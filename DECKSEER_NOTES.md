@@ -122,6 +122,18 @@ Moving to a new origin (for example a hosted PWA) starts with empty storage. The
   - `bonusMana`, `anyColor`, `allHaste`, `bonusCard`: what-if settings for "What would make it faster"
 - **Display**: `renderFast()` and `fwTurnHtml()` show turn-by-turn tables with what to tap. "How the finder reads each card" (`fwDescribe`, `fwAuditHtml`) has **Copy as text**. Use that report to find cards the finder misreads; the user's Ashling Elementals deck was audited this way.
 
+## The 3,000-game deck test (`simulateDeck`)
+
+Plays your deck against a model opponent for the chosen bracket and style (`BRACKETS`, `STYLES`). Since Nov 2026 your own cards are read twice. `cardRole` gives each card's rough job (mana, draw, power, removal, wipe). `fwCard`, the fastest-win reader, gives its rules:
+- triggers (`etb` including landfall, `cast`, `sac`, `dies`), using the same matching rules as the finder (`who`: self/other/selfOrOther/any, `nontoken`)
+- trigger effects: draw, damage, Risen Reef's `topif`, land search, tokens (including "one per land"), +1/+1 counters, and token **copies**
+- evoke, its own or granted (**Ashling**: Elementals for {4}); the sacrifice triggers Ashling's hasty copy, which is kept at the end step by paying {W}{U}{B}{R}{G} when 5 mana is left and you have 5 or more lands (colours aren't tracked), otherwise sacrificed
+- Yarok and Twinflame doublers, cost reducers, extra land drops, cascade, haste-granting
+
+Evoke is chosen when the card can't be hardcast and has an enter value or a copier is out, or when evoke plus keeping the copy fits (5 mana is held back for that). Activated abilities (Ashnod's Altar and the like) and colours are **not** modelled. The results panel shows evokes, copies and kept copies per game. Test: `tests/sim.test.js`. An Ashling test deck wins 267 of 600 games with her abilities read, 182 without.
+
+The fastest-win finder now also keeps a delayed-sacrifice copy when the leftover mana pays its cost (`keepCost` on the permanent, paid with `fwPay` at the end step).
+
 ## Deck check
 
 - **Mana base**: `dcMana()` with hypergeometric odds.
