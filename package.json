@@ -1,0 +1,12 @@
+{
+  "name": "deckseer",
+  "private": true,
+  "description": "Tests for deckseer.html (the app itself needs no build step).",
+  "scripts": {
+    "test": "node tests/run.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0",
+    "onnxruntime-web": "1.20.1"
+  }
+}

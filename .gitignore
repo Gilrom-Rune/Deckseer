@@ -1,0 +1,11 @@
+node_modules/
+dist/
+__pycache__/
+*.pyc
+# the AI picture files are large; add them on purpose (see README) rather than by accident
+/deckseer-embed.onnx
+/deckseer-index.bin
+/deckseer-index.json
+/cardsight-embed.onnx
+/cardsight-index.bin
+/cardsight-index.json
