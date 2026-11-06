@@ -124,15 +124,20 @@ Moving to a new origin (for example a hosted PWA) starts with empty storage. The
 
 ## The 3,000-game deck test (`simulateDeck`)
 
-Plays your deck against a model opponent for the chosen bracket and style (`BRACKETS`, `STYLES`). Since Nov 2026 your own cards are read twice. `cardRole` gives each card's rough job (mana, draw, power, removal, wipe). `fwCard`, the fastest-win reader, gives its rules:
-- triggers (`etb` including landfall, `cast`, `sac`, `dies`), using the same matching rules as the finder (`who`: self/other/selfOrOther/any, `nontoken`)
-- trigger effects: draw, damage, Risen Reef's `topif`, land search, tokens (including "one per land"), +1/+1 counters, and token **copies**
-- evoke, its own or granted (**Ashling**: Elementals for {4}); the sacrifice triggers Ashling's hasty copy, which is kept at the end step by paying {W}{U}{B}{R}{G} when 5 mana is left and you have 5 or more lands (colours aren't tracked), otherwise sacrificed
-- Yarok and Twinflame doublers, cost reducers, extra land drops, cascade, haste-granting
+Plays your deck against a model opponent: a bracket or speed (`BRACKETS`, `SPEEDS`) with a style (`STYLES`), or **your table** (see below). Your own cards are read twice. `cardRole` gives each card's rough job. `fwCard`, the fastest-win reader, gives its rules, and since Nov 2026 the test uses:
+- **Mana with colours:** every land, rock and dork adds its real units (`f.units`, `f.rock`, `f.dork`, restricted mana, Arcane Signet limited to your commander's colours), and costs are paid with `fwPay`, so the wrong colours stop you. **Lands that enter tapped** arrive a turn late. Land searches fetch the basic of a colour the deck needs (`basicFor`). Results show "wrong colours" turns and the number of tapped lands.
+- **Triggers:** enters (including landfall), cast, sacrifice and dies, with the finder's matching rules. Effects covered: draw, damage, Risen Reef's top card, land search, tokens, +1/+1 counters, token copies.
+- **Evoke**, its own or granted (Ashling's {4}), and **Ashling's copy**, kept at the end step only if `{W}{U}{B}{R}{G}` can really be paid (colours checked). The test holds that mana back when it plans to keep one.
+- **Sacrifice outlets** (Ashnod's Altar, Phyrexian Altar: `outlet` on the card). An evoked creature is sacrificed to the outlet for mana, and in a **second main phase** after combat, copies that can't be kept are sacrificed to it, with the mana spent. An outlet counts as a strong play while a sacrifice payoff or evoke-granter is out. It isn't a mana rock (`cardRole` would think so).
+- **Activated abilities** without sacrifice costs (`acts`: draw, token, damage, counters, land search), used once each per turn with leftover mana.
+- **Turn order:** a landfall creature is cast before the land drop when it can be. A tapped land is played on turns its mana isn't needed.
+- Yarok and Twinflame doublers, cost reducers, extra land drops, cascade and granted haste.
 
-Evoke is chosen when the card can't be hardcast and has an enter value or a copier is out, or when evoke plus keeping the copy fits (5 mana is held back for that). Activated abilities (Ashnod's Altar and the like) and colours are **not** modelled. The results panel shows evokes, copies and kept copies per game. Test: `tests/sim.test.js`. An Ashling test deck wins 267 of 600 games with her abilities read, 182 without.
+**Your table** (`tableGames`, `calibrateTable`, `d.simCal`): with 5 or more logged games for the deck in the Game tab, the opponent is tuned so the test wins as often as you really do. The game-length turn comes from your games, and the opponent's speed shift is found by bisection (8 × 500 seeded games). The tuning is stored on the deck and redone only when new games are logged or the style changes, so later tests and the Upgrades swap tests all use the same opponent.
 
-The fastest-win finder now also keeps a delayed-sacrifice copy when the leftover mana pays its cost (`keepCost` on the permanent, paid with `fwPay` at the end step).
+**Still not modelled:** combat details (evasion, blockers, commander damage), multiplayer politics, tutors and graveyard recursion, Treasures, the opponent's real cards. A full run takes about 2.7 s. Tests: `tests/sim.test.js`, `tests/sim2.test.js`.
+
+The fastest-win finder also keeps a delayed-sacrifice copy when the leftover mana pays its cost (`keepCost`).
 
 ## Deck check
 
