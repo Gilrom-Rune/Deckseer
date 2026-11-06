@@ -40,7 +40,9 @@ header{max-width:1400px;margin:0 auto;padding:18px 0 14px;display:flex;align-ite
 h1{font-family:"Cinzel Decorative","Trajan Pro",var(--f-display);font-weight:900;font-size:2.2rem;line-height:1;margin:0;letter-spacing:.04em;
   background:linear-gradient(100deg,var(--rune-a) 0%,var(--rune-b) 38%,var(--rune-c) 50%,var(--rune-b) 62%,var(--rune-a) 100%);background-size:250% 100%;
   -webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 6px var(--rune-glow));animation:runeShimmer 7s ease-in-out infinite}
-h1 .eye{display:inline-block;font-size:.55em;vertical-align:.45em;margin:0 .12em;-webkit-text-fill-color:var(--rune-b)}
+h1 .eye{display:inline-block;width:1.5em;height:.86em;vertical-align:-.02em;margin:0 .06em;overflow:visible}
+h1 .eye .iris{transition:transform .12s ease-out}
+@media (prefers-reduced-motion:reduce){h1 .eye .iris{transition:none}}
 @keyframes runeShimmer{0%,100%{background-position:100% 0}50%{background-position:0 0}}
 @media (prefers-reduced-motion:reduce){h1{animation:none;background-position:50% 0}}
 .pips{display:flex;gap:6px;margin-bottom:8px}
@@ -1014,7 +1016,20 @@ img.noimg{visibility:hidden}
       </defs>
     </svg>
     <div class="pips" aria-hidden="true"><svg viewBox="0 0 16 18"><use href="#gem" fill="var(--pip-w)"/><use href="#gem-facets"/></svg><svg viewBox="0 0 16 18"><use href="#gem" fill="var(--pip-u)"/><use href="#gem-facets"/></svg><svg viewBox="0 0 16 18"><use href="#gem" fill="var(--pip-b)"/><use href="#gem-facets"/></svg><svg viewBox="0 0 16 18"><use href="#gem" fill="var(--pip-r)"/><use href="#gem-facets"/></svg><svg viewBox="0 0 16 18"><use href="#gem" fill="var(--pip-g)"/><use href="#gem-facets"/></svg></div>
-    <h1>Deck<span class="eye" aria-hidden="true">✦</span>seer</h1>
+    <h1 aria-label="Deckseer">Deck<svg class="eye" viewBox="0 0 60 34" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="eyeGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6dc8a"/><stop offset=".5" stop-color="#c9952e"/><stop offset="1" stop-color="#8a5a12"/></linearGradient>
+        <radialGradient id="eyeIris" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#f3c6ff"/><stop offset=".35" stop-color="#b16cf2"/><stop offset=".8" stop-color="#6a2bc9"/><stop offset="1" stop-color="#2e0f6e"/></radialGradient>
+        <clipPath id="eyeShape"><path d="M4 17 Q30 -3 56 17 Q30 37 4 17 Z"/></clipPath>
+      </defs>
+      <path d="M4 17 Q30 -3 56 17 Q30 37 4 17 Z" fill="#170d3a"/>
+      <g clip-path="url(#eyeShape)"><g class="iris" id="logoIris">
+        <circle cx="30" cy="17" r="11.5" fill="url(#eyeIris)" stroke="#2a0f5c" stroke-width="1"/>
+        <ellipse cx="30" cy="17" rx="2.3" ry="9.5" fill="#0b0620"/>
+        <circle cx="34.5" cy="12" r="1.8" fill="#fff" opacity=".85"/>
+      </g></g>
+      <path d="M4 17 Q30 -3 56 17 Q30 37 4 17 Z" fill="none" stroke="url(#eyeGold)" stroke-width="2.6" stroke-linejoin="round"/>
+    </svg>seer</h1>
   </div>
   <div class="stats">
     <div class="stat"><b id="stTotal">0</b><span>Cards</span></div>
@@ -6560,6 +6575,29 @@ async function undoRestore(){
   // reload only when an *update* takes over; the very first install takes over quietly
   let reloading = false; const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener("controllerchange", () => { if (reloading || !hadController) return; reloading = true; location.reload(); });
+})();
+
+
+/* ---------------- the logo's eye: the pupil follows the pointer ---------------- */
+(() => {
+  const iris = document.getElementById("logoIris"); if (!iris) return;
+  const eye = iris.closest("svg");
+  let px = null, py = null, queued = false;
+  const look = () => {
+    queued = false;
+    const r = eye.getBoundingClientRect(); if (!r.width) return;
+    let ox = 0, oy = 0;
+    if (px != null) {
+      const dx = px - (r.left + r.width / 2), dy = py - (r.top + r.height / 2), d = Math.hypot(dx, dy) || 1;
+      const reach = Math.min(1, d / 180);           // looks fully to the side once the pointer is a little way off
+      ox = dx / d * 10.5 * reach; oy = dy / d * 4.5 * reach;   // in the eye's own units: wide, not tall
+    }
+    iris.style.transform = `translate(${ox.toFixed(2)}px, ${oy.toFixed(2)}px)`;
+  };
+  const queue = () => { if (!queued) { queued = true; requestAnimationFrame(look); } };
+  window.addEventListener("pointermove", e => { px = e.clientX; py = e.clientY; queue(); }, {passive: true});
+  document.documentElement.addEventListener("pointerleave", () => { px = py = null; queue(); });
+  window.addEventListener("blur", () => { px = py = null; queue(); });
 })();
 
 /* ---------------- misc ---------------- */
