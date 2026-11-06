@@ -4,7 +4,7 @@
 
 A Magic: The Gathering app that runs in your browser: webcam card scanner, collection, deck builder, deck analysis, playtester with a rules engine, card search, wishlist and game tracker.
 
-**Open it:** https://gilrom-rune.github.io/deckseer/ (Chrome or Edge), then click **Install app** next to Backup to get it as a program with its own icon.
+**Open it:** https://gilrom-rune.github.io/Deckseer/ (Chrome or Edge), then click **Install app** next to Backup to get it as a program with its own icon.
 
 Everything you own (collection, decks, games) is saved in your browser on your own computer. Use **Backup** now and then.
 
