@@ -132,10 +132,15 @@ Plays your deck against a model opponent: a bracket or speed (`BRACKETS`, `SPEED
 - **Activated abilities** without sacrifice costs (`acts`: draw, token, damage, counters, land search), used once each per turn with leftover mana.
 - **Turn order:** a landfall creature is cast before the land drop when it can be. A tapped land is played on turns its mana isn't needed.
 - Yarok and Twinflame doublers, cost reducers, extra land drops, cascade and granted haste.
+- **Combat** (`combat`): the opponent has creatures (`oppBoard`). A bracket opponent gets random ones that grow with the turn; a saved-deck opponent uses its real creatures, only once it could have cast them. They block: a block that kills and survives, a trade against power 3+, and a chump when the damage would be lethal, the attacker has power 6+, or commander damage would reach 21. Covered: flying (only fliers and reach block it), menace, "can't be blocked", trample, deathtouch, double strike, infect (poison wins) and **commander damage** (21 wins). Blocked creatures can die, which fires their dies triggers. Your removal kills their best blocker half the time; wipes clear both boards.
+- **Resources:** Treasures are kept between turns as any-colour mana. Clues are cracked for {2} when your hand is low. Food and similar tokens are ignored. "X" tokens count as 2.
+- **Tutors** (`tutor`: into hand, on top, or onto the battlefield) and **graveyard recursion** (`regrow`, `reanimate`, Eternal Witness's `fromGrave`) pick the card worth most to the deck (`worth`). The graveyard holds nontoken permanents that died and resolved spells.
+
+**One of your decks as the opponent** (`deckOpponent`, option `deck:<id>`): its unopposed win turn (300 games), its removal and wipe density as interaction chances, and its creatures as blockers. Cached per deck version. It's a model built from that deck, not a turn-by-turn game of both decks.
 
 **Your table** (`tableGames`, `calibrateTable`, `d.simCal`): with 5 or more logged games for the deck in the Game tab, the opponent is tuned so the test wins as often as you really do. The game-length turn comes from your games, and the opponent's speed shift is found by bisection (8 × 500 seeded games). The tuning is stored on the deck and redone only when new games are logged or the style changes, so later tests and the Upgrades swap tests all use the same opponent.
 
-**Still not modelled:** combat details (evasion, blockers, commander damage), multiplayer politics, tutors and graveyard recursion, Treasures, the opponent's real cards. A full run takes about 2.7 s. Tests: `tests/sim.test.js`, `tests/sim2.test.js`.
+**Still not modelled:** multiplayer politics (by choice), the opponent attacking you with its creatures (its win turn stands in for that), your creatures staying back to block, first strike, and both decks playing every card turn by turn. A full run takes about 2.5 s. Tests: `tests/sim.test.js`, `tests/sim2.test.js`, `tests/sim3.test.js`.
 
 The fastest-win finder also keeps a delayed-sacrifice copy when the leftover mana pays its cost (`keepCost`).
 

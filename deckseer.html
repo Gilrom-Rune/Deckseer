@@ -4432,13 +4432,39 @@ function shuffle(a){ for (let i = a.length - 1; i > 0; i--) { const j = Math.flo
 function gauss(){ let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
 // Who you're playing against: a bracket or speed model, or "your table" (tuned to your logged games with this deck)
 function simOpponent(d, opts){
-  const isCmd = d.format === "commander";
+  const isCmd = d.format === "commander", pick = isCmd ? opts.bracket : opts.speed;
+  if (typeof pick === "string" && pick.startsWith("deck:")) { const od = deckById(pick.slice(5)); if (od) return deckOpponent(od, isCmd); }
   if ((isCmd ? opts.bracket : opts.speed) === "table") {
     const cal = d.simCal && d.simCal.opp;
     if (cal) return Object.assign({name: "your table"}, cal);
     return isCmd ? BRACKETS[3] : SPEEDS.strong;   // not calibrated yet: a middle opponent
   }
   return isCmd ? BRACKETS[opts.bracket] || BRACKETS[3] : SPEEDS[opts.speed] || SPEEDS.strong;
+}
+// One of your saved decks as the opponent: how fast it wins (its own unopposed games), how much removal and how many
+// wipes it runs, and its real creatures as blockers. Remembered per deck version.
+const deckOppCache = new Map();
+function deckOpponent(od, isCmd){
+  const key = od.id + "|" + JSON.stringify([od.commanders.map(c => c.name), od.cards.map(c => [c.name, c.qty, c.board])]);
+  if (deckOppCache.has(key)) return deckOppCache.get(key);
+  const S = simSeeded(4242, () => simulateDeck(od, {bracket: 3, speed: "strong", style: "balanced", games: 300, goldOnly: true}));
+  const turns = S ? S.goldTurns.slice().sort((a, b) => a - b) : [];
+  const mean = turns.length ? turns.reduce((a, b) => a + b, 0) / turns.length : 10;
+  const sd = turns.length > 1 ? Math.sqrt(turns.reduce((s, t) => s + (t - mean) ** 2, 0) / turns.length) : 2;
+  const main = od.cards.filter(c => c.board === "main"), n = main.reduce((s, c) => s + (c.qty || 1), 0) || 1;
+  const roles = main.map(c => [cardRole(c), c.qty || 1]);
+  const removal = roles.reduce((s, [r, q]) => s + (r.removal || r.counter ? q : 0), 0), wipes = roles.reduce((s, [r, q]) => s + (r.wipe ? q : 0), 0);
+  const creatures = [];
+  for (const c of main.concat(od.commanders)) if (/\bCreature\b/.test(c.type || "")) {
+    const t = (c.text || "").toLowerCase(), kw = (() => { try { return ptKwPrinted({name: c.name, text: c.text || "", back: false}).map(k => k.key); } catch (e) { return []; } })();
+    const p = parseInt(c.power), tg = parseInt(c.toughness);
+    for (let i = 0; i < (c.qty || 1); i++) creatures.push({p: isNaN(p) ? 2 : p, t: isNaN(tg) ? 2 : tg, fly: kw.includes("flying"), reach: kw.includes("reach"), dt: kw.includes("deathtouch"), cmc: c.cmc ?? 3});
+  }
+  const o = {name: od.name, win: turns.length ? turns[Math.floor(turns.length / 2)] : 10, sd: Math.max(1, Math.min(2.5, sd)), min: Math.max(2, (turns[0] || 6)),
+    // removal and wipes per card drawn, turned into a chance per turn (about one card a turn, a third of it aimed at you in a 4-player game)
+    inter: Math.min(0.5, removal / n * (isCmd ? 1.2 : 2)), wipe: Math.min(0.2, wipes / n * (isCmd ? 1.5 : 2.5)), creatures: creatures.length ? creatures : null, crDensity: creatures.length / n};
+  deckOppCache.set(key, o);
+  return o;
 }
 // Your real games with this deck (from the Game tab)
 function tableGames(d){
@@ -4485,6 +4511,20 @@ function simulateDeck(d, opts){
     const type = (c.type || "").split(" // ")[0];
     const outlet = (f.acts || []).find(a => a.sac && !a.tap && !(a.pay.gen + a.pay.cols.length) && a.effs.length && a.effs.every(x => x.t === "mana"));
     if (outlet && !(f.rock || f.dork)) r.mana = 0;   // Ashnod's Altar makes mana only by sacrificing: it isn't a mana rock
+    const t0 = (c.text || "").toLowerCase().replace(/\([^)]*\)/g, "");
+    let kw = []; try { kw = ptKwPrinted({name: c.name, text: c.text || "", back: false}).map(k => k.key); } catch (e) { kw = []; }
+    const tough = parseInt(c.toughness);
+    // tutors ("search your library for a creature card, put it into your hand"; "… on top"), and the graveyard: regrowth and reanimation
+    const tut = t0.match(/search your library for (?:a|an|up to one) ((?:[a-z]+ )*?)card[^.]*?(?:put (?:that card|it) into your hand|put (?:that card|it) on top|put (?:that card|it) onto the battlefield)/);
+    const grows = !(f.trigs || []).some(tr => tr.acts.some(a => a.t === "fromGrave"));
+    const regrow = grows && t0.match(/return (?:target|up to one target|a) ((?:[a-z]+ )*?)card from your graveyard to your hand/);
+    const rean = grows && (t0.match(/(?:return|put) target ((?:[a-z]+ )*?)creature card from (?:a|your) graveyard (?:to|onto) the battlefield/) || (/return enchanted creature card to the battlefield/.test(t0) ? [0, ""] : null));
+    Object.assign(r, {kw: {fly: kw.includes("flying"), trample: kw.includes("trample"), menace: kw.includes("menace"), dt: kw.includes("deathtouch"), ds: kw.includes("double strike"), infect: kw.includes("infect"),
+      unblock: /(?:^|\n|\. )(?:cardname|this creature|[^.\n]*?) can't be blocked(?! except| by)/.test(t0.replace(new RegExp(trEsc(c.name.toLowerCase()), "g"), "cardname")) && !/creatures? (?:you control|target)/.test(t0)},
+      tough: isNaN(tough) ? Math.max(1, r.power || 1) : tough,
+      tutor: tut ? {ph: tut[1].trim(), top: /on top/.test(tut[0]), bf: /onto the battlefield/.test(tut[0])} : null,
+      regrow: regrow ? {ph: regrow[1].trim()} : null, rean: rean ? {ph: (rean[1] || "").trim()} : null});
+    if (tut && r.draw && !tut[0].includes("draw")) r.draw = 0;   // a tutor isn't a draw: it's handled as a tutor
     return Object.assign(r, {f, type, cols: f.cols || "C", changeling: !!f.changeling, perm: !/\b(Instant|Sorcery)\b/.test(type), creature: /\bCreature\b/.test(type),
       etbDraw: f.etbDraw ? (f.draw || 0) : 0, pay: f.pay || {cols: [], gen: r.cmc || 0}, legend: !!f.legend, artifact: !!f.artifact,
       landfall: (f.trigs || []).some(tr => tr.conds.some(k => k.ev === "etb" && /\bland\b/.test(String(k.phrase || "")))),
@@ -4496,7 +4536,8 @@ function simulateDeck(d, opts){
   // which colours the deck asks for (to fetch the right basic land)
   const demand = {}; for (const c of library0.concat(cmdrs)) for (const s0 of c.pay.cols || []) for (const k of String(s0).split("/")) if (/^[WUBRG]$/.test(k)) demand[k] = (demand[k] || 0) + 1;
   const S = {games, kept7: 0, mulls: 0, land3: 0, land4: 0, screw: 0, flood: 0, cmdTurns: [], manaAvail: Array(MAXT + 1).fill(0), manaUsed: Array(MAXT + 1).fill(0),
-    wins: 0, losses: 0, long: 0, winTurn: Array(MAXT + 2).fill(0), lossTurn: Array(MAXT + 2).fill(0), goldTurns: [], evokes: 0, copies: 0, kept: 0, trigs: 0, colorStuck: 0, outletSacs: 0, abilities: 0};
+    wins: 0, losses: 0, long: 0, winTurn: Array(MAXT + 2).fill(0), lossTurn: Array(MAXT + 2).fill(0), goldTurns: [], evokes: 0, copies: 0, kept: 0, trigs: 0, colorStuck: 0, outletSacs: 0, abilities: 0,
+    treasures: 0, tutors: 0, recursions: 0, blocked: 0, attackers: 0, died: 0, cmdWins: 0, poisonWins: 0};
   if (library0.length < 7) return null;
   const fits = (cond, ev, x, srcId) => {
     if (cond.ev !== ev) return false;
@@ -4528,6 +4569,7 @@ function simulateDeck(d, opts){
     const onPlay = Math.random() < 0.5;
     let engines = 0, engineAcc = 0, oppLife = life, cmdIn = cmdrs.map(() => true), cmdCasts = cmdrs.map(() => 0), cmdTurn = 0;
     let perms = [], srcs = [], pool = [], nextId = 0, budget = 0, t = 0, keepNeed = 0;
+    let grave = [], treasures = 0, clues = 0, poison = 0, cmdDmg = {}, oppBoard = [];
     let oppWin = versus ? Math.max(opp.min, opp.win + st.shift + gauss() * opp.sd) : 99, delay = 0;
     const landCount = () => perms.reduce((s, p) => s + (p.c.land ? 1 : 0), 0);
     const draw = n => { for (let k = 0; k < n && deck.length; k++) hand.push(deck.shift()); };
@@ -4545,6 +4587,13 @@ function simulateDeck(d, opts){
     };
     const putLand = (l, tapped) => { const x = enter(l, {}); addSource(x, l.f.units && l.f.units.length ? l.f.units : ["C"], false, !tapped && !l.f.tapped); return x; };
     const fetchBasic = tapped => { const k = basicFor(); const li = deck.findIndex(q => q.land && /\bBasic\b/.test(q.type)); if (li >= 0) deck.splice(li, 1); const b = {name: "Basic land", type: "Basic Land", land: true, f: {units: [k]}, cols: "C"}; putLand(b, tapped); };
+    // the card a tutor or recursion picks: the one that does the most for this deck, preferring what you can cast soon
+    const worth = c => (c.creature ? (c.power || 0) / 2 : 0) + (c.etbDraw || 0) + (c.f.trigs ? 2 : 0) + (c.outlet ? 3 : 0) + (c.f.dbl ? 3 : 0) + (c.f.grantEvoke ? 3 : 0) + (c.mana ? 2 : 0) + (c.draw || 0) * 0.7
+      - (c.cmc > srcs.length + 2 ? 1.5 : 0);
+    const bestOf = (list, ph, creatureOnly) => { let bi = -1, bv = -1e9; list.forEach((c, i) => { if (c.land || (creatureOnly && !c.creature) || (ph && !fwFits(ph, c))) return; const v = worth(c); if (v > bv) { bv = v; bi = i; } }); return bi; };
+    const tutor = tu => { const i = bestOf(deck, tu.ph.replace(/\b(a|an)\b/g, "").trim(), /creature/.test(tu.ph)); if (i < 0) return; const c = deck.splice(i, 1)[0]; S.tutors++; if (tu.bf && c.perm) enter(c, {}); else if (tu.top) deck.unshift(c); else hand.push(c); };
+    const regrow = ph => { const i = bestOf(grave, ph, /creature/.test(ph || "")); if (i < 0) return; S.recursions++; hand.push(grave.splice(i, 1)[0]); };
+    const reanimate = ph => { const i = bestOf(grave, ph, true); if (i < 0) return; S.recursions++; enter(grave.splice(i, 1)[0], {}); };
     const act = (a, src, x, tr, k) => {
       switch (a.t) {
         case "draw": draw(a.n || 1); break;
@@ -4555,9 +4604,13 @@ function simulateDeck(d, opts){
           break;
         }
         case "searchAuto": if (/land/.test(a.phrase || "") && a.to === "bf") for (let i = 0; i < (a.n || 1); i++) { const li = deck.findIndex(c => c.land); if (li < 0) break; putLand(deck.splice(li, 1)[0], a.tapped); } break;
+        case "fromGrave": if (/hand/.test(a.to || "")) regrow(""); else reanimate(""); break;
         case "token": {
           const def = a.def || {}, p = parseInt(def.power) || 0;
-          const n = a.each ? (/\bland/.test(a.each) ? landCount() : perms.filter(q => fwFits(a.each, q.c)).length) : (a.x ? 0 : a.n || 1);
+          const n = a.each ? (/\bland/.test(a.each) ? landCount() : perms.filter(q => fwFits(a.each, q.c)).length) : (a.x ? 2 : a.n || 1);   // "X" tokens: counted as 2
+          if (/^treasure$/i.test(def.name || "")) { treasures += n; S.treasures += n; for (let i = 0; i < n; i++) pool.push("WUBRG~T"); break; }
+          if (/^clue$/i.test(def.name || "")) { clues += n; break; }
+          if (/^(food|blood|map|gold|powerstone)$/i.test(def.name || "")) break;
           const tc = {name: def.name || "Token", type: def.type || "Token Creature", cols: (def.colors || []).join("") || "C", f: {}, power: p, creature: /Creature/.test(def.type || "Creature"), perm: true, pay: {cols: [], gen: 0}};
           for (let i = 0; i < Math.min(n, 30); i++) enter(tc, {token: true, quiet: i >= 3});
           break;
@@ -4586,7 +4639,7 @@ function simulateDeck(d, opts){
       }
     };
     const enter = (c, o) => {
-      const x = {id: ++nextId, c, token: !!o.token, temp: !!o.temp, keepPay: o.keepPay || null, cmd: o.cmd, creature: !!c.creature, power: c.creature ? (c.power || 0) : 0, sick: true, haste: !!(o.haste || c.haste)};
+      const x = {id: ++nextId, c, token: !!o.token, temp: !!o.temp, keepPay: o.keepPay || null, cmd: o.cmd, creature: !!c.creature, power: c.creature ? (c.power || 0) : 0, tough: c.tough || Math.max(1, c.power || 1), kw: c.kw || {}, sick: true, haste: !!(o.haste || c.haste)};
       if (c.land) { perms.push(x); if (!o.quiet) fire("etb", x); return x; }
       if (c.perm) perms.push(x);
       x.haste = x.haste || hasteFor(x);
@@ -4595,11 +4648,13 @@ function simulateDeck(d, opts){
       if (c.f.ramp) for (let i = 0; i < c.f.ramp; i++) fetchBasic(!!c.f.rampTapped);
       else if (c.landRamp) for (let i = 0; i < c.landRamp; i++) fetchBasic(true);
       if (c.etbDraw) draw(c.etbDraw);
+      if (c.perm && !o.token) { if (c.tutor) tutor(c.tutor); if (c.regrow) regrow(c.regrow.ph); if (c.rean) reanimate(c.rean.ph); }
       if (!o.quiet && c.perm) fire("etb", x);
       return x;
     };
     const leave = x => {
       perms = perms.filter(p => p !== x);
+      if (!x.token && x.cmd == null && !x.c.land && x.c.perm) grave.push(x.c);
       if (srcs.some(s => s.id === x.id)) { srcs = srcs.filter(s => s.id !== x.id); const tg = new RegExp("[#@]" + x.id + "$"); pool = pool.filter(u => !tg.test(u)); }
       if (x.cmd != null) cmdIn[x.cmd] = true;
     };
@@ -4638,10 +4693,13 @@ function simulateDeck(d, opts){
       if (c.f.burst && c.f.burst.length && !c.perm) float(c.f.burst);   // rituals
       if (!c.perm) {
         if (c.draw) draw(c.draw);
+        if (c.tutor) tutor(c.tutor); if (c.regrow) regrow(c.regrow.ph); if (c.rean) reanimate(c.rean.ph);
+        if (how !== "free") grave.push(c);
         if (c.f.ramp) for (let i = 0; i < c.f.ramp; i++) fetchBasic(!!c.f.rampTapped); else if (c.landRamp) for (let i = 0; i < c.landRamp; i++) fetchBasic(true);
         engines += c.engine;
-        if (versus && (c.removal || c.counter)) delay += (c.counter && opp.win < 7 ? 0.8 : st.slowBy);
-        if (versus && c.wipe) { delay += st.slowBy * 2.5; perms.filter(p => p.creature).forEach(destroy); }
+        if (versus && c.removal && !c.counter && oppBoard.length && Math.random() < 0.5) { oppBoard.sort((a, b) => b.p - a.p); oppBoard.shift(); }   // their best blocker
+        else if (versus && (c.removal || c.counter)) delay += (c.counter && opp.win < 7 ? 0.8 : st.slowBy);
+        if (versus && c.wipe) { delay += st.slowBy * 2.5; oppBoard = []; perms.filter(p => p.creature).forEach(destroy); }
         return;
       }
       const x = enter(c, {});
@@ -4649,6 +4707,43 @@ function simulateDeck(d, opts){
       engines += c.engine;
       if (versus && (c.removal || c.counter)) delay += st.slowBy * 0.5;
       if (how === "evoke") { S.evokes++; sacrifice(x, true); }   // with an Altar out: sacrificed to it for mana as it enters
+    };
+    // Combat: your creatures attack; the opponent blocks with its creatures. Flying (only fliers and reach block it), menace (two
+    // blockers), "can't be blocked", trample (the excess goes through), deathtouch, double strike, infect, and commander damage.
+    const combat = versus => {
+      const atk = perms.filter(p => p.creature && !p.manaSrc && (!p.sick || p.haste) && p.power > 0).sort((a, b) => b.power - a.power);
+      S.attackers += atk.length;
+      const free = versus ? oppBoard.slice() : [];
+      const incoming = atk.reduce((s, a) => s + a.power * (a.kw.ds ? 2 : 1), 0);
+      const lethal = incoming >= oppLife;
+      const deadAtk = [];
+      for (const a of atk) {
+        const mult = a.kw.ds ? 2 : 1;
+        let blk = null;
+        if (free.length && !a.kw.unblock) {
+          const can = free.filter(b => !a.kw.fly || b.fly || b.reach);
+          if (can.length >= (a.kw.menace ? 2 : 1)) {
+            // a block that kills the attacker and survives; else a trade on a big attacker; else a chump block if the damage would be lethal
+            const good = can.find(b => (b.p >= a.tough || b.dt) && b.t > a.power * mult && !a.kw.dt);
+            const trade = can.find(b => b.p >= a.tough || b.dt);
+            const chump = lethal || a.power >= 6 || (isCmd && a.cmd != null && (cmdDmg[a.cmd] || 0) + a.power >= 21) ? can.sort((x, y) => x.p - y.p)[0] : null;
+            blk = good || (a.power >= 3 && trade) || chump || null;
+            if (blk && a.kw.menace) { const second = can.find(b => b !== blk); if (!second) blk = null; else { free.splice(free.indexOf(second), 1); } }
+          }
+        }
+        let dmg = a.power * mult;
+        if (blk) {
+          free.splice(free.indexOf(blk), 1); S.blocked++;
+          const lethalToBlk = a.kw.dt ? 1 : blk.t;
+          dmg = a.kw.trample ? Math.max(0, a.power * mult - lethalToBlk) : 0;
+          if (a.power * mult >= lethalToBlk) oppBoard.splice(oppBoard.indexOf(blk), 1);
+          if (blk.p >= a.tough || blk.dt) deadAtk.push(a);
+        }
+        if (!dmg) continue;
+        if (a.kw.infect) poison += dmg; else oppLife -= dmg;
+        if (a.cmd != null && !a.kw.infect) cmdDmg[a.cmd] = (cmdDmg[a.cmd] || 0) + dmg;
+      }
+      for (const a of deadAtk) { S.died++; destroy(a); }
     };
     // one main phase: commander, then the best play you can pay for, again and again
     const mainPhase = () => {
@@ -4674,6 +4769,8 @@ function simulateDeck(d, opts){
         opts2.sort((a, b) => b.pri - a.pri || b.cost - a.cost);
         const o = opts2[0]; pool = o.after; keepNeed += o.keep || 0; play(o.c, o.how);
       }
+      // Clues: {2} each for a card
+      while (clues > 0 && hand.filter(c => !c.land).length < 3) { const after = afford({cols: [], gen: 2}, 0, null); if (!after) break; pool = after; clues--; draw(1); }
       // activated abilities with what's left (once each per turn): "{2}, {T}: draw a card", "{3}: create a token"…
       for (const p of perms) for (const ab of p.c.acts || []) {
         if (p.used || (ab.tap && p.creature && p.sick && !p.haste)) continue;
@@ -4687,7 +4784,7 @@ function simulateDeck(d, opts){
       if (!(t === 1 && onPlay)) draw(1);
       engineAcc += engines; while (engineAcc >= 1 && deck.length) { hand.push(deck.shift()); engineAcc -= 1; }
       perms.forEach(p => { p.sick = false; p.used = false; });
-      pool = srcs.flatMap(s => tag(s.units, s));   // everything untaps
+      pool = srcs.flatMap(s => tag(s.units, s)).concat(Array(treasures).fill("WUBRG~T"));   // everything untaps; Treasures wait to be used
       // landfall first: a creature that triggers on lands is cast before the land drop when it can be
       const lf = hand.filter(c => c.landfall && !c.land).map(c => ({c, after: afford(reduced(c, c.pay), 0, c)})).filter(x => x.after).sort((a, b) => b.c.cmc - a.c.cmc)[0];
       if (lf) { pool = lf.after; play(lf.c, "cast"); }
@@ -4711,9 +4808,13 @@ function simulateDeck(d, opts){
       if (t === 4) { if (landCount() >= 4) S.land4++; if (landCount() <= 2) S.screw++; }
       if (t === 7 && landCount() >= 8 && hand.filter(c => !c.land).length <= 1) S.flood++;
       // attack
-      const power = perms.filter(p => p.creature && !p.manaSrc && (!p.sick || p.haste)).reduce((s, p) => s + p.power, 0);
-      oppLife -= Math.round(power * (versus ? st.block : 1));
-      if (oppLife <= 0) { S.manaAvail[t] += avail; S.manaUsed[t] += avail - Math.min(avail, pool.length); return {win: true, t, m, cmdTurn}; }
+      treasures = pool.filter(u => u.includes("~T")).length;
+      combat(versus);
+      if (oppLife <= 0 || poison >= 10 || (isCmd && Object.values(cmdDmg).some(v => v >= 21))) {
+        S.manaAvail[t] += avail; S.manaUsed[t] += avail - Math.min(avail, pool.length);
+        if (oppLife > 0) { if (poison >= 10) S.poisonWins++; else S.cmdWins++; }
+        return {win: true, t, m, cmdTurn};
+      }
       // second main phase: copies you can't keep go to a sacrifice outlet for mana, then that mana is spent
       for (const p of perms.filter(q => q.temp && q.creature)) if (outletFor(p) && !(p.keepPay && fwPay(pool, keepPayFor(keepNeed), 0))) { keepNeed = Math.max(0, keepNeed - 1); sacrifice(p, true); }
       mainPhase();
@@ -4724,27 +4825,34 @@ function simulateDeck(d, opts){
         if (after) { pool = after; p.temp = false; S.kept++; } else sacrifice(p, false);
       }
       perms.forEach(p => { p.haste = p.haste && (p.c.haste || hasteFor(p)); });
+      treasures = pool.filter(u => u.includes("~T")).length;
       if (oppLife <= 0) return {win: true, t, m, cmdTurn};
       if (versus) {
         const myTurnEnds = onPlay ? t : t - 0.5;
         if (myTurnEnds >= oppWin + Math.min(3, delay)) return {win: false, t, m, cmdTurn};
         const cre = perms.filter(p => p.creature);
         if (t >= 3 && cre.length && Math.random() < opp.inter * st.inter) destroy(cre.reduce((b, x) => x.power > b.power ? x : b));
-        if (t >= 5 && cre.length && Math.random() < opp.wipe * st.wipe) perms.filter(p => p.creature).forEach(destroy);
+        if (t >= 5 && (cre.length || oppBoard.length) && Math.random() < opp.wipe * st.wipe) { perms.filter(p => p.creature).forEach(destroy); oppBoard = []; }
+        // their creatures, which block yours: their real ones when the opponent is one of your decks
+        if (Math.random() < (opp.crDensity != null ? Math.min(0.9, opp.crDensity * 2.2) : 0.5) * st.block && oppBoard.length < 6) {
+          // a creature it could have cast by now (about one land a turn, a little ramp later on)
+          if (opp.creatures) { const can = opp.creatures.filter(x => x.cmc <= t + Math.floor(t / 4)); if (can.length) oppBoard.push(Object.assign({}, can[Math.floor(Math.random() * can.length)])); }
+          else { const sz = Math.max(1, Math.min(7, 1 + Math.floor(t / 2) + Math.round(gauss()))); oppBoard.push({p: sz, t: Math.max(1, sz + Math.round(gauss())), fly: Math.random() < 0.2, reach: Math.random() < 0.1, dt: Math.random() < 0.08}); }
+        }
         if (oppLife <= 0) return {win: true, t, m, cmdTurn};
       }
     }
     return {win: null, t: MAXT, m, cmdTurn};
   };
-  for (let g = 0; g < games; g++) {
+  for (let g = 0; g < (opts.goldOnly ? 0 : games); g++) {
     const r = run(true);
     if (r.m === 0) S.kept7++; S.mulls += r.m; if (r.cmdTurn) S.cmdTurns.push(r.cmdTurn);
     if (r.win === true) { S.wins++; S.winTurn[r.t]++; } else if (r.win === false) { S.losses++; S.lossTurn[r.t]++; } else S.long++;
   }
   if (!opts.noGold) {
     const keep = Object.assign({}, S, {manaAvail: S.manaAvail.slice(), manaUsed: S.manaUsed.slice()});
-    for (let g = 0; g < Math.min(1000, games); g++) { const r = run(false); if (r.win) S.goldTurns.push(r.t); }
-    for (const k of ["land3", "land4", "screw", "flood", "manaAvail", "manaUsed", "evokes", "copies", "kept", "trigs", "colorStuck", "outletSacs", "abilities"]) S[k] = keep[k];
+    for (let g = 0; g < (opts.goldOnly ? games : Math.min(1000, games)); g++) { const r = run(false); if (r.win) S.goldTurns.push(r.t); }
+    for (const k of ["land3", "land4", "screw", "flood", "manaAvail", "manaUsed", "evokes", "copies", "kept", "trigs", "colorStuck", "outletSacs", "abilities", "treasures", "tutors", "recursions", "blocked", "attackers", "died", "cmdWins", "poisonWins"]) S[k] = keep[k];
   }
   const comp = {lands: 0, ramp: 0, draw: 0, removal: 0, wipes: 0, creatures: 0, mvSum: 0, mvN: 0, tapped: 0};
   for (const c of library0) {
@@ -4794,8 +4902,10 @@ function renderSim(){
     const rowp = (label, v, good, note) => `<div class="srow2"><span>${esc(label)}</span>${bar(v, good)}<b>${v}%</b>${note ? `<small>${esc(note)}</small>` : ""}</div>`;
     const cmdMed = median(S.cmdTurns), gold = median(S.goldTurns);
     const ends = (arr) => { let n = 0, s = 0; arr.forEach((v, i) => { n += v; s += v * i; }); return n ? Math.round(s / n) : null; };
-    const cal = (S.isCmd ? res.opts.bracket : res.opts.speed) === "table" && d.simCal;
-    html += `<div class="sim-title">${cal ? `Your deck vs your table, tuned to your ${cal.n} logged games (you won ${Math.round(cal.rate * 100)}% of them; they usually ended on turn ${cal.turn})` : `Your deck vs a typical ${S.isCmd ? `Bracket ${res.opts.bracket} (${S.opp.name})` : S.opp.name.toLowerCase()} deck`} playing ${S.style.name.toLowerCase()} · ${g.toLocaleString()} games</div>
+    const pickO = S.isCmd ? res.opts.bracket : res.opts.speed, cal = pickO === "table" && d.simCal, vsDeck = typeof pickO === "string" && pickO.startsWith("deck:");
+    html += `<div class="sim-title">${cal ? `Your deck vs your table, tuned to your ${cal.n} logged games (you won ${Math.round(cal.rate * 100)}% of them; they usually ended on turn ${cal.turn})`
+      : vsDeck ? `Your deck vs ${esc(S.opp.name)} (your saved deck: its speed, removal, wipes and creatures)`
+      : `Your deck vs a typical ${S.isCmd ? `Bracket ${res.opts.bracket} (${S.opp.name})` : S.opp.name.toLowerCase()} deck`} playing ${S.style.name.toLowerCase()} · ${g.toLocaleString()} games</div>
       <div class="sim-big"><div><b class="${winP >= 50 ? "okc" : winP >= 35 ? "" : "warnc"}">${winP}%</b><span>you win</span></div><div><b>${lossP}%</b><span>they win</span></div>
         ${S.long ? `<div><b>${pct(S.long, g)}%</b><span>still going at turn 16</span></div>` : ""}
         <div><b>${ends(S.winTurn) ?? "—"}</b><span>turn you usually win</span></div><div><b>${ends(S.lossTurn) ?? "—"}</b><span>turn you usually lose</span></div>
@@ -4815,6 +4925,12 @@ function renderSim(){
         if (S.copies) bits.push(`${(S.copies / g).toFixed(1)} token copies made (${(S.kept / g).toFixed(1)} kept by paying for them)`);
         if (S.outletSacs) bits.push(`${(S.outletSacs / g).toFixed(1)} sacrificed to an altar for mana`);
         if (S.abilities) bits.push(`${(S.abilities / g).toFixed(1)} activated abilities used`);
+        if (S.treasures) bits.push(`${(S.treasures / g).toFixed(1)} Treasures made`);
+        if (S.tutors) bits.push(`${(S.tutors / g).toFixed(1)} cards tutored`);
+        if (S.recursions) bits.push(`${(S.recursions / g).toFixed(1)} cards brought back from the graveyard`);
+        if (S.attackers) bits.push(`${Math.round(S.blocked / S.attackers * 100)}% of your attackers blocked, ${(S.died / g).toFixed(1)} of your creatures lost in combat`);
+        if (S.cmdWins) bits.push(`${pct(S.cmdWins, S.wins)}% of wins by commander damage`);
+        if (S.poisonWins) bits.push(`${pct(S.poisonWins, S.wins)}% of wins by poison`);
         if (S.trigs) bits.push(`${Math.round(S.trigs / g)} triggers`);
         const stuck = S.colorStuck / g;
         return (bits.length ? `<p class="cur-sub">Your cards' rules in these games, per game on average: ${bits.join(", ")}.</p>` : "")
@@ -4830,14 +4946,15 @@ function renderSim(){
         </tbody></table></div>
         <div><h4>Suggestions</h4><ul class="sim-tips">${simTips(S).map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>
       </div>
-      <p class="cur-sub sim-note">These are estimates. Deckseer plays your deck by your cards' rules: lands (with their colours, and tapped ones a turn late), ramp, draw, removal, wipes and creatures, plus triggers (enters, landfall, dies, sacrifice), token copies, evoke (like Ashling's), sacrifice outlets like Ashnod's Altar, activated abilities, trigger doublers, cost reducers, extra land drops and cascade, against a model of a typical ${S.isCmd ? "deck in that bracket" : "opponent"} rather than a real decklist. Combos, tricky cards and politics aren't modeled. Use it to compare versions of your deck.</p>`;
+      <p class="cur-sub sim-note">These are estimates. Deckseer plays your deck by your cards' rules: lands (with their colours, and tapped ones a turn late), ramp, draw, removal, wipes and creatures, plus triggers (enters, landfall, dies, sacrifice), token copies, evoke (like Ashling's), sacrifice outlets like Ashnod's Altar, activated abilities, Treasures and Clues, tutors, graveyard recursion, trigger doublers, cost reducers, extra land drops and cascade. Combat has blockers, flying, menace, trample, deathtouch, double strike, infect and commander damage, against ${vsDeck ? "a model built from that deck (its speed, interaction and creatures; it doesn't play its cards turn by turn)" : `a model of a typical ${S.isCmd ? "deck in that bracket" : "opponent"} rather than a real decklist`}. Combos and politics aren't modeled. Use it to compare versions of your deck.</p>`;
   }
   box.innerHTML = html;
 }
 // "Your table": the opponent tuned to your own logged games with this deck
 function tableOpt(d, cur){
-  const T = tableGames(d);
-  return `<option value="table" ${cur === "table" ? "selected" : ""}>Your table (${T.n} logged game${T.n === 1 ? "" : "s"}${T.n < TABLE_MIN_GAMES ? `, needs ${TABLE_MIN_GAMES}` : ""})</option>`;
+  const T = tableGames(d), others = decks.filter(x => x.id !== d.id && x.format === d.format && x.cards.length);
+  return `<option value="table" ${cur === "table" ? "selected" : ""}>Your table (${T.n} logged game${T.n === 1 ? "" : "s"}${T.n < TABLE_MIN_GAMES ? `, needs ${TABLE_MIN_GAMES}` : ""})</option>`
+    + (others.length ? `<optgroup label="One of your decks">${others.map(x => `<option value="deck:${x.id}" ${cur === "deck:" + x.id ? "selected" : ""}>vs ${esc(x.name)}</option>`).join("")}</optgroup>` : "");
 }
 function simChart(S){
   const W = 560, H = 120, n = 16, max = Math.max(1, ...S.winTurn.slice(1, n + 1), ...S.lossTurn.slice(1, n + 1)), bw = W / n;
@@ -4875,7 +4992,7 @@ $("deckSim").addEventListener("click", e => {
   }
 });
 $("deckSim").addEventListener("change", e => {
-  if (e.target.id === "simBracket") prefs.simOpts = Object.assign({}, prefs.simOpts, {bracket: e.target.value === "table" ? "table" : +e.target.value});
+  if (e.target.id === "simBracket") prefs.simOpts = Object.assign({}, prefs.simOpts, {bracket: /^(table|deck:)/.test(e.target.value) ? e.target.value : +e.target.value});
   if (e.target.id === "simSpeed") prefs.simOpts = Object.assign({}, prefs.simOpts, {speed: e.target.value});
   savePrefs(); if (simState) simState.stale = true; renderSim();
 });
