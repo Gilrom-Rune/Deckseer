@@ -37,6 +37,10 @@ The goal is to be a **one-stop app**: scanning, collection, deck building, deck 
 
 **Playtest** is a full-screen overlay (`#pt`) opened from a deck. It has a rules engine built from the Comprehensive Rules (effective Sept 25, 2026).
 
+## The step-by-step guide
+
+The **📖 Guide** button in the header, "How to use Deckseer", and the welcome box all open `#tour`, a side panel. (Note: `#guide` is the camera's outline box, so don't reuse that id.) Content lives in `GUIDE`: chapters of steps `{h, b, go: {page, ctab, dtab, el, needDeck}}`. **Show me** (`guideShow`) switches page and tab, opens any `<details>` around the target, scrolls to it and makes it glow (`.guide-hl`). Progress is kept in `prefs.guide`. `tests/guide.test.js` walks every step and checks every target exists, so **add or update a guide step whenever a feature or button changes**.
+
 ## External services and libraries
 
 - **Scryfall API**: card data, prices, images, search. The `sf()` helper queues requests about 110 ms apart.
