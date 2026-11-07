@@ -63,6 +63,7 @@ h1{font-family:"Cinzel Decorative","Trajan Pro",var(--f-display);font-weight:900
 h1 .eye{display:inline-block;width:1.5em;height:.86em;vertical-align:-.02em;margin:0 .06em;overflow:visible}
 h1 .eye .iris{transition:transform .12s ease-out}
 @media (prefers-reduced-motion:reduce){h1 .eye .iris{transition:none}}
+
 @keyframes runeShimmer{0%,100%{background-position:100% 0}50%{background-position:0 0}}
 @media (prefers-reduced-motion:reduce){h1{animation:none;background-position:50% 0}}
 .pips{display:flex;gap:6px;margin-bottom:8px}
@@ -1026,6 +1027,44 @@ img.noimg{visibility:hidden}
   .pt-stat{padding:1px 6px}.pt-stat small{display:none}.pt-stat b{font-size:1rem}
   .pt-actions .btn{padding:4px 8px;font-size:.84rem}
   .pt-hand{position:sticky;bottom:0;z-index:5}
+  .pt-main{display:flex;flex-direction:column;min-height:max-content}
+  .pt-left,.pt-right,.pt-bf,.pt-side{flex:none}
+  .pt-left,.pt-right{min-height:max-content}
+}
+/* a card shown as a text tile (no picture yet) keeps a card's shape instead of growing with its rules text */
+.pt-cmdcard .ptc{aspect-ratio:63/88;overflow:hidden}
+.pt-cmdcard .ptc-in,.pt-cmdcard .ptc-tile{height:100%;overflow:hidden}
+
+/* ---------- phones ---------- */
+@media (max-width:700px){
+  /* the pages become a bottom bar with icons, like a phone app */
+  .pagetabs{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;justify-content:space-around;gap:0;margin:0;
+    padding:4px max(4px,env(safe-area-inset-right,0px)) calc(4px + env(safe-area-inset-bottom,0px)) max(4px,env(safe-area-inset-left,0px));
+    background:var(--surface);border-top:1px solid var(--line);border-bottom:0;box-shadow:0 -2px 12px rgba(0,0,0,.08)}
+  .pagetabs button{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 2px 4px!important;font-size:.72rem!important;font-family:var(--f-body,inherit);border-bottom:0!important;border-top:3px solid transparent;margin:0}
+  .pagetabs button::before{content:attr(data-ic);font-size:1.3rem;line-height:1.2}
+  .pagetabs button::after{content:attr(data-short);font-weight:600}
+  .pagetabs button .tl,.pagetabs button .count{display:none}
+  .pagetabs button[aria-selected="true"]{border-top-color:var(--rune-b);color:var(--ink)}
+  body{padding-bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+  #toast{bottom:calc(80px + env(safe-area-inset-bottom,0px))!important}
+  .guide{bottom:calc(76px + env(safe-area-inset-bottom,0px))!important;max-height:min(70vh,560px)}
+  /* a smaller header */
+  header{padding:10px 0 8px;gap:8px;align-items:center}
+  h1{font-size:1.6rem}
+  .stats{gap:12px}.stat b{font-size:1.15rem}.stat span{font-size:.62rem}
+  /* wide tables scroll inside themselves instead of pushing the page sideways */
+  .dc-table,.sim-table{display:block;overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
+  .deck-tabs{scroll-snap-type:x proximity}.deck-tabs button{scroll-snap-align:start}
+  #expBar label,#expBar .field{min-width:0;max-width:100%;flex:1 1 100%}
+  #expBar select{max-width:100%;width:100%;min-width:0}
+}
+label.btn{display:inline-flex;align-items:center;justify-content:center}
+/* fingers need bigger targets than a mouse */
+@media (pointer:coarse){
+  .btn{min-height:42px}
+  .linkbtn{padding:8px 4px}
+  input[type="checkbox"]{width:20px;height:20px}
 }
 </style>
 </head>
@@ -1072,11 +1111,11 @@ img.noimg{visibility:hidden}
   </div>
 </header>
 <nav class="pagetabs" role="tablist" aria-label="Pages">
-  <button type="button" role="tab" id="pgScan" aria-selected="true">Scanner</button>
-  <button type="button" role="tab" id="pgColl" aria-selected="false">Collection <span class="count" id="collCountTop">0</span></button>
-  <button type="button" role="tab" id="pgBuild" aria-selected="false">Deck builder <span class="count" id="deckCount">0</span></button>
-  <button type="button" role="tab" id="pgSearch" aria-selected="false">Card search</button>
-  <button type="button" role="tab" id="pgGame" aria-selected="false">Game</button>
+  <button type="button" role="tab" id="pgScan" aria-selected="true" data-ic="📷" data-short="Scan"><span class="tl">Scanner</span></button>
+  <button type="button" role="tab" id="pgColl" aria-selected="false" data-ic="🗂️" data-short="Cards"><span class="tl">Collection</span> <span class="count" id="collCountTop">0</span></button>
+  <button type="button" role="tab" id="pgBuild" aria-selected="false" data-ic="🃏" data-short="Decks"><span class="tl">Deck builder</span> <span class="count" id="deckCount">0</span></button>
+  <button type="button" role="tab" id="pgSearch" aria-selected="false" data-ic="🔎" data-short="Search"><span class="tl">Card search</span></button>
+  <button type="button" role="tab" id="pgGame" aria-selected="false" data-ic="❤️" data-short="Game"><span class="tl">Game</span></button>
 </nav>
 
 <main id="scanPage">
@@ -1103,6 +1142,7 @@ img.noimg{visibility:hidden}
         <label class="chk"><input type="checkbox" id="optAuto" checked> Auto-scan</label>
         <button class="btn" id="scanNow" type="button" disabled>Scan now <kbd>Space</kbd></button>
         <button class="btn" id="screenLight" type="button" title="Turns the rest of the screen white so it lights the card, like a lamp">💡 Screen light</button>
+          <button class="btn" type="button" id="torchBtn" aria-pressed="false" hidden title="Turn the phone's flashlight on or off">🔦 Flashlight</button>
         <button class="btn hide" id="askAi" type="button" disabled>Ask Claude <kbd>C</kbd></button>
       </div>
       <div class="deck-strip" id="deckStrip" hidden></div>
@@ -1693,7 +1733,9 @@ async function startCam(deviceId){
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { setStatus("This browser can't use a webcam. Open the file in Chrome, Edge or Firefox.", "err"); return; }
   if (stream) stream.getTracks().forEach(t => t.stop());
   try {
-    stream = await navigator.mediaDevices.getUserMedia({audio:false, video: Object.assign({width:{ideal:1920}, height:{ideal:1080}}, deviceId ? {deviceId:{exact:deviceId}} : {})});
+    // on a phone or tablet, the camera on the back (it can be switched in the Camera list)
+    const back = !deviceId && isPhone() ? {facingMode: {ideal: "environment"}} : {};
+    stream = await navigator.mediaDevices.getUserMedia({audio:false, video: Object.assign({width:{ideal:1920}, height:{ideal:1080}}, back, deviceId ? {deviceId:{exact:deviceId}} : {})});
   } catch (e) {
     setStatus(e && e.name === "NotAllowedError" ? "Webcam access was blocked. Click the camera icon in the address bar, allow it, then try again." : "Couldn't start the webcam. Check that no other app is using it.", "err");
     return;
@@ -1702,11 +1744,29 @@ async function startCam(deviceId){
   $("idle").classList.add("hide"); ["guide","zName","zInfo"].forEach(id => $(id).classList.remove("hide"));
   $("scanNow").disabled = !ready; syncAiUI();
   const s = stream.getVideoTracks()[0].getSettings(); prefs.cam = s.deviceId || ""; savePrefs();
+  torchSetup();
   await listCams(); layoutGuide(); savedExposure = null; lowCamSaved = null; roomLum = null; if (prefs.sleeve) sleeveExposure(true); if (lowLight()) lowLightCamera(true);
   if (ready) setStatus(CV ? (prefs.auto ? "Hold a card up to the camera. A green outline means it's found the card." : "Hold a card up and press Space.") : (prefs.auto ? "Hold a card inside the frame, name at the top." : "Hold a card in the frame and press Space."));
 }
 $("startCam").onclick = () => startCam(prefs.cam || undefined);
 document.addEventListener("click", e => { if (e.target.closest("#memForget")) { for (const id of Object.keys(memMeta)) forgetCard(id, true); saveMemMeta(); renderMemInfo(); toast("Forgot everything learned from your scans."); } });
+// phones and tablets: a touch screen and no mouse
+function isPhone(){ return matchMedia("(pointer:coarse)").matches && !matchMedia("(pointer:fine)").matches; }
+// the phone's flashlight, when the camera has one (Android Chrome; not iPhone)
+let torchOn = false;
+function torchSetup(){
+  const tr = stream && stream.getVideoTracks()[0], caps = tr && tr.getCapabilities ? tr.getCapabilities() : {};
+  const has = !!caps.torch; $("torchBtn").hidden = !has; torchOn = false; $("torchBtn").setAttribute("aria-pressed", false);
+  // a back camera points away from the screen, so the screen light can't help it
+  const facing = tr && tr.getSettings ? tr.getSettings().facingMode : "";
+  $("screenLight").hidden = facing === "environment";
+}
+async function torch(on){
+  const tr = stream && stream.getVideoTracks()[0]; if (!tr) return;
+  try { await tr.applyConstraints({advanced: [{torch: on}]}); torchOn = on; $("torchBtn").setAttribute("aria-pressed", on); setStatus(on ? "Flashlight on. If there's glare, tilt the card a little." : "Flashlight off.", ""); }
+  catch (e) { setStatus("Couldn't turn on the flashlight on this phone.", "err"); }
+}
+$("torchBtn").onclick = () => torch(!torchOn);
 function screenLight(on){
   document.body.classList.toggle("lit", on);
   $("screenLight").setAttribute("aria-pressed", on);
@@ -6965,7 +7025,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.07.3";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.07.4";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
@@ -7047,6 +7107,7 @@ function toast(msg, btnText, fn){
 let actx = null;
 function sound(kind){
   if (!prefs.sound) return;
+  try { if (navigator.vibrate && isPhone()) navigator.vibrate(kind === "valuable" ? [40, 60, 40] : kind === "check" ? [15, 40, 15] : 30); } catch (e) {}
   try {
     actx = actx || new AudioContext(); const t0 = actx.currentTime;
     const notes = kind === "valuable" ? [[988, 0], [1319, 0.11], [1760, 0.22]] : kind === "check" ? [[392, 0], [311, 0.13]] : [[880, 0]];
@@ -10615,12 +10676,14 @@ const GUIDE = [
   {t: "Getting started", steps: [
     {h: "Welcome to Deckseer", b: "Deckseer scans your Magic cards with a webcam, keeps your collection, builds and tests decks, finds combos, and tracks your games. This guide walks through everything, one step at a time. Press <b>Show me</b> on a step and Deckseer jumps to that spot and makes it glow. You can keep using the app while the guide is open."},
     {h: "Install it as an app", b: "Open Deckseer from its website (<b>gilrom-rune.github.io/Deckseer</b>) in Chrome or Edge and click <b>Install app</b>, or the install icon in the address bar. It gets its own window and an icon in the Start menu, works without internet, and <b>updates itself</b>. The Install button appears only on the website, when the browser offers it.", go: {page: "collection", ctab: "cards", el: "installApp"}},
+    {h: "On a phone or tablet", b: "Deckseer works on phones too. <b>Android:</b> open the website in Chrome, then <b>⋮ → Install app</b>. <b>iPhone/iPad:</b> open it in Safari, then <b>Share → Add to Home Screen</b>. On a phone the pages are in the bar at the bottom. Each device keeps its own cards: move them with Backup and Restore."},
     {h: "Bring your cards across", b: "Coming from an older copy (Cardsight, or the downloaded file)? In the old copy click <b>Backup</b>. In this one click <b>Restore</b> and pick that file. Your collection, decks, wishlist, games and what the scanner has learned all come across.", go: {page: "collection", ctab: "cards", el: "restoreLbl"}},
     {h: "Back up now and then", b: "Everything you own is saved in this browser on this computer, and nowhere else. Click <b>Backup</b> every so often and keep the file somewhere safe (a USB stick, OneDrive, Google Drive). If the browser's data is ever cleared, <b>Restore</b> brings it all back.", go: {page: "collection", ctab: "cards", el: "backup"}}
   ]},
   {t: "Scanning cards", steps: [
     {h: "Turn on the webcam", b: "On the <b>Scanner</b> page click <b>Turn on webcam</b> and allow camera access. Any webcam works; a sharper one reads small text better.", go: {page: "scanner", el: "startCam"}},
     {h: "Hold a card up", b: "Hold the card flat against a plain background, filling most of the frame. When Deckseer finds it, a <b>green outline</b> appears. With <b>Auto-scan</b> on, it reads the card by itself and beeps when it's added. Otherwise press <b>Scan now</b> (or Space).", go: {page: "scanner", el: "optAuto"}},
+    {h: "Scanning with a phone", b: "A phone uses its <b>back camera</b> (switch it in the Camera list). If it has a flashlight, a <b>🔦 Flashlight</b> button appears: tilt the card slightly if the light glares on it. The phone gives a short buzz when a card is added. Scanning is slower than on a PC, so good light helps a lot.", go: {page: "scanner", el: "startCam"}},
     {h: "Light", b: "Even light with no glare works best. In a dim room <b>Low light</b> (Auto) brightens the camera and averages a few frames. <b>Screen light</b> turns your screen into a soft white lamp.", go: {page: "scanner", el: "screenLight"}},
     {h: "Cards in sleeves", b: "Tick <b>Sleeved cards</b>. Deckseer then finds the card inside the sleeve and removes the plastic's glare by combining several frames.", go: {page: "scanner", el: "optSleeve"}},
     {h: "Going through one set? Use Set lock", b: "Type the set's code (like <b>MH3</b> or <b>HOC</b>) in <b>Set lock</b>. Scans get faster, it picks the right printing, and it can recognise cards by picture alone within that set.", go: {page: "scanner", el: "optSet"}},
