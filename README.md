@@ -22,6 +22,10 @@ Everything you own (collection, decks, games) is saved in your browser on your o
 
 The Stage 2 notebook makes `deckseer-embed.onnx`, `deckseer-index.bin` and `deckseer-index.json` (about 50 MB). Upload them next to `deckseer.html` and the scanner finds them on its own. Or keep them off GitHub and load them in the app: Scanner options → AI picture recognition → Load files.
 
+## License
+
+Deckseer is free to use, copy and change for **noncommercial** purposes: personal use, hobby projects, learning. Selling it or using it to make money isn't allowed. See [LICENSE.md](LICENSE.md) (PolyForm Noncommercial 1.0.0).
+
 ---
 
 Deckseer is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC. Magic: The Gathering is a trademark of Wizards of the Coast. Card data and images from Scryfall; Deckseer is not affiliated with Scryfall.
