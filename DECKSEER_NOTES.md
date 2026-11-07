@@ -168,6 +168,16 @@ The fastest-win finder also keeps a delayed-sacrifice copy when the leftover man
 - Keep the UI organised. Things were split into tabs because it felt crowded; don't cram new features onto one page.
 - PC is the main target.
 
+## Releasing an update (it's live)
+
+The app is live at **https://gilrom-rune.github.io/Deckseer/** (GitHub Pages from `main`, repository `Gilrom-Rune/Deckseer`, public, PolyForm Noncommercial license). Everyone using it from there gets updates automatically. To release:
+
+1. `node tools/bump-version.js`: sets `APP_VERSION` in `deckseer.html` and `version.json` (date plus counter). `tests/version.test.js` fails if they differ.
+2. `npm test`: every check must pass. An update reaches every user at once.
+3. Commit and push to `main`. Pages redeploys in about a minute.
+
+How it reaches people: `sw.js` fetches the page with `cache: "no-cache"`, so it revalidates instead of waiting out the 10-minute browser and CDN cache. An open app fetches `version.json` (no-store) at start, every 10 minutes and on window focus. If it differs from `APP_VERSION`, the toast "A new version of Deckseer is ready (…) → Reload" stays until clicked. Bump `VERSION` in `sw.js` only when the offline helper itself changes.
+
 ## Installable app (PWA): how to put it online
 
 Done in code (`manifest.webmanifest`, `sw.js`, `icons/`, `index.html` → `deckseer.html`, and in the app a registration that runs only on http(s), an **Install app** button next to Backup and a "new version ready, Reload" toast). Steps for the user:

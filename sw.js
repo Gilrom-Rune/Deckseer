@@ -3,7 +3,7 @@
    - Libraries (OpenCV, Tesseract and its language data, the text-reader model, fonts): saved the first time, then used from the saved copy.
    - Card pictures from Scryfall: saved as you see them, up to IMG_MAX; the oldest are dropped.
    - Scryfall searches/prices, Commander Spellbook and the AI picture files are never cached here (the app keeps its own copies). */
-const VERSION = "deckseer-v3";
+const VERSION = "deckseer-v4";
 const SHELL = VERSION + "-shell", LIBS = "deckseer-libs-v1", IMGS = "deckseer-imgs-v1";
 const SHELL_FILES = ["./", "./deckseer.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/deckseer.ico", "./icons/favicon-32.png"];
 const LIB_HOSTS = ["cdn.jsdelivr.net", "docs.opencv.org", "unpkg.com", "tessdata.projectnaptha.com", "fonts.googleapis.com", "fonts.gstatic.com", "cdnjs.cloudflare.com"];
@@ -37,7 +37,10 @@ self.addEventListener("fetch", e => {
 async function networkFirst(req){
   const c = await caches.open(SHELL);
   try {
-    const res = await fetch(req);
+    // "no-cache": always ask the server whether the file changed (cheap when it hasn't), so an update shows up at once
+    // instead of after the browser's or GitHub's 10-minute cache. version.json is never stored.
+    const res = await fetch(req.url, {cache: "no-cache", credentials: "same-origin"});
+    if (/\/version\.json$/.test(new URL(req.url).pathname)) return res;
     if (res.ok) c.put(req, res.clone());
     return res;
   } catch (err) {

@@ -1238,7 +1238,7 @@ img.noimg{visibility:hidden}
       <button class="btn ghost" id="clearAll" type="button">Clear collection</button>
     </section>
     <small style="color:var(--muted)">Card data and prices from Scryfall. Everything is saved in this browser on this PC, after every card. Use Backup now and then to keep a copy.</small>
-    <small class="legal-note">Deckseer is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC. Magic: The Gathering is a trademark of Wizards of the Coast. Deckseer is free and not affiliated with Scryfall.</small>
+    <small class="legal-note">Deckseer is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC. Magic: The Gathering is a trademark of Wizards of the Coast. Deckseer is free and not affiliated with Scryfall. <span id="appVersion"></span></small>
     <button class="btn ghost help-btn" type="button" id="introOpen">How to use Deckseer</button>
   </div>
 </main>
@@ -6930,9 +6930,12 @@ async function undoRestore(){
 })();
 
 
+/* ---------------- version and updates ---------------- */
+const APP_VERSION = "2026.11.07.1";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
+  let swReg = null;
   const link = document.createElement("link"); link.rel = "manifest"; link.href = "manifest.webmanifest"; document.head.appendChild(link);
   let prompt = null;
   window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); prompt = e; $("installApp").classList.remove("hide"); });
@@ -6950,8 +6953,28 @@ async function undoRestore(){
       const w = reg.installing; if (!w) return;
       w.addEventListener("statechange", () => { if (w.state === "installed" && navigator.serviceWorker.controller) offer(w); });
     });
-    setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
+    swReg = reg;
   }).catch(() => {});
+  // Is there a newer Deckseer? Checked at start, every 10 minutes, and when you come back to the window.
+  // version.json is tiny; the page itself is only fetched again when you choose Reload.
+  let lastCheck = 0, offered = false;
+  const checkUpdate = async () => {
+    if (offered || Date.now() - lastCheck < 60e3) return;
+    lastCheck = Date.now();
+    try {
+      const r = await fetch("version.json?t=" + Date.now(), {cache: "no-store"}); if (!r.ok) return;
+      const v = (await r.json()).version;
+      if (swReg) swReg.update().catch(() => {});
+      if (!v || v === APP_VERSION) return;
+      offered = true;
+      toast(`A new version of Deckseer is ready (${v}).`, "Reload", () => { const w = swReg && swReg.waiting; if (w) w.postMessage("skipWaiting"); else location.reload(); });
+      clearTimeout(toastT);   // stays until you choose
+    } catch (e) { /* offline: try again later */ }
+  };
+  setTimeout(checkUpdate, 3000);
+  setInterval(checkUpdate, 10 * 60e3);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkUpdate(); });
+  window.addEventListener("focus", checkUpdate);
   // reload only when an *update* takes over; the very first install takes over quietly
   let reloading = false; const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener("controllerchange", () => { if (reloading || !hadController) return; reloading = true; location.reload(); });
@@ -10822,6 +10845,7 @@ function applyDeckTab(){
 renderWish();
 if (wish.length && Date.now() - (prefs.wishChecked || 0) > 20 * 3600e3) setTimeout(() => checkWish(true), 4000);
 setTimeout(() => aiInit(), 1200);
+{ const v = document.getElementById("appVersion"); if (v) v.textContent = "Version " + APP_VERSION + "."; }
 renderLists(); syncCurUI(); showPage(PAGES[prefs.page] && prefs.page !== "scanner" ? prefs.page : prefs.view === "collection" ? "collection" : "scanner"); renderAll(); syncAiUI();
 (async () => {
   try {

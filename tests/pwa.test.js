@@ -7,9 +7,10 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.webmanifest': 
 
 module.exports = async function () {
   console.log('Installable app (PWA)');
-  let up = true;
+  let up = true, fakeVersion = null;
   const server = http.createServer((req, res) => {
     if (!up) { req.socket.destroy(); return; }
+    if (fakeVersion && req.url.startsWith('/version.json')) { res.writeHead(200, {'content-type': 'application/json'}); return res.end(JSON.stringify({version: fakeVersion})); }
     const f = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]).replace(/\/$/, '/index.html'));
     if (!f.startsWith(ROOT) || !fs.existsSync(f)) { res.writeHead(404); return res.end(); }
     res.writeHead(200, { 'content-type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res);
@@ -33,6 +34,20 @@ module.exports = async function () {
   check('the page is controlled by the service worker', await page.evaluate(() => !!navigator.serviceWorker.controller));
   const cached = await page.evaluate(async () => (await Promise.all((await caches.keys()).map(async k => (await (await caches.open(k)).keys()).map(r => r.url)))).flat());
   check('the app is saved for offline use', cached.some(u => u.endsWith('/deckseer.html')), cached);
+
+  // Versions: version.json and the app agree; a newer version.json makes an open app offer "Reload"
+  const vfile = JSON.parse(fs.readFileSync(path.join(ROOT, 'version.json'), 'utf8')).version;
+  const vapp = await page.evaluate(() => APP_VERSION);
+  check(`version.json and the app have the same version (${vapp})`, vfile === vapp && /^\d{4}\.\d{2}\.\d{2}\.\d+$/.test(vapp), [vfile, vapp]);
+  check('the version is shown in the app', (await page.textContent('#appVersion')).includes(vapp));
+  fakeVersion = vapp + '9';
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { /* the check waits a minute between tries: let it run now */ });
+  let msg = await page.textContent('#toastMsg');
+  if (!/new version/.test(msg)) { await page.reload(); await page.waitForTimeout(3600); msg = await page.textContent('#toastMsg'); }
+  check('an open app notices a newer version and offers Reload', /A new version of Deckseer is ready/.test(msg) && (await page.textContent('#toastBtn')) === 'Reload', msg);
+  fakeVersion = null;
 
   // Go offline (server down) and open the app again.
   up = false; await context.setOffline(true);
