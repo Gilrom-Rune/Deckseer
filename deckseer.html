@@ -557,6 +557,14 @@ a.btn{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
 body.lit{background:#fff!important}
 body.lit #cam{position:relative;z-index:1000;box-shadow:0 0 0 200vmax #fff;border-radius:12px}
 body.lit #status,body.lit #current,body.lit #scanHelp{position:relative;z-index:1001}
+/* with the screen light on, everything around the camera sits on white: black text in white boxes with a clear black outline */
+body.lit #status,body.lit #current:not(:empty),body.lit #scanHelp:not([hidden]),body.lit .lit-off{background:#fff!important;color:#000!important;border:2px solid #000!important;border-radius:10px;box-shadow:none!important}
+body.lit #status{padding:6px 10px;margin-top:8px}
+body.lit #status *,body.lit #current *,body.lit #scanHelp *,body.lit .lit-off{color:#000!important;-webkit-text-fill-color:#000!important}
+body.lit #status,body.lit #scanHelp,body.lit .lit-off{font-weight:600}
+body.lit #current .btn,body.lit #scanHelp .btn{background:#fff!important;border:2px solid #000!important}
+body.lit #current .btn.primary{background:#000!important;color:#fff!important;-webkit-text-fill-color:#fff!important}
+body.lit #status .spin{border-color:#bbb;border-top-color:#000}
 .lit-off{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:1001;background:#fff;color:#222;border:1px solid #ccc;box-shadow:0 2px 10px rgba(0,0,0,.15)}
 .pagetabs{overflow-x:auto;scrollbar-width:none}.pagetabs::-webkit-scrollbar{display:none}
 .pagetabs button{white-space:nowrap;flex:none}
@@ -6957,7 +6965,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.07.2";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.07.3";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
