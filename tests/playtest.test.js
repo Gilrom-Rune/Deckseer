@@ -357,6 +357,45 @@ module.exports = async function () {
   check('split cards cost the side you cast', alt.fire === '{1}{R}' && alt.ice === '{1}{U}', alt);
   check('unearth is an ability, not a spell: no reduction', alt.unearth === '{2}{R}', alt);
 
+  // ---- creatures that make tokens as they enter: the tokens appear by themselves ----
+  await fresh(4);
+  const toks = await page.evaluate(() => {
+    prefs.ptAutoPick = false; prefs.ptTrigMode = 'auto';
+    ['Forest', 'Island', 'Mountain'].forEach(put);
+    const out = {};
+    const enter = (name, type, text, pt, extra) => { const c = ptMakeCard(Object.assign({name, type, text, cost: '', colors: ['G'], power: pt ? pt[0] : '', toughness: pt ? pt[1] : ''}, extra || {})); PT.hand.push(c); prefs.ptAutoMana = false; ptCastPaid(c.uid); prefs.ptAutoMana = true; return c; };
+    const tokens = n => PT.bf.filter(c => c.token && c.name === n);
+    enter('Glint-Sleeve Artisan', 'Creature — Dwarf Artificer', 'Fabricate 1 (When this creature enters, put a +1/+1 counter on it or create a 1/1 colorless Servo artifact creature token.)', ['2', '2']);
+    out.servo = tokens('Servo').length;
+    enter('Fortress Kin-Guard', 'Creature — Dog Soldier', 'When this creature enters, it endures 1. (Put a +1/+1 counter on it or create a 1/1 white Spirit creature token.)', ['1', '2']);
+    out.spirit = tokens('Spirit').map(t => t.power + '/' + t.toughness).join();
+    enter('Additive Evolution', 'Enchantment', 'When this enchantment enters, create a 0/0 green and blue Fractal creature token. Put three +1/+1 counters on it.');
+    out.fractal = tokens('Fractal').map(t => ptPT(t)).join();
+    enter('Goblin Goliath', 'Creature — Goblin Mutant', 'When Goblin Goliath enters, create a number of 1/1 red Goblin creature tokens equal to the number of opponents you have.', ['5', '4']);
+    out.goblins = tokens('Goblin').length;
+    enter('Bonny Pall, Clearcutter', 'Legendary Creature — Giant Scout', 'Reach\nWhen Bonny Pall, Clearcutter enters, create Beau, a legendary blue Ox creature token with "Beau\'s power and toughness are each equal to the number of lands you control."', ['6', '3']);
+    out.beau = tokens('Beau').map(t => ptPT(t)).join();
+    enter('Ertha Jo', 'Creature — Human', 'When Ertha Jo enters, create a 1/1 red Mercenary creature token with "{T}: Target creature you control gets +1/+0 until end of turn. Activate only as a sorcery."', ['2', '4']);
+    out.merc = tokens('Mercenary').map(t => t.text).join();
+    out.mercPumped = PT.bf.some(c => c.eot && c.eot.p);
+    enter('The Unbeatable Squirrel Girl', 'Legendary Creature — Human Squirrel', 'Do You Like Squirrels? — Whenever The Unbeatable Squirrel Girl enters or attacks, create a 1/1 green Squirrel creature token.', ['2', '2']);
+    out.squirrel = tokens('Squirrel').length;
+    enter('Invasion Test', 'Creature — Test', 'When this creature enters, create a Treasure token. Then you may discard a card. If you do, draw a card.', ['1', '1']);
+    out.treasure = tokens('Treasure').length; out.waiting = PT.trig.some(t => /discard/.test(t.text || ''));
+    enter('Mabel', 'Legendary Creature — Mouse', 'When Mabel enters, create Cragflame, a legendary colorless Equipment artifact token with "Equipped creature gets +1/+1 and has vigilance, trample, and haste" and equip {2}.', ['3', '3']);
+    out.cragflame = tokens('Cragflame').map(t => t.type).join();
+    return out;
+  });
+  check('fabricate makes its Servo tokens', toks.servo === 1, toks);
+  check('endure makes its Spirit token', toks.spirit === '1/1', toks);
+  check('"create a 0/0 Fractal, put three +1/+1 counters on it": the Fractal is a 3/3 and lives', toks.fractal === '3/3', toks);
+  check('"tokens equal to the number of opponents you have" makes 3', toks.goblins === 3, toks);
+  check('named tokens whose size is "equal to the number of lands" (Beau) are the right size', toks.beau === '3/3', toks);
+  check('a token\'s own quoted ability belongs to the token, not to the card making it', /Target creature you control gets \+1\/\+0/.test(toks.merc) && !toks.mercPumped, toks);
+  check('ability names with punctuation ("Do You Like Squirrels? —") still work', toks.squirrel === 1, toks);
+  check('"Create a Treasure. Then you may discard…": the Treasure comes at once, the choice waits', toks.treasure === 1 && toks.waiting, toks);
+  check('named Equipment tokens (Cragflame) are made', /Legendary Artifact — Equipment/.test(toks.cragflame), toks);
+
   check('no page errors', page.errors.length === 0, page.errors);
   await browser.close();
 };

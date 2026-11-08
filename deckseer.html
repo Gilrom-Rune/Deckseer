@@ -7276,7 +7276,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.08.12";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.08.13";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
@@ -8971,6 +8971,8 @@ function trFits(phrase, c){
 }
 // "When CARDNAME enters or attacks" → [{ev:"etb",who:"self"},{ev:"attack",who:"self"}]
 function trConditions(cond){
+  // "When Ivora enters and whenever it deals combat damage to a player"
+  { const two = cond.match(/^(when(?:ever)? .+?) and (whenever .+)$/); if (two && !/^when(?:ever)? (?:you|a|an|one|each)\b.* and\b/.test(two[1])) { const a = trConditions(two[1]), b = trConditions(two[2].replace(/\b(?:it|they)\b/, "cardname")); if (a.length && b.length) return a.concat(b); } }
   const out = [], c = cond.replace(/^(when|whenever)\s+/, "");
   let m;
   if ((m = c.match(/^at the beginning of (.*)$/))) {
@@ -9025,7 +9027,7 @@ function trConditions(cond){
   const batch = /one or more/.test(subject), nontoken = /\bnontoken\b/.test(subject), tokenOnly = /\btokens?\b/.test(subject) && !nontoken;
   let who, phrase = subject;
   if (/^cardname$/.test(subject)) who = "self";
-  else if (/^cardname or another\b/.test(subject)) { who = "selfOrOther"; phrase = subject.replace(/^cardname or /, ""); }
+  else if (/^cardname or (?:another|an?|one or more)\b/.test(subject)) { who = "selfOrOther"; phrase = subject.replace(/^cardname or /, ""); }
   else if (/^cardname and\b/.test(subject)) { who = "self"; }
   else if (/\banother\b|\bother\b/.test(subject)) who = "other";
   else if (/^(?:a|an|one or more|each)\b/.test(subject)) who = "any";
@@ -9036,6 +9038,19 @@ function trConditions(cond){
   for (const ev of evs) out.push({ev, who, phrase: phrase.replace(/\b(nontoken|tokens?)\b/g, " "), batch, nontoken, tokenOnly});
   return out;
 }
+// " with flying, vigilance, and "{T}: …" and equip {2}": a token's abilities, read up to the end of the sentence (quotes may hold periods)
+function trWithClause(rest){
+  if (!/^ with /.test(rest)) return {raw: "", clause: ""};
+  let i = 6, q = false;
+  for (; i < rest.length; i++) {
+    const ch = rest[i];
+    if (ch === '"') { q = !q; continue; }
+    if (q) continue;
+    if (ch === "." || ch === ";") break;
+    if (/^ (?:equal to|for each|attached to|until|that's|that are|where x)\b/.test(rest.slice(i, i + 16))) break;
+  }
+  return {raw: rest.slice(0, i), clause: rest.slice(6, i).replace(/,\s*$/, "")};
+}
 // Simple effects it can carry out: a list of actions with a short label each
 function trActions(eff, selfName){
   const a = [], e = eff.toLowerCase();
@@ -9044,23 +9059,51 @@ function trActions(eff, selfName){
   // draw
   if ((m = e.match(/\b(?:you )?(?:may )?draws? (a|an|one|two|three|four|five|six|seven|x|\d+) cards?\b/)) && !/\b(?:each opponent|target opponent|that player) draws/.test(e)) a.push({t: "draw", n: trNum(m[1]), x: m[1] === "x", label: `Draw ${m[1] === "x" ? "X" : trNum(m[1])}`});
   // tokens (possibly several "create" clauses)
-  const tokRe = /\bcreate (a|an|one|two|three|four|five|six|seven|x|\d+|that many) (tapped )?(?:(\d+|x)\/(\d+|x) )?((?:[a-z]+(?:,| and)? )*?)(?:(artifact |enchantment )?creature )?tokens?(?: with ([a-z, ]+?))?(?=[.,;]| and | or | that | that's | for each|$)/g;
+  const tokRe = /\bcreate (a number of|a|an|one|two|three|four|five|six|seven|eight|nine|ten|x|\d+|that many) (tapped )?(?:(\d+|x)\/(\d+|x) )?((?:[a-z'-]+(?:,| and)? )*?)(?:(artifact |enchantment )?creature )?tokens?(?: named ([a-z' -]+?))?(?=[.,;]| with | and | or | that | that's | for each| equal to| attached|$)/g;
+  const cap = w => String(w).split(" ").map(x => x ? x[0].toUpperCase() + x.slice(1) : x).join(" ");
   while ((m = tokRe.exec(e))) {
-    const n = trNum(m[1]), words = (m[5] || "").replace(/,| and /g, " ").trim().split(/\s+/).filter(Boolean);
+    if (/\brole$/.test((m[5] || "").trim())) continue;   // Role tokens: read below
+    { const w = trWithClause(e.slice(m.index + m[0].length)); m = Object.assign([...m], {index: m.index}); m[0] += w.raw; m[8] = w.clause || undefined; }
+    const n = m[1] === "a number of" ? 1 : trNum(m[1]), words = (m[5] || "").replace(/,| and /g, " ").trim().split(/\s+/).filter(Boolean);
     if (/\bcopy\b/.test(m[0]) || /\bthat's a copy\b/.test(e.slice(m.index, m.index + 60))) continue;
     const colors = words.filter(w => TR_COLOR_WORD[w]).map(w => TR_COLOR_WORD[w]);
-    const rest = words.filter(w => !TR_COLOR_WORD[w] && w !== "colorless" && w !== "legendary" && w !== "snow");
-    const supers = (m[6] || "").trim();
-    const isCre = !!(m[3] || /creature/.test(m[0]));
-    const nm = rest.map(w => w[0].toUpperCase() + w.slice(1)).join(" ") || (isCre ? "Creature" : "Token");
-    const known = typeof PT_COMMON_TOKENS !== "undefined" ? PT_COMMON_TOKENS.find(t => t.name.toLowerCase() === nm.toLowerCase() && !isCre === !t.power) : null;
-    const def = known && !m[3] ? Object.assign({}, known) : {name: nm, type: `Token ${supers ? supers[0].toUpperCase() + supers.slice(1) + " " : ""}${isCre ? "Creature" : "Artifact"} — ${nm}`.replace(/ Artifact — (Treasure|Clue|Food|Blood|Map|Gold|Powerstone|Junk|Incubator)/i, " Artifact — $1"), power: m[3] && m[3] !== "x" ? m[3] : isCre ? (m[3] || "1") : "", toughness: m[4] && m[4] !== "x" ? m[4] : isCre ? (m[4] || "1") : "", colors, text: m[7] ? m[7].replace(/(^|, )([a-z])/g, (x, p, ch) => p + ch.toUpperCase()) : ""};
+    const TYPES = ["artifact", "enchantment", "land"];
+    const typeW = words.filter(w => TYPES.includes(w)).concat((m[6] || "").trim() ? [(m[6] || "").trim()] : []);
+    const rest = words.filter(w => !TR_COLOR_WORD[w] && !TYPES.includes(w) && !["colorless", "legendary", "snow"].includes(w));
+    const legendary = words.includes("legendary"), snow = words.includes("snow");
+    const isCre = !!(m[3] || /creature tokens?\b/.test(m[0]));
+    const nm = m[7] ? cap(m[7].trim()) : cap(rest.join(" ")) || (isCre ? "Creature" : "Token");
+    const known = typeof PT_COMMON_TOKENS !== "undefined" && !m[7] ? PT_COMMON_TOKENS.find(t => t.name.toLowerCase() === nm.toLowerCase() && !isCre === !t.power) : null;
+    const withTxt = (m[8] || "").replace(/"([^"]*)"/g, (x, q) => "\n" + q.replace(/\bcardname\b/g, nm).replace(/(^|\. |: )([a-z])/g, (y, p0, ch) => p0 + ch.toUpperCase()) + "\n").replace(/(^|\n)([a-z])/g, (x, p0, ch) => p0 + ch.toUpperCase()).replace(/(,? and |, )([a-z{])/g, (x, p0, ch) => "\n" + ch.toUpperCase()).replace(/,? and \n/g, "\n").replace(/^\s*,?\s*|\s*,?\s*$/g, "").replace(/\n\s*,?\s*/g, "\n").replace(/\{([a-z0-9])\}/gi, (x, c) => "{" + c.toUpperCase() + "}");
+    const tline = `Token ${legendary ? "Legendary " : ""}${snow ? "Snow " : ""}${cap(typeW.join(" "))}${isCre ? (typeW.length ? " " : "") + "Creature" : typeW.length ? "" : "Artifact"} — ${cap(rest.join(" ")) || nm}`.replace(/\s+/g, " ").replace(/ Artifact — (Treasure|Clue|Food|Blood|Map|Gold|Powerstone|Junk|Incubator)/i, " Artifact — $1");
+    const def = known && !m[3] ? Object.assign({}, known) : {name: nm, type: tline, power: m[3] && m[3] !== "x" ? m[3] : isCre ? (m[3] || (/power and toughness are each equal/.test(withTxt.toLowerCase()) ? "*" : "1")) : "", toughness: m[4] && m[4] !== "x" ? m[4] : isCre ? (m[4] || (/power and toughness are each equal/.test(withTxt.toLowerCase()) ? "*" : "1")) : "", colors, text: withTxt};
     if (m[2]) def.tapped = true;
     const after = e.slice(m.index + m[0].length), fe = after.match(/^ for each ([a-z ]+?) you control/), choice = /^ or an? /.test(after);
+    const eq = m[1] === "a number of" ? (after.match(/^(?: with [a-z ,]+?)? equal to (?:the )?((?:number of )?[^.]+?)(?=\.|$)/) || [])[1] : null;
     const attacking = /^,? (?:that are |that's |which are )?(?:tapped and )?attacking/.test(after);
     if (attacking) def.tapped = true;
     const perOpp = /for each opponent,? (?:you )?$/.test(e.slice(Math.max(0, m.index - 30), m.index));
-    a.push({t: "token", n, x: m[1] === "x", attacking, many: m[1] === "that many", each: fe ? fe[1] : null, perOpp, span: perOpp ? e.slice(e.lastIndexOf("for each opponent", m.index), m.index + m[0].length) : undefined, def, i: m.index, label: `Create ${fe ? "one per " + trSingular(fe[1].split(" ").pop()) : n > 1 ? n + "×" : ""} ${def.power ? def.power + "/" + def.toughness + " " : ""}${def.name}${choice ? " (or the other choice)" : ""}`.replace(/\s+/g, " ")});
+    const span = perOpp ? e.slice(e.lastIndexOf("for each opponent", m.index), m.index + m[0].length) : eq ? m[0] + after.slice(0, after.indexOf(eq) + eq.length) : m[8] && /"/.test(m[8]) ? m[0] : undefined;
+    a.push({t: "token", n, x: m[1] === "x", count: eq || undefined, attacking, many: m[1] === "that many", each: fe ? fe[1] : null, perOpp, span, def, i: m.index, label: `Create ${eq ? "" : fe ? "one per " + trSingular(fe[1].split(" ").pop()) : n > 1 ? n + "×" : ""} ${def.power && def.power !== "*" ? def.power + "/" + def.toughness + " " : ""}${def.name}${eq ? "s (" + eq.replace(/^number of /, "one per ") + ")" : ""}${choice ? " (or the other choice)" : ""}`.replace(/\s+/g, " ")});
+  }
+  if ((m = e.match(/\bcreate your choice of (?:a|an) ([a-z]+) token,? (?:an? ([a-z]+) token,? )?or (?:a|an) ([a-z]+) token/))) {
+    const opts = [m[1], m[2], m[3]].filter(Boolean), pick = opts.includes("treasure") ? "treasure" : opts[0], known = PT_COMMON_TOKENS.find(t => t.name.toLowerCase() === pick);
+    if (known) a.push({t: "token", n: 1, def: Object.assign({}, known), i: m.index, span: m[0], label: `Create a ${cap(pick)} (your choice: ${opts.join(", ")})`});
+  }
+  // named legendary tokens: "create Beau, a legendary blue Ox creature token with …", "create Mowu, a legendary 3/3 green Dog creature token"
+  if ((m = e.match(/\bcreate ((?:the )?[a-z'-]+(?: [a-z'-]+){0,2}), a legendary (?:(\d+|x)\/(\d+|x) )?((?:[a-z]+ ){0,6}?)(artifact (?:creature )?|creature )token\b/))) {
+    { const w = trWithClause(e.slice(m.index + m[0].length)); m = Object.assign([...m], {index: m.index}); m[0] += w.raw; m[6] = w.clause || undefined; }
+    const words = m[4].trim().split(/\s+/).filter(Boolean), colors = words.filter(w => TR_COLOR_WORD[w]).map(w => TR_COLOR_WORD[w]), sub = words.filter(w => !TR_COLOR_WORD[w] && w !== "colorless");
+    const isCre = /creature/.test(m[5]);
+    const txt = (m[6] || "").replace(/"([^"]*)"/g, (x, q) => q.replace(/\bcardname\b/g, cap(m[1])).replace(/^([a-z])/, c => c.toUpperCase())).replace(/^([a-z])/, c => c.toUpperCase());
+    const cda = /power and toughness are each equal/.test(txt.toLowerCase());
+    const kwTxt = (m[6] || "").replace(/"[^"]*"/g, "").replace(/(^|,? and |, )([a-z])/g, (x, p0, ch) => (p0 ? "\n" : "") + ch.toUpperCase()).replace(/\{([a-z0-9])\}/g, (x, c) => "{" + c.toUpperCase() + "}").trim();
+    const quoted = [...(m[6] || "").matchAll(/"([^"]*)"/g)].map(q => q[1].replace(/^([a-z])/, c => c.toUpperCase())).join("\n");
+    a.push({t: "token", n: 1, def: {name: cap(m[1]), type: `Token Legendary ${/artifact/.test(m[5]) ? "Artifact " : ""}${isCre ? "Creature " : ""}— ${cap(sub.join(" "))}`.replace(/  +/g, " ").replace(" — ", isCre || /artifact/.test(m[5]) ? " — " : " — "), power: isCre || /vehicle/.test(sub.join(" ")) ? (m[2] || (cda ? "*" : "1")) : "", toughness: isCre || /vehicle/.test(sub.join(" ")) ? (m[3] || (cda ? "*" : "1")) : "", colors, text: [quoted, kwTxt].filter(Boolean).join("\n") || txt}, i: m.index, span: m[0], label: `Create ${cap(m[1])}${m[2] ? ` (${m[2]}/${m[3]})` : ""}`});
+  }
+  // Role tokens (Auras): "create a Royal Role token attached to another target creature you control"
+  if ((m = e.match(/\bcreate (?:a|an) ([a-z ]+?) role token attached to (it|cardname|that creature|target creature you control|another target creature you control|up to one target creature you control|target creature|up to one other target creature|target creature an opponent controls)\b/))) {
+    a.push({t: "role", role: m[1].trim(), on: m[2], i: m.index, span: m[0], label: `Create a ${cap(m[1].trim())} Role on ${/opponent/.test(m[2]) ? "an opponent's creature" : /^(it|cardname|that creature)$/.test(m[2]) ? "it" : "your best creature"}`});
   }
   if ((m = e.match(/\bcreate (a|one|two|three|four|five|six|seven|x|\d+) tokens? that(?:'s| are) (?:a )?cop(?:y|ies) of (cardname|it|that creature|that card|target [^.]*)/))) {
     const haste = /\b(?:the|that|those) tokens? (?:gains?|ha(?:s|ve)) haste\b|\bcopy of [^.]*? with haste\b|\bexcept it has haste\b/.test(e);
@@ -9134,6 +9177,12 @@ function trActions(eff, selfName){
   // keep them in the order the card says them ("scry 1, then draw a card")
   for (const x of a) if (x.i == null) { const k = e.indexOf(x.t === "draw" ? "draw" : x.t === "life" ? (x.n > 0 ? "gain" : "lose") : x.t === "opp" ? (/loses/.test(e) ? "loses" : "damage") : x.t === "scry" ? (/surveil/.test(x.label.toLowerCase()) ? "surveil" : "scry") : x.t === "mill" ? "mill" : x.t === "dig" ? "look at" : x.t === "untap" ? "untap" : x.t === "energy" ? "you get" : x.t === "search" ? "search" : x.t === "grave" ? "graveyard" : x.t); x.i = k < 0 ? 999 : k; }
   a.sort((p, q) => p.i - q.i);
+  // abilities in quotes belong to the token (or emblem) being made, not to this effect
+  const quoted = [...e.matchAll(/"[^"]*"/g)].filter(q => /\b(?:tokens?|emblem)\b[^."]*$/.test(e.slice(Math.max(0, q.index - 120), q.index))).map(q => [q.index, q.index + q[0].length]);
+  if (quoted.length) for (let k = a.length - 1; k >= 0; k--) if (a[k].t !== "token" && a[k].i != null && quoted.some(([s0, s1]) => a[k].i > s0 && a[k].i < s1)) a.splice(k, 1);
+  // "create a 0/0 Fractal token. Put three +1/+1 counters on it": the counters go on the new token, after it's made
+  const tk = a.findIndex(x => x.t === "token"), ci = a.findIndex(x => x.t === "counter" && x.on === "it");
+  if (tk >= 0 && ci >= 0 && (a[ci].i == null || a[tk].i == null || a[ci].i > a[tk].i || ci < tk)) { const c = a.splice(ci, 1)[0]; c.onMade = true; a.splice(a.indexOf(a.find(x => x.t === "token")) + 1, 0, c); }
   return a;
 }
 // All triggered abilities on a card (cached by name and text)
@@ -9162,7 +9211,7 @@ function trAbilities(card){
     if (card.name.split(" // ").includes(ab)) continue;   // face names in double-faced card text
     if (/^Max speed\s*—/i.test(ab)) { if (!speed) continue; ab = ab.replace(/^Max speed\s*—\s*/i, ""); }
     if (/^(?:I|II|III|IV|V|VI|VII)(?:, (?:I|II|III|IV|V|VI|VII))* — /.test(ab)) continue;   // saga chapters below
-    const t = trLower(card, ab.replace(/^[A-Z][A-Za-z' ]+ — /, ""));
+    const t = trLower(card, ab.replace(/^[A-Z][A-Za-z' ]+ — /, "").replace(/^[A-Z][^—\n]{0,70}? — (?=When|Whenever|At the beginning|As )/, ""));
     const r = trParseTrig(t, ab, card); if (!r) continue;
     const md = /\n\s*•/.test(ab) ? trModes(ab) : null;
     if (md) { const nm0 = ptFaceName(card); Object.assign(r, {modes: md.lines.map(l => { const e = trLower(card, l); return {text: l, eff: e, actions: trActions(e, nm0)}; }), pick: md.pick, upTo: md.upTo, actions: [], eff: null}); }
@@ -9206,7 +9255,7 @@ const TR_TOPIF = String.raw`\b(?:look at|reveal) the top card of your library\.?
 // Parts of the text that are handled by a later step, so they don't count as "needs a person" now
 const trStripHandled = e => e.replace(/\b(?:it|that creature|that permanent|those creatures|they) (?:doesn't|don't|does not|do not) untap during (?:its|their) controllers?'s? next untap step/g, " ").replace(/\bsacrifice [a-z ,'-]+? unless you sacrifice (?:a|an) [a-z ]+/g, " ").replace(/\bas an additional cost to cast (?:this spell|cardname),? (?:you may )?(?:pay x life|pay \d+ life|behold [^.]*|reveal [^.]*|tap [^.]*)?/g, " ").replace(/\b(?:and )?attacks? this combat if able\b|\bif able\b/g, " ").replace(/\buntil (?:an opponent becomes the monarch|cardname leaves the battlefield|your next turn)\b/g, " ").replace(/\bit's still a land\b|\bthis ability triggers only once each turn\b|\bactivate only (?:as a sorcery|once each turn)\b/g, " ").replace(new RegExp(TR_TOPIF, "g"), " ").replace(/\b(?:cardname|it|that creature) explores\b/g, " ").replace(/\binvestigate(?: twice| three times)?\b/g, " ").replace(/\b(?:at the beginning of (?:the |your )?next end step, )?(?:sacrifice|exile) (?:it|them|that token|those tokens|the token)(?: at the beginning of (?:the |your )?next end step)?(?: unless [^.]*)?/g, " ")
   .replace(/\b(?:the|that|those) tokens? (?:gains?|ha(?:s|ve)) haste(?: until end of turn)?/g, " ");
-function trConditional(text){ return /\bif\b|\bunless\b|\binstead\b/i.test(trStripHandled(String(text || "").toLowerCase().replace(/\([^)]*\)/g, "").replace(/^[^,]*,/, ""))); }   // reminder text doesn't count
+function trConditional(text){ return /\bif\b|\bunless\b|\binstead\b/i.test(trStripHandled(String(text || "").toLowerCase().replace(/\([^)]*\)/g, "").replace(/"[^"]*"/g, " ").replace(/^[^,]*,/, ""))); }   // reminder text doesn't count
 function trCovered(eff, actions){
   let e = String(eff || "").toLowerCase().replace(/\([^)]*\)/g, "");
   for (const a of actions) if (a.span) e = e.split(a.span).join(" ");
@@ -9411,6 +9460,20 @@ function ptPartial(p){
   return !trCovered(p.eff, p.actions);
 }
 function ptAddPrompt(p){
+  // "Create a Treasure token. Then you may discard a card. If you do, draw a card.": the part before the choice happens
+  // on its own, and only the choice waits on the stack
+  if (p.fresh && p.conditional && !p.modes && !p.choice && !p._split && p.eff && (p.actions || []).length && !/\b(?:instead|this way|that card|those cards)\b/.test(p.eff)) {
+    const sents = String(p.eff).split(/(?<=\.)\s+|,? then (?=you may\b|if\b)/).filter(x => x.trim());
+    const k = sents.findIndex(x => /\byou may\b/.test(x) || trConditional("x, " + x));
+    if (k > 0) {
+      const lead = sents.slice(0, k).join(" "), rest = sents.slice(k).join(" ");
+      const la = trActions(lead, p.srcName), ra = trActions(rest, p.srcName);
+      if (la.length && trCovered(lead, la) && !la.some(ptNeedsPick)) {
+        ptAddPrompt(Object.assign({}, p, {_split: true, eff: lead, actions: la, conditional: false, may: false}));
+        return ptAddPrompt(Object.assign({}, p, {_split: true, eff: rest, actions: ra, conditional: true, text: `${p.srcName}, then: ${rest.replace(/^then /, "")}`}));
+      }
+    }
+  }
   if (PT.trig.length >= 1500) { PT.chain = Object.assign(PT.chain || {}, {capped: (PT.chain && PT.chain.capped || 0) + 1}); return; }   // runaway safety net, shown in the stack
   PT.trig.push(Object.assign({id: ++ptTrigId + "-" + Date.now() % 1e6}, p));
 }
@@ -9515,7 +9578,7 @@ function ptResolve(p){
     }
     else if (a.t === "fromexile") { const f = ptFind(a.uid); if (f && f.zone === "exile") ptMove(a.uid, "bf", {cast: false}); done.push(a.label); }
     else if (a.t === "counter") {
-      const targets = a.on === "self" ? (src && src.zone === "bf" ? [src.card] : []) : a.on === "it" ? (it && it.zone === "bf" ? [it.card] : src && src.zone === "bf" ? [src.card] : [])
+      const targets = a.on === "self" ? (src && src.zone === "bf" ? [src.card] : []) : a.onMade && ctx.made && ctx.made.length ? ctx.made.map(u => PT.bf.find(c => c.uid === u)).filter(Boolean) : a.on === "it" ? (it && it.zone === "bf" ? [it.card] : src && src.zone === "bf" ? [src.card] : [])
         : a.on === "all" ? PT.bf.filter(ptIsCreature) : a.on === "allOther" ? PT.bf.filter(c => ptIsCreature(c) && c.uid !== p.srcUid) : a.on === "each" ? PT.bf.filter(c => trFits(a.each, c))
         : a.on === "host" ? (src && src.card.att != null ? PT.bf.filter(c => c.uid === src.card.att) : [])
         : a.on === "target" && (a.tn || 1) > 1 && ptAuto() ? PT.bf.filter(c => ptIsCreature(c) && c.uid !== p.srcUid).sort((x, y) => ptPow(y) - ptPow(x)).slice(0, a.tn) : null;
@@ -10166,6 +10229,14 @@ function ptKwList(s){
 // What an Aura or Equipment gives the creature it's attached to
 function ptAttachBonus(a){
   const t = ptFaceText(a).replace(/\([^)]*\)/g, "");
+  // "Equipped creature gets +X/+1, where X is the number of artifacts you control" / "+1/+1 for each …"
+  const xm = t.match(/(?:equipped|enchanted) creature gets ([+-](?:\d+|x))\/([+-](?:\d+|x))(?: for each ([^.,\n]+)|,? where x is ([^.\n]+))/i);
+  if (xm) {
+    let k = 0; try { k = ptCount((xm[3] || xm[4]).toLowerCase(), {src: {card: a}}); } catch (e) { k = 0; }
+    const v = s => /x/i.test(s) ? (s[0] === "-" ? -k : k) : xm[3] ? +s * k : +s;
+    const rest = t.match(/(?:equipped|enchanted) creature (?:gets [^.\n]*? and )?(?:has|gains) ([^.\n]+)/i);
+    return {p: v(xm[1]), t: v(xm[2]), kws: rest ? ptKwList(rest[1]) : []};
+  }
   const m = t.match(/(?:equipped|enchanted|fortified) (?:creature|permanent|land)(?: gets ([+-]\d+)\/([+-]\d+))?(?: and)? (?:has|gains|have) ([^.\n]+)/i) || t.match(/(?:equipped|enchanted) creature gets ([+-]\d+)\/([+-]\d+)/i);
   return {p: m && m[1] ? +m[1] : 0, t: m && m[2] ? +m[2] : 0, kws: m && m[3] ? ptKwList(m[3]) : []};
 }
@@ -10201,6 +10272,7 @@ function ptKws(c){
 const ptKwRule = key => { const k = PT_KW_BY.get(key); return k ? `${k.name} (702.${k.n}): ${k.rule}` : ""; };
 
 /* ----- power and toughness ----- */
+const ptSelfPumpCache = new Map();
 function ptStats(c){
   if (!c) return null;
   let p = parseInt(c.power), t = parseInt(c.toughness);
@@ -10215,6 +10287,9 @@ function ptStats(c){
   const cs = c.counters || {}, d = (cs.p1p1 || 0) - (cs.m1m1 || 0), [ap, at] = ptAnthemOf(c);
   p += d + ap; t += d + at;
   if (c.eot) { p += c.eot.p || 0; t += c.eot.t || 0; }
+  { const ft = ptFaceText(c), key = c.name + "|" + ft; let own = ptSelfPumpCache.get(key);
+    if (own === undefined) { own = /\bfor each\b/.test(ft) ? trLower(c, ft).match(/\b(?:cardname|this token|this creature) gets ([+-]\d+)\/([+-]\d+) for each ([^.]+)/) : null; if (ptSelfPumpCache.size > 2000) ptSelfPumpCache.clear(); ptSelfPumpCache.set(key, own); }
+    if (own && PT) { let k = 0; try { k = ptCount(own[3], {src: {card: c}}); } catch (e) { k = 0; } p += +own[1] * k; t += +own[2] * k; } }
   if (PT && PT.bf.includes(c)) for (const a of PT.bf) if (a.att === c.uid && !a.faceDown) { const b = ptAttachBonus(a); p += b.p; t += b.t; }
   return [p, t];
 }
@@ -10236,7 +10311,12 @@ const ptTou = c => { const s = ptStats(c); return s ? s[1] : 0; };
 function ptCount(expr, ctx){
   if (!PT) return 0;
   let e = String(expr || "").toLowerCase().trim().replace(/[.,;]$/, "").replace(/^(?:the )?/, "");
+  e = e.replace(/^number of /, "");   // every pattern below reads the same with or without "the number of"
   if (/^(?:life lost this way|damage dealt this way)$/.test(e)) return PT.lastLost || 0;   // a drain: what the opponents lost just before
+  if (/^(?:number of )?opponents you have$/.test(e)) return PT.opps ? ptLiveOpps().length : 1;
+  if (/^(?:number of )?differently named lands you control$/.test(e)) return new Set(PT.bf.filter(c => ptIsLand(c) && !c.faceDown).map(c => c.name)).size;
+  if (/^(?:number of )?colors among permanents you control$/.test(e)) return new Set(PT.bf.filter(c => !c.faceDown).flatMap(c => c.colors || [])).size;
+  { const nm = e.match(/^(?:number of )?(other )?creatures you control named (.+)$/); if (nm) { const srcC = ctx && ctx.src ? (ctx.src.card || ctx.src) : null; const name = nm[2] === "cardname" && srcC ? srcC.name : nm[2]; return PT.bf.filter(c => ptIsCreature(c) && c.name.toLowerCase() === String(name).toLowerCase() && !(nm[1] && srcC && c.uid === srcC.uid)).length; } }
   const src = ctx && ctx.src ? (ctx.src.card || ctx.src) : null, it = ctx && ctx.it ? (ctx.it.card || ctx.it) : null, p = ctx && ctx.p;
   let m;
   if (/^(?:x|that much|that many)$/.test(e)) return p && p.amount != null ? p.amount : 1;
@@ -10633,7 +10713,7 @@ const PT_KW_TRIG = {
   "evolve": () => "whenever another creature you control enters, if that creature has greater power or toughness than cardname, put a +1/+1 counter on cardname.",
   "extort": () => "whenever you cast a spell, each opponent loses 1 life and you gain 1 life.",
   "afterlife": v => `when cardname dies, create ${trWord(v)} 1/1 white and black spirit creature token${+v > 1 ? "s" : ""} with flying.`,
-  "fabricate": v => `when cardname enters, put ${trWord(v)} +1/+1 counter${+v > 1 ? "s" : ""} on cardname.`,
+  "fabricate": v => `when cardname enters, create ${trWord(v)} 1/1 colorless servo artifact creature token${+v > 1 ? "s" : ""}.`,   // the choice is yours; it makes the tokens (counters: right-click → counters)
   "modular": () => ({cond: "when cardname dies", actions: [{t: "modular", label: "Move its +1/+1 counters to an artifact creature"}]}),
   "renown": v => ({cond: "whenever cardname deals combat damage to a player", check: "renown", actions: [{t: "counter", n: +v || 1, kind: "p1p1", on: "self", label: `${v} +1/+1 counter${+v > 1 ? "s" : ""} (renowned)`}, {t: "flag", k: "renowned", on: "cardname", label: "It becomes renowned"}]}),
   "annihilator": v => ({cond: "whenever cardname attacks", actions: [{t: "oppNone", label: `Defending player sacrifices ${v} permanent${+v > 1 ? "s" : ""} (not tracked here)`}]}),
@@ -10756,7 +10836,7 @@ const trNameRe = new Map();
 function trLower(card, s){
   const key = card.name;
   if (!trNameRe.has(key)) { const names = new Set([card.name]); for (const p0 of card.name.split(" // ")) for (const part of [p0, p0.replace(/^A-/, "")]) { names.add(part); if (part.includes(",")) names.add(part.split(",")[0]); } trNameRe.set(key, new RegExp("\\b(" + [...names].sort((a, b) => b.length - a.length).map(trEsc).join("|") + ")\\b", "gi")); }
-  return String(s || "").replace(/\([^)]*\)/g, "").replace(trNameRe.get(key), "CARDNAME").replace(/\bthis (creature|permanent|artifact|enchantment|land|planeswalker|vehicle|card|spell|equipment|aura|saga|token|battle|class|case|room)\b/gi, "CARDNAME").toLowerCase()
+  return String(s || "").replace(/\([^)]*\)/g, "").replace(trNameRe.get(key), "CARDNAME").replace(/\bthis (creature|permanent|artifact|enchantment|land|planeswalker|vehicle|card|spell|equipment|aura|saga|token|battle|class|case|room|spacecraft|planet|siege|kindred)\b/gi, "CARDNAME").toLowerCase()
     .replace(/enters the battlefield under your control/g, "enters").replace(/enters the battlefield/g, "enters").replace(/\s+/g, " ").trim();
 }
 /* ----- choosing for you: targets, sacrifices, discards, searches ----- */
@@ -10927,6 +11007,21 @@ function ptResolve2(a, p, ctx){
       ptLog(`${nm}: ${a.label}${t && t.how ? " (no opponent has one to hit)" : ""}.`); break;
     }
     case "note": ptLog(`${nm}: ${a.label}.`); break;
+    case "role": {
+      if (/opponent/.test(a.on)) { const x = ptOppTargets({phrase: "creature"})[0]; ptLog(`${nm}: a ${trCap(a.role)} Role goes on ${x ? x.o.name + "'s " + x.b.name : "an opponent's creature"} (tracked by hand).`); break; }
+      const host = /^(it|cardname|that creature)$/.test(a.on) ? (ctx.it && ctx.it.zone === "bf" ? ctx.it.card : sc && PT.bf.includes(sc) ? sc : null)
+        : PT.bf.filter(c => ptIsCreature(c) && !(/another|other/.test(a.on) && sc && c.uid === sc.uid)).sort((x, y) => ptPow(y) - ptPow(x))[0];
+      if (!host) { ptLog(`${nm}: no creature for the ${trCap(a.role)} Role.`); break; }
+      const ROLE = {royal: "Enchanted creature gets +1/+1 and has ward {1}.", monster: "Enchanted creature gets +1/+1 and has trample.", wicked: "Enchanted creature gets +2/+1.\nWhen this Aura is put into a graveyard from the battlefield, each opponent loses 1 life.",
+        "young hero": "Enchanted creature has \"Whenever this creature attacks, if its toughness is 3 or less, put a +1/+1 counter on it.\"", sorcerer: "Enchanted creature gets +1/+1 and has \"Whenever this creature attacks, scry 1.\"",
+        virtuous: "Enchanted creature gets +1/+1 for each enchantment you control.", cursed: "Enchanted creature has base power and toughness 1/1.", huntsman: "Enchanted creature gets +1/+1 and has \"{T}: Add {G}.\""};
+      const r = trCap(a.role), t = ptMakeCard({name: `${r} Role`, type: "Token Enchantment — Aura Role", text: ROLE[a.role] || "Enchanted creature gets +1/+1.", colors: []}, {token: true});
+      [t.x, t.y] = ptPlace(t); t.z = ++PT.z; t.since = PT.turn; t.att = host.uid;
+      // a creature can only have one Role from you: a new one replaces the old
+      for (const o of PT.bf.filter(o => o.att === host.uid && /\bRole\b/.test(o.type || ""))) ptMove(o.uid, "grave");
+      PT.bf.push(t); ptEmit("token", t); ptEmit("etb", t);
+      ptLog(`${nm}: a ${r} Role on ${ptNameOf(host)}.`); break;
+    }
     case "oppAll": {
       for (const o of PT.opps || []) for (const b of o.board.slice()) {
         if (a.how === "tap") b.tapped = true; else if (a.how === "noblock") b.noBlock = PT.turn; else ptHitOppCre({o, b}, "shrink", nm, 0, {p: a.p, t: a.tt});
@@ -11072,9 +11167,9 @@ function ptResolve2(a, p, ctx){
       const t = PT.bf[PT.bf.length - 1]; ptAddCounters(t.uid, "p1p1", n); ptLog(`${nm}: incubate ${n}.`); break;
     }
     case "endure": {
-      const who = a.on === "cardname" ? sc : ((ctx.it || src || {}).card || sc);
-      if (who && PT.bf.includes(who) && n > 0) ptAddCounters(who.uid, "p1p1", n);
-      ptLog(`${nm}: endure ${n} (+1/+1 counters).`); break;
+      // endure N: +1/+1 counters, or an N/N white Spirit token. It makes the token (you can undo and add counters instead).
+      if (n > 0) { ptCreateToken({name: "Spirit", type: "Token Creature — Spirit", power: String(n), toughness: String(n), colors: ["W"], text: ""}, ptTokenMult({type: "Token Creature — Spirit"})); }
+      ptLog(`${nm}: endure ${n} (made a ${n}/${n} Spirit token).`); break;
     }
     case "forage": {
       if (PT.grave.length >= 3) { const ex = ptWorstCards(PT.grave).slice(0, 3); ex.forEach(c => { PT.grave.splice(PT.grave.indexOf(c), 1); PT.exile.push(c); }); ptLog(`${nm}: foraged (exiled ${ex.map(c => c.name).join(", ")}).`); }

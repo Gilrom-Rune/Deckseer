@@ -326,3 +326,23 @@ Lessons from running it on Colab (all fixed in the script): Scryfall's bulk-data
   - Emerge also subtracts the mana value of the creature `ptEmergeSac` picks, and sacrifices it as part of paying.
 - The card menu shows "Evoke {4} → {2}" when reductions change it. Hand cards also glow when only an alternative way (`PT_WAY_GLOW`) is affordable.
 - The 3,000-game simulator now reduces evoke costs too (`evokePay` goes through `reduced`). The finder already did.
+
+## Tokens made as cards enter (2026.11.08.13)
+Checked with every card whose enter ability creates tokens (848). Cast in Auto mode without automatic choosing, 681 now make their tokens by themselves, up from 569. The rest have an unmet condition ("if you attacked this turn"), X = 0, an optional cost not paid (kicker, offspring, squad, bargain), or a real choice first ("you may sacrifice… if you do").
+
+**Fixed**
+- `ptCount` dropped "the" but not "number of", so most "the number of X you control" counts were 0. This affected token counts, sizes, X values and more across the Playtest. New counts: opponents you have, differently named lands, colors among permanents, other creatures named ….
+- Fabricate and endure make the tokens (fabricate's Servos, endure's Spirit); you can undo and add counters instead.
+- "Create a 0/0 … token. Put N +1/+1 counters on it": the counters follow the token and go on it (`onMade`).
+- A card's own "gets +1/+1 for each …" (Urza's Construct), and Equipment "+X/+N where X is / for each …" (`ptAttachBonus`).
+
+**Token reader**
+- "a number of … tokens equal to …" (`count`), tokens "named …", named legendary tokens including non-creatures ("Beau, a legendary blue Ox…", Cragflame, The Blackjack), "your choice of a Clue, Food or Treasure" (makes a Treasure), and Role tokens (`role`: the Role's text, attached to your best creature, replacing an older Role).
+- The "with …" part is read by `trWithClause`, a linear scanner, after an exponential regex froze on Mechtitan Core. It handles quoted abilities, numbered keywords and equip costs.
+- Abilities in quotes belong to the token: actions inside them are dropped, and "unless" inside them no longer makes the effect conditional.
+
+**Triggers**
+- Ability names with punctuation are stripped ("Do You Like Squirrels? —").
+- "When X enters and whenever …" gives both conditions. "this … or a/an … enters" counts as self or other.
+- "this Spacecraft/Planet/Siege" reads as the card's own name.
+- `ptAddPrompt` splits "Create a Treasure. Then you may …": the part with no choice resolves on its own, and only the choice waits.
