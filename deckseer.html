@@ -973,7 +973,18 @@ img.noimg{visibility:hidden}
 .pt-hand-head{display:flex;gap:8px;align-items:baseline;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin-bottom:0}
 .pt-hand-note{text-transform:none;letter-spacing:0;font-weight:500;font-size:.72rem}
 .pt-hand .ptc.can-cast{box-shadow:0 0 0 3px #f0b429,0 0 14px 3px rgba(240,180,41,.7)}
-.pt-pool{cursor:pointer;border-color:#3fb950;color:var(--ink);font-family:var(--mono,monospace)}
+.pt-pool{display:inline-flex;align-items:center;gap:6px;padding:3px 8px 3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--sunk);cursor:pointer;font:inherit;color:var(--ink)}
+.pt-pool>span:first-child{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.pt-pool-list{display:inline-flex;gap:3px;align-items:center}
+.mana-pip{--c:#cac5c0;width:22px;height:22px;border-radius:50%;display:inline-grid;place-items:center;font-size:.72rem;font-weight:800;line-height:1;background:var(--c);color:#111;box-shadow:inset 0 -2px 0 rgba(0,0,0,.25),0 1px 2px rgba(0,0,0,.35);border:1px solid rgba(0,0,0,.35);position:relative}
+.mana-pip.W{--c:#f8f2cf}.mana-pip.U{--c:#3d8fd6;color:#fff}.mana-pip.B{--c:#2b2523;color:#f2ece6}.mana-pip.R{--c:#e0533b;color:#fff}.mana-pip.G{--c:#2f9a52;color:#fff}.mana-pip.C{--c:#b9b2ab;border-radius:5px;transform:rotate(45deg) scale(.82)}.mana-pip.C>i{transform:rotate(-45deg)}
+.mana-pip.multi{color:#fff;text-shadow:0 1px 2px #000}
+.mana-pip>i{font-style:normal}
+.mana-pip.only::after{content:"";position:absolute;right:-3px;bottom:-3px;width:9px;height:9px;border-radius:50%;background:#f0b429;border:1px solid #6b4e00}
+.mana-pip.new{animation:manaPop .45s ease-out}
+@keyframes manaPop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.18)}100%{transform:scale(1)}}
+.mana-pip.C.new{animation:none}
+.pt-pool-n{font-size:.75rem;font-weight:700;color:var(--muted)}
 .pt-hand-head b{font:700 .85rem var(--f-mono);color:var(--ink)}
 .pt-hand-cards{display:flex;gap:8px;overflow-x:auto;overflow-y:visible;padding:8px 4px 2px;min-height:calc(var(--g) * 7.28 + 10px);border:1px dashed transparent;border-radius:10px;align-items:flex-end}
 .pt-hand-cards .ptc{flex:0 0 auto;width:calc(var(--g) * 5.2);height:calc(var(--g) * 7.28);transition:transform .12s}
@@ -7265,7 +7276,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.08.9";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.08.10";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
@@ -7526,7 +7537,7 @@ function ptPlace(card){
   return [1, lanes[0]];
 }
 function ptClean(card){ card.tapped = false; card.counters = {}; card.faceDown = false; card.back = false; delete card.x; delete card.y;
-  for (const k of ["evoked", "blitz", "dash", "unearthed", "disturbed", "kicked", "haste", "kw", "att", "eot", "dmg", "dt", "regen", "used", "pwTurn", "pwSet", "saddled", "renowned", "monstrous", "suspected", "anim", "cloak", "impending", "bestowed", "exerted", "proto", "paid", "overloaded", "entwined", "castFace", "attackedTurn", "harnessed", "earth", "fromHand"]) delete card[k];
+  for (const k of ["evoked", "blitz", "dash", "unearthed", "disturbed", "kicked", "haste", "kw", "att", "eot", "dmg", "dt", "regen", "used", "pwTurn", "pwSet", "saddled", "renowned", "monstrous", "suspected", "anim", "cloak", "impending", "bestowed", "exerted", "proto", "paid", "overloaded", "entwined", "castFace", "attackedTurn", "harnessed", "earth", "fromHand", "wasCast"]) delete card[k];
   if (card.orig) { Object.assign(card, card.orig); delete card.orig; } }
 // Move a card between zones. opts: {x, y} squares on the battlefield, {bottom} for the library, {faceDown}
 function ptMove(uid, to, opts = {}){
@@ -7555,7 +7566,7 @@ function ptMove(uid, to, opts = {}){
       ptEnterReplace(card, from);
       if (ptIsSaga(card) && !card.faceDown) ptAddCounters(card.uid, "lore", 1);
       if (ptIsLand(card) && from === "hand") ptEmit("landplay", card);
-      else if (castIt && !card.faceDown) { PT.castN++; if (from === "exile") PT.exileCastN = (PT.exileCastN || 0) + 1; ptEmit("cast", card, {nth: PT.castN, from, exileNth: from === "exile" ? PT.exileCastN : 0}); }
+      else if (castIt && !card.faceDown) { card.wasCast = true; PT.castN++; if (from === "exile") PT.exileCastN = (PT.exileCastN || 0) + 1; ptEmit("cast", card, {nth: PT.castN, from, exileNth: from === "exile" ? PT.exileCastN : 0}); }
       ptEmit("etb", card);
     }
     return;
@@ -7597,7 +7608,7 @@ function ptNextTurn(){
   });
   PT.castN = 0; PT.drawN = 0; PT.exileCastN = 0;
   ptLog(`${extra ? "Extra turn! " : ""}Turn ${PT.turn}: untapped.`);
-  if (!extra) { ptOppsFix(); ptOppGrow(); }
+  if (!extra) { ptOppsFix(); for (const o of PT.opps) for (const b of o.board) b.tapped = false; ptOppGrow(); }
   ptEmit("upkeep"); ptUpkeepRules();
   for (const u of PT.rebound || []) { const f = ptFind(u); if (f && f.zone === "exile") ptAddPrompt({srcUid: u, srcName: f.card.name, img: f.card.img, kind: "rebound", text: "Rebound: cast it again from exile without paying its mana cost.", actions: [{t: "recast", uid: u, label: `Cast ${f.card.name} again`}], fresh: true}); }
   PT.rebound = [];
@@ -7740,7 +7751,7 @@ function ptCounter(uid, kind, delta){
 function ptCopy(uid, n = 1){
   const f = ptFind(uid); if (!f) return []; const src = f.card, made = [];
   for (let i = 0; i < n; i++) {
-    const t = Object.assign({}, src, {uid: ++ptUid, token: true, copyOf: src.name, tapped: false, counters: {}, faceDown: false, commander: false, back: src.back, z: ++PT.z,
+    const t = Object.assign({}, src, {uid: ++ptUid, token: true, copyOf: src.name, tapped: false, counters: {}, faceDown: false, commander: false, back: src.back, z: ++PT.z, wasCast: false, fromHand: false,
       evoked: false, blitz: false, dash: false, unearthed: false, disturbed: false, kicked: false, haste: false});
     [t.x, t.y] = ptPlace(t);   // copies fan out together in the next free spot of the right lane
     t.since = PT.turn; PT.bf.push(t); ptEmit("token", t); ptEmit("etb", t); made.push(t.uid);
@@ -7985,7 +7996,7 @@ function ptPlan(cost, spell, opts = {}){
     if (++nodes > 20000 || best) return;
     if (k === order.length) {
       // generic: anything left, cheapest first; a multi-unit source already tapped is free to finish
-      const tapped = new Set(assign.filter(a => a.s.kind === "src").map(a => a.s.si));
+      const tapped = new Set(assign.filter(a => a.s && a.s.kind === "src").map(a => a.s.si));
       const rest = supply.filter(s => !used.has(key(s)) && s.unit.some(o => !o.only || ptOnlyOk(o.only, spell))).sort((a, b) => ((a.kind === "src" && tapped.has(a.si)) ? -20 : a.score) - ((b.kind === "src" && tapped.has(b.si)) ? -20 : b.score));
       let g = generic; const gen = [];
       for (const s of rest) { if (g <= 0) break; const o = s.unit.find(o => !o.only || ptOnlyOk(o.only, spell)); gen.push({s, o}); if (s.kind === "src") tapped.add(s.si); g--; }
@@ -8037,6 +8048,25 @@ function ptApplyPlan(plan, what){
   if (plan.left.length) PT.pool.push(...plan.left);
   const names = [...new Set(plan.paidWith)];
   ptLog(`Paid for ${what} with ${names.join(", ") || "nothing"}${loss ? ` (lost ${loss} life)` : ""}${plan.left.length ? ` · ${plan.left.length} mana left floating` : ""}.`);
+}
+// The mana pool as real mana symbols: one coloured circle per mana (split when it can be more than one colour)
+const PT_PIP_COL = {W: "#f8f2cf", U: "#3d8fd6", B: "#2b2523", R: "#e0533b", G: "#2f9a52", C: "#b9b2ab"};
+function ptPipHtml(u, isNew){
+  const cs = [...new Set(u.map(o => o.c))].filter(c => PT_PIP_COL[c]), only = u.some(o => o.only);
+  const from = u[0] && u[0].from ? ` from ${u[0].from}` : "";
+  const what = cs.length >= 5 ? "one mana of any colour" : cs.length > 1 ? cs.join(" or ") : cs[0] === "C" ? "colourless" : {W: "white", U: "blue", B: "black", R: "red", G: "green"}[cs[0]];
+  const tip = `${what}${from}${only ? ` (only for ${u.find(o => o.only).only} spells)` : ""}`;
+  if (cs.length === 1) return `<span class="mana-pip ${cs[0]}${only ? " only" : ""}${isNew ? " new" : ""}" title="${esc(tip)}"><i>${cs[0]}</i></span>`;
+  const step = 360 / cs.length, bg = `conic-gradient(${cs.map((c, i) => `${PT_PIP_COL[c]} ${i * step}deg ${(i + 1) * step}deg`).join(",")})`;
+  return `<span class="mana-pip multi${only ? " only" : ""}${isNew ? " new" : ""}" style="--c:${bg};background:${bg}" title="${esc(tip)}"><i>${cs.length >= 5 ? "★" : ""}</i></span>`;
+}
+let ptPoolSeen = 0;
+function ptPoolHtml(){
+  const pool = PT.pool || []; if (!pool.length) { ptPoolSeen = 0; return ""; }
+  const fresh = pool.length > ptPoolSeen ? ptPoolSeen : pool.length; ptPoolSeen = pool.length;
+  const order = {W: 0, U: 1, B: 2, R: 3, G: 4, C: 5};
+  const list = pool.map((u, i) => ({u, i})).sort((a, b) => (a.u.length - b.u.length) || ((order[a.u[0].c] ?? 9) - (order[b.u[0].c] ?? 9)));
+  return `<button type="button" class="pt-pool" data-pt="pool" title="Your mana pool: it's spent first when you cast something, and empties at the end of the turn. Click to empty it now." aria-label="Mana pool: ${pool.length} mana. Click to empty it."><span>Mana</span><span class="pt-pool-list">${list.map(x => ptPipHtml(x.u, x.i >= fresh)).join("")}</span>${pool.length > 6 ? `<span class="pt-pool-n">${pool.length}</span>` : ""}</button>`;
 }
 const ptPoolTxt = () => (PT.pool || []).map(u => u.length >= 5 ? "{any}" : u.length > 1 ? "{" + u.map(o => o.c).join("/") + "}" : "{" + u[0].c + "}").join("");
 // Add mana to the pool: rituals, Treasures and lands you tap by hand
@@ -8120,7 +8150,7 @@ function ptRender(){
   $("ptTop").innerHTML = `
     <div class="pt-title"><b>${esc(PT.name)}</b><span class="pt-turn">${PT.phase === "play" ? `Turn ${PT.turn}` : "Opening hand"}</span></div>
     ${lifeCtl("life", "Life", "♥")}${PT.poison || PT.showPoison ? lifeCtl("poison", "Poison", "☠") : ""}${PT.energy || PT.showEnergy ? lifeCtl("energy", "Energy", "ϟ") : ""}
-    ${(PT.pool || []).length ? `<button type="button" class="pt-chip pt-pool" data-pt="pool" title="Mana in your pool. It's spent first when you cast something, and empties at the end of the turn. Click to empty it now.">Mana ${esc(ptManaTxt(ptPoolTxt()))}</button>` : ""}${PT.speed ? `<span class="pt-chip" title="Your speed (goes up once a turn when the opponent loses life on your turn)">Speed ${PT.speed}</span>` : ""}${PT.monarch ? `<span class="pt-chip" title="You're the monarch: draw at your end step">👑 Monarch</span>` : ""}${PT.day ? `<span class="pt-chip">${PT.day === "night" ? "☾ Night" : "☀ Day"}</span>` : ""}${PT.extraTurns ? `<span class="pt-chip">+${PT.extraTurns} extra turn${PT.extraTurns > 1 ? "s" : ""}</span>` : ""}${PT.story ? `<span class="pt-chip" title="You have an enduring story">Storied</span>` : ""}
+    ${ptPoolHtml()}${PT.speed ? `<span class="pt-chip" title="Your speed (goes up once a turn when the opponent loses life on your turn)">Speed ${PT.speed}</span>` : ""}${PT.monarch ? `<span class="pt-chip" title="You're the monarch: draw at your end step">👑 Monarch</span>` : ""}${PT.day ? `<span class="pt-chip">${PT.day === "night" ? "☾ Night" : "☀ Day"}</span>` : ""}${PT.extraTurns ? `<span class="pt-chip">+${PT.extraTurns} extra turn${PT.extraTurns > 1 ? "s" : ""}</span>` : ""}${PT.story ? `<span class="pt-chip" title="You have an enduring story">Storied</span>` : ""}
     <span class="sp"></span>
     <div class="pt-actions">
       <button class="btn" type="button" data-pt="draw" title="Draw a card (D)">Draw</button>
@@ -8355,6 +8385,7 @@ function ptRenderView(){
   const title = {grave: "Graveyard", exile: "Exile", search: "Search your library", scry: `Scry ${v.n}`, look: `Top ${v.n} of your library`}[v.kind];
   const acts = v.kind === "scry" ? [["top", "Keep on top"], ["bottom", "Bottom"], ["grave", "Graveyard"]]
     : [["hand", "Hand"], ["bf", "Battlefield"], ...(zone !== "grave" ? [["grave", "Graveyard"]] : []), ...(zone !== "exile" ? [["exile", "Exile"]] : []), ...(zone !== "lib" ? [["lib", "Library top"]] : [["libBottom", "Bottom"]])];
+  if (v.kind === "exile" && PT.phase === "play") acts.unshift(["play", "Play", true]);
   if (v.kind === "search") {
     acts.splice(acts.findIndex(x => x[0] === "libBottom"), 0, ["top", "Top"]);
     if (v.to) { const want = {hand: "hand", bf: v.tapped ? "bfTapped" : "bf", top: "top", grave: "grave", bottom: "libBottom"}[v.to]; const lbl = {hand: "Into your hand", bf: "Onto the battlefield", bfTapped: "Onto the battlefield tapped", top: "On top (after the shuffle)", grave: "Into your graveyard", libBottom: "On the bottom"}[want];
@@ -8454,7 +8485,7 @@ function ptHelp(){
     <p><b>⚡ Trigger helper.</b> When something happens that one of your cards cares about (a card enters, you cast a spell, a creature dies, your upkeep or end step, you gain life, you attack…), the helper steps in. In <b>Auto</b> mode the simple ones just happen (draw, tokens, life, counters, damage to your opponent, mill) and a green note says what it did. Anything with a choice, a target or an “if” waits in the tray: <b>Do it</b> carries out the parts it understands, the rest is a reminder to do by hand. <b>Ask</b> mode puts every trigger in the tray. Click the ⚡ button to switch. It reads the card's wording, so now and then it asks when a condition isn't met: just Skip. Mute stops a card asking for the rest of the game.</p>
     <p>It also knows the usual rules-changers on your table: token and counter doublers (Doubling Season, Parallel Lives, Hardened Scales, Winding Constrictor), life and damage doublers (Boon Reflection, Torbran, Fiery Emancipation), extra triggers (Panharmonicon, Yarok, Teysa, Drivnod, Isshin, Veyran), stat boosts and abilities other cards give (anthems, lords, haste, vigilance, lifelink, double strike), blinking and rebound (Ephemerate), clones, cascade, discover and afterlife.</p>
     <p><b>Rules engine.</b> All 195 keyword abilities and 71 keyword actions from the Comprehensive Rules are recognised (hover a card to see its keywords; ⋯ → Rules lookup to read any of them). In Auto mode these happen on their own: keyword triggers (prowess, exalted, afterlife, mobilize, evolve, training, extort and the rest), instants and sorceries (removal, wipes, pumps, burn, card draw, tutors for lands and typed cards, reanimation, extra turns, modal spells: click the mode), sagas, planeswalker loyalty, Equipment and Auras (drag one onto a creature to attach it), vehicles, and the state-based actions: 0 toughness, lethal damage, legend rule, auras falling off, poison. Right-click a permanent to use its abilities (mana rocks, Clues, Treasures, equip, crew, loyalty…). When a card needs you to choose (a target, what to sacrifice, discard, return or search for, what to equip or crew with, what a Clone copies), the choices open in the side panel: click the cards and press Done, or press <b>Pick for me</b>. Close the panel to decide later: the choice waits on the stack. To have every choice made for you, turn on ⋯ → Make choices for me. The opponent is only a life total here, so anything aimed at their permanents or spells is noted and skipped. Mana isn't counted: costs are assumed paid, and X is your land count minus the rest of the cost.</p>
-    <p><b>Opponents.</b> The strip under the top bar shows each opponent (3 in Commander; change it in ⋯ → Settings) with their life, poison and commander damage. Click a name to aim at that opponent: "target opponent" and "any target" effects hit them, "each opponent" effects hit everyone. Give them creatures with <b>+ Creature</b> (quick ones, your own, or a real card), or use their ⋯ menu to let their board grow each turn like a typical deck or like one of your decks. An opponent is out at 0 life, 10 poison or 21 damage from one commander, and you win when they're all out.</p>
+    <p><b>Opponents.</b> The strip under the top bar shows each opponent (3 in Commander; change it in ⋯ → Settings) with their life, poison and commander damage. Click a name to aim at that opponent: "target opponent" and "any target" effects hit them, "each opponent" effects hit everyone. Give them creatures with <b>+ Creature</b> (quick ones, your own, or a real card), or use their ⋯ menu to let their board grow each turn like a typical deck or like one of your decks. Your removal and sweepers hit their creatures (the biggest threat first, from the opponent you're aiming at), and "each opponent sacrifices" takes their least useful one. An opponent is out at 0 life, 10 poison or 21 damage from one commander, and you win when they're all out.</p>
     <p><b>Attack</b> taps your attackers and sets off attack triggers. Choose who each creature attacks. Your opponents then block the way a careful player would (good blocks, safe blocks, and chump blocks only to stay alive), and you can change any block. Damage follows the rules: first strike and double strike, trample, deathtouch, lifelink, menace, flying and reach, infect and toxic. <b>Next turn</b> runs your end step, untap, upkeep and draw in order.</p>
     <p class="keys"><span><kbd>D</kbd> draw</span><span><kbd>U</kbd> untap all</span><span><kbd>N</kbd> next turn</span><span><kbd>S</kbd> shuffle</span><span><kbd>K</kbd> tokens</span><span><kbd>A</kbd> attack</span><span><kbd>E</kbd> end turn</span><span><kbd>T</kbd> tap card under the pointer</span><span><kbd>+</kbd>/<kbd>−</kbd> +1/+1 counter on it</span><span><kbd>C</kbd> copy it</span><span><kbd>Ctrl</kbd>+<kbd>Z</kbd> undo</span><span><kbd>Esc</kbd> close</span></p>
     <label class="inline-field">Opponents <select id="ptOppNsel">${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${PT && PT.opps && PT.opps.length === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>
@@ -8715,6 +8746,7 @@ function ptInit(){
         if (v.to === "top" && v.max && v.max < 99 && v.held.length >= v.max) return ptSearchDone();
         return ptRenderView(); }
       if (v.held) v.held = v.held.filter(u => u !== uid);
+      if (to === "play") { ptCloseModal(); return ptCastPaid(uid); }
       ptDo(() => { to === "libBottom" ? ptMove(uid, "lib", {bottom: true}) : ptMove(uid, to === "bfTapped" ? "bf" : to); if (to === "bfTapped") { const f = ptFind(uid); if (f) f.card.tapped = true; } });
       if (v.kind === "search") { v.got = (v.got || 0) + 1; if (v.max && v.max < 99 && v.got >= v.max && !(v.held || []).length) return ptSearchDone(); }
       return ptRenderView();
@@ -8804,6 +8836,12 @@ function trFits(phrase, c){
   if (mv && (mv[2] === "less" ? (c.cmc || 0) > +mv[1] : (c.cmc || 0) < +mv[1])) return false;
   const mvx = (phrase || "").match(/with (?:a )?mana value (?:equal to )?(\d+)\b(?! or)/);
   if (mvx && (c.cmc || 0) !== +mvx[1]) return false;
+  // "with flying", "without defender", "with a +1/+1 counter on it", "with toughness 2 or less"
+  const kwq = (phrase || "").match(/\b(with|without) (flying|defender|haste|trample|vigilance|deathtouch|lifelink|reach|first strike|double strike|menace|hexproof|indestructible|flash|ward|prowess|infect|toxic)\b/);
+  if (kwq) { let has = false; try { has = PT && PT.bf && PT.bf.includes(c) ? !!ptHasKw(c, kwq[2]) : new RegExp(`(?:^|\\n|,\\s*)${kwq[2]}\\b`, "i").test(ptFaceText(c)); } catch (e) { has = new RegExp(kwq[2], "i").test(c.text || ""); } if (has !== (kwq[1] === "with")) return false; }
+  if (/\bwith (?:a|one or more) \+1\/\+1 counters? on (?:it|them)/.test(phrase || "") && !((c.counters || {}).p1p1 > 0)) return false;
+  const tq = (phrase || "").match(/with toughness (\d+) or (less|greater|more)/);
+  if (tq) { const t = ptStats(c) ? ptStats(c)[1] : parseInt(c.toughness); if (isNaN(t) || (tq[2] === "less" ? t > +tq[1] : t < +tq[1])) return false; }
   phrase = (phrase || "").replace(/\s+with\b.*$/, "").replace(/\b(you control|under your control|you own|one or more|another|other|an?|the|your|of|card|cards)\b/g, " ").replace(/\s+/g, " ").trim();
   if (!phrase || /^(spell|permanent)s?$/.test(phrase)) return phrase !== "permanent" || !/\b(Instant|Sorcery)\b/.test(c.type || "");
   const type = (c.type || "").split(" // ")[0].toLowerCase(), words = type.replace(/[—-]/g, " ").split(/\s+/);
@@ -8900,7 +8938,7 @@ function trActions(eff, selfName){
   // draw
   if ((m = e.match(/\b(?:you )?(?:may )?draws? (a|an|one|two|three|four|five|six|seven|x|\d+) cards?\b/)) && !/\b(?:each opponent|target opponent|that player) draws/.test(e)) a.push({t: "draw", n: trNum(m[1]), x: m[1] === "x", label: `Draw ${m[1] === "x" ? "X" : trNum(m[1])}`});
   // tokens (possibly several "create" clauses)
-  const tokRe = /\bcreate (a|an|one|two|three|four|five|six|seven|x|\d+|that many) (tapped )?(?:(\d+|x)\/(\d+|x) )?((?:[a-z]+(?:,| and)? )*?)(?:(artifact |enchantment )?creature )?tokens?(?: with ([a-z, ]+?))?(?=[.,;]| and | or | that | for each|$)/g;
+  const tokRe = /\bcreate (a|an|one|two|three|four|five|six|seven|x|\d+|that many) (tapped )?(?:(\d+|x)\/(\d+|x) )?((?:[a-z]+(?:,| and)? )*?)(?:(artifact |enchantment )?creature )?tokens?(?: with ([a-z, ]+?))?(?=[.,;]| and | or | that | that's | for each|$)/g;
   while ((m = tokRe.exec(e))) {
     const n = trNum(m[1]), words = (m[5] || "").replace(/,| and /g, " ").trim().split(/\s+/).filter(Boolean);
     if (/\bcopy\b/.test(m[0]) || /\bthat's a copy\b/.test(e.slice(m.index, m.index + 60))) continue;
@@ -8913,9 +8951,10 @@ function trActions(eff, selfName){
     const def = known && !m[3] ? Object.assign({}, known) : {name: nm, type: `Token ${supers ? supers[0].toUpperCase() + supers.slice(1) + " " : ""}${isCre ? "Creature" : "Artifact"} — ${nm}`.replace(/ Artifact — (Treasure|Clue|Food|Blood|Map|Gold|Powerstone|Junk|Incubator)/i, " Artifact — $1"), power: m[3] && m[3] !== "x" ? m[3] : isCre ? (m[3] || "1") : "", toughness: m[4] && m[4] !== "x" ? m[4] : isCre ? (m[4] || "1") : "", colors, text: m[7] ? m[7].replace(/(^|, )([a-z])/g, (x, p, ch) => p + ch.toUpperCase()) : ""};
     if (m[2]) def.tapped = true;
     const after = e.slice(m.index + m[0].length), fe = after.match(/^ for each ([a-z ]+?) you control/), choice = /^ or an? /.test(after);
-    const attacking = /^,? (?:that are |which are )?(?:tapped and )?attacking/.test(after);
+    const attacking = /^,? (?:that are |that's |which are )?(?:tapped and )?attacking/.test(after);
     if (attacking) def.tapped = true;
-    a.push({t: "token", n, x: m[1] === "x", attacking, many: m[1] === "that many", each: fe ? fe[1] : null, def, i: m.index, label: `Create ${fe ? "one per " + trSingular(fe[1].split(" ").pop()) : n > 1 ? n + "×" : ""} ${def.power ? def.power + "/" + def.toughness + " " : ""}${def.name}${choice ? " (or the other choice)" : ""}`.replace(/\s+/g, " ")});
+    const perOpp = /for each opponent,? (?:you )?$/.test(e.slice(Math.max(0, m.index - 30), m.index));
+    a.push({t: "token", n, x: m[1] === "x", attacking, many: m[1] === "that many", each: fe ? fe[1] : null, perOpp, span: perOpp ? e.slice(e.lastIndexOf("for each opponent", m.index), m.index + m[0].length) : undefined, def, i: m.index, label: `Create ${fe ? "one per " + trSingular(fe[1].split(" ").pop()) : n > 1 ? n + "×" : ""} ${def.power ? def.power + "/" + def.toughness + " " : ""}${def.name}${choice ? " (or the other choice)" : ""}`.replace(/\s+/g, " ")});
   }
   if ((m = e.match(/\bcreate (a|one|two|three|four|five|six|seven|x|\d+) tokens? that(?:'s| are) (?:a )?cop(?:y|ies) of (cardname|it|that creature|that card|target [^.]*)/))) {
     const haste = /\b(?:the|that|those) tokens? (?:gains?|ha(?:s|ve)) haste\b|\bcopy of [^.]*? with haste\b|\bexcept it has haste\b/.test(e);
@@ -8925,18 +8964,19 @@ function trActions(eff, selfName){
   if ((m = e.match(/\bat the beginning of (?:the |your )?next end step, (sacrifice|exile) (?:it|them|that token|those tokens|the token)( unless [^.]*)?/)) || (m = e.match(/\b(sacrifice|exile) (?:it|them|that token|those tokens|the token) at the beginning of (?:the |your )?next end step( unless [^.]*)?/)))
     a.push({t: "delay", act: m[1] === "exile" ? "exile" : "sac", unless: (m[2] || "").trim(), i: m.index, label: `${m[1] === "exile" ? "Exile" : "Sacrifice"} it at your next end step${m[2] ? " unless you pay" : ""}`});
   // life
-  if ((m = e.match(/\byou gain (\d+|x|that much) life(?! for each| equal)/))) a.push({t: "life", n: trNum(m[1]), x: m[1] === "x", much: m[1] === "that much", label: m[1] === "that much" ? "Gain that much life" : `Gain ${trNum(m[1])} life`});
-  if ((m = e.match(/\byou lose (\d+|x) life/))) a.push({t: "life", n: -trNum(m[1]), x: m[1] === "x", label: `Lose ${trNum(m[1])} life`});
+  if ((m = e.match(/\b(?:you (?:may )?|you [a-z ,]+? and |(?:^|\. )(?:you )?(?:may )?)gain (\d+|x|that much) life(?! for each| equal)/))) a.push({t: "life", n: trNum(m[1]), x: m[1] === "x", much: m[1] === "that much", label: m[1] === "that much" ? "Gain that much life" : `Gain ${trNum(m[1])} life`});
+  if ((m = e.match(/\b(?:you |you [a-z ,]+? and )lose (\d+|x) life/))) a.push({t: "life", n: -trNum(m[1]), x: m[1] === "x", label: `Lose ${trNum(m[1])} life`});
   if ((m = e.match(/\b(each opponent|target opponent|target player|that player|defending player) loses (\d+|x|that much) life/))) { const each = m[1] === "each opponent"; a.push({t: "opp", n: trNum(m[2]), x: m[2] === "x", much: m[2] === "that much", each, defending: /defending|that player/.test(m[1]), label: `${each ? "Each opponent" : "Opponent"} loses ${m[2] === "that much" ? "that much" : trNum(m[2])}`}); }
   else if ((m = e.match(/\bdeals? (\d+|x|that much) damage to (each opponent|target opponent|any target|target player|that player|target player or planeswalker|each player|defending player)/))) { const each = /^each/.test(m[2]); a.push({t: "opp", n: trNum(m[1]), x: m[1] === "x", much: m[1] === "that much", dmg: true, each, defending: /defending|that player/.test(m[2]), label: `${m[1] === "that much" ? "That much" : trNum(m[1])} damage to ${each ? "each opponent" : "an opponent"}`}); }
   // counters
-  const cRe = /\bput (a|an|one|two|three|four|five|x|\d+) (\+1\/\+1|-1\/-1|loyalty|charge|lore|time|oil|shield|stun|quest|level|fade|age|verse|ki|study|blood|divinity|flood|growth|page) counters? on (cardname|it|that creature|this creature|each (?:other )?[a-z ]*?(?:creature )?you control|target creature(?: you control)?|up to one target creature|each creature|target permanent)/g;
+  const cRe = /\bput (a|an|one|two|three|four|five|x|\d+) (\+1\/\+1|-1\/-1|loyalty|charge|lore|time|oil|shield|stun|quest|level|fade|age|verse|ki|study|blood|divinity|flood|growth|page) counters? on (cardname|it|him|her|that creature|this creature|each (?:other )?[a-z ]*?(?:creature )?you control|each of up to (?:one|two|three|four|five) (?:other )?target (?:[a-z]+ )?creatures?(?: you control)?|(?:another |up to one )?target (?:attacking |tapped |nonlegendary |[a-z]+ )?(?:artifact or )?creature(?: you control)?|another target [a-z]+ you control|target [a-z]+ you control|up to one target creature|each creature|target permanent|enchanted creature|equipped creature|a creature you control|each attacking creature|each [a-z]+ creature)/g;
   while ((m = cRe.exec(e))) {
     const kind = {"+1/+1": "p1p1", "-1/-1": "m1m1"}[m[2]] || m[2], on = m[3];
-    let tgt = /^(cardname|this creature)$/.test(on) ? "self" : /^(it|that creature)$/.test(on) ? "it" : /^each other creature you control$/.test(on) ? "allOther" : /^each creature( you control)?$/.test(on) ? "all" : /^each /.test(on) ? "each" : "target";
+    let tgt = /^(cardname|this creature|him|her)$/.test(on) ? "self" : /^(it|that creature)$/.test(on) ? "it" : /^(enchanted|equipped) creature$/.test(on) ? "host" : /^each of up to/.test(on) ? "target" : /^each other creature you control$/.test(on) ? "allOther" : /^each creature( you control)?$/.test(on) ? "all" : /^each /.test(on) ? "each" : "target";
     const each = tgt === "each" ? on.replace(/^each (other )?/, "").replace(/ you control$/, "") : null;
+    const tn = (on.match(/^each of up to (one|two|three|four|five)/) || [])[1];
     const nm = {p1p1: "+1/+1", m1m1: "−1/−1"}[kind] || kind[0].toUpperCase() + kind.slice(1);
-    a.push({t: "counter", n: trNum(m[1]), x: m[1] === "x", kind, on: tgt, each, i: m.index, label: `${trNum(m[1]) > 1 ? trNum(m[1]) + " " : ""}${nm} counter${trNum(m[1]) > 1 ? "s" : ""} on ${{self: selfName, it: "it", all: "each creature", allOther: "each other creature", target: "a creature you pick", each: "each " + each}[tgt]}`});
+    a.push({t: "counter", n: trNum(m[1]), x: m[1] === "x", kind, on: tgt, each, tn: tn ? trNum(tn) : 1, i: m.index, span: tn || /^(another|target [a-z]+ you control|a creature you control|enchanted|equipped|him|her)/.test(on) ? m[0] : undefined, label: `${trNum(m[1]) > 1 ? trNum(m[1]) + " " : ""}${nm} counter${trNum(m[1]) > 1 ? "s" : ""} on ${{self: selfName, it: "it", all: "each creature", allOther: "each other creature", target: (tn && trNum(tn) > 1) ? `up to ${trNum(tn)} creatures you pick` : "a creature you pick", host: "the creature it's attached to", each: "each " + each}[tgt]}`});
   }
   if (/\bproliferate\b/.test(e)) a.push({t: "proliferate", label: "Proliferate"});
   // library
@@ -8944,7 +8984,7 @@ function trActions(eff, selfName){
   if ((m = e.match(/\bsurveil (\d+|x)\b/))) a.push({t: "scry", n: trNum(m[1]), x: m[1] === "x", surveil: true, label: `Surveil ${trNum(m[1])}`});
   if ((m = e.match(/\b(?:you )?mills? (a|one|two|three|four|five|x|\d+) cards?\b/)) && !/\b(?:target|each) (?:player|opponent) mills/.test(e)) a.push({t: "mill", n: trNum(m[1]), x: m[1] === "x", label: `Mill ${trNum(m[1])}`});
   if ((m = e.match(/\blook at the top (a|one|two|three|four|five|six|seven|x|\d+) cards? of your library/))) a.push({t: "dig", n: trNum(m[1]), label: `Look at the top ${trNum(m[1])}`});
-  if ((m = e.match(/\bexile the top (card|a card|two cards|three cards|\w+ cards) of your library/))) a.push({t: "exiletop", n: m[1] === "card" || m[1] === "a card" ? 1 : trNum(m[1].split(" ")[0]), label: "Exile from the top"});
+  if ((m = e.match(/\bexile the top (card|a card|two cards|three cards|\w+ cards) of your library/))) a.push({t: "exiletop", n: m[1] === "card" || m[1] === "a card" ? 1 : trNum(m[1].split(" ")[0]), i: m.index, label: "Exile from the top"});
   if (/\bsearch your library\b/.test(e)) a.push(trSearch(e));
   if (/\breturn [^.]*from your graveyard\b/.test(e) || /\bfrom your graveyard to\b/.test(e)) a.push({t: "grave", label: "Open your graveyard", dialog: true});
   // untap / energy
@@ -9009,13 +9049,18 @@ function trAbilities(card){
   const key = card.name + "|" + (card.back ? 1 : 0) + "|" + speed + "|" + kwKey + "|" + text;
   if (trCache.has(key)) return trCache.get(key);
   const list = [];
-  for (let ab of text.split(/\n+/)) {
+  // "Choose one —" abilities: the "•" lines under it are its modes
+  const lines0 = []; for (const l of text.split(/\n+/)) { if (/^\s*•/.test(l) && lines0.length && /—\s*$|•/.test(lines0[lines0.length - 1])) lines0[lines0.length - 1] += "\n" + l.trim(); else lines0.push(l); }
+  for (let ab of lines0) {
     ab = ab.trim(); if (!ab) continue;
     if (card.name.split(" // ").includes(ab)) continue;   // face names in double-faced card text
     if (/^Max speed\s*—/i.test(ab)) { if (!speed) continue; ab = ab.replace(/^Max speed\s*—\s*/i, ""); }
     if (/^(?:I|II|III|IV|V|VI|VII)(?:, (?:I|II|III|IV|V|VI|VII))* — /.test(ab)) continue;   // saga chapters below
     const t = trLower(card, ab.replace(/^[A-Z][A-Za-z' ]+ — /, ""));
-    const r = trParseTrig(t, ab, card); if (r) list.push(r);
+    const r = trParseTrig(t, ab, card); if (!r) continue;
+    const md = /\n\s*•/.test(ab) ? trModes(ab) : null;
+    if (md) { const nm0 = ptFaceName(card); Object.assign(r, {modes: md.lines.map(l => { const e = trLower(card, l); return {text: l, eff: e, actions: trActions(e, nm0)}; }), pick: md.pick, upTo: md.upTo, actions: [], eff: null}); }
+    list.push(r);
   }
   // keyword abilities that are triggers (prowess, afterlife, mobilize…), as rule 702 defines them
   list.push(...trKwAbilities(card, (t, shown) => trParseTrig(t, shown, card)));
@@ -9053,7 +9098,7 @@ function trSearch(e){
 }
 const TR_TOPIF = String.raw`\b(?:look at|reveal) the top card of your library\.? (?:if it's|if it is|if that card is|if it's a|if it's an) (?:an? )?([a-z ]+?) card,? (you may )?(?:put it|put that card|reveal it and put it) (onto the battlefield(?: tapped)?|into your hand)\.?\s*(?:(?:if you don't put the card onto the battlefield|if you don't|otherwise),? (?:you may )?(?:put (?:it|that card|the card) )?(into your hand|on the bottom of your library|into your graveyard|on top of your library|back)?)?`;
 // Parts of the text that are handled by a later step, so they don't count as "needs a person" now
-const trStripHandled = e => e.replace(/\bsacrifice [a-z ,'-]+? unless you sacrifice (?:a|an) [a-z ]+/g, " ").replace(/\bas an additional cost to cast (?:this spell|cardname),? (?:you may )?(?:pay x life|pay \d+ life|behold [^.]*|reveal [^.]*|tap [^.]*)?/g, " ").replace(/\b(?:and )?attacks? this combat if able\b|\bif able\b/g, " ").replace(/\buntil (?:an opponent becomes the monarch|cardname leaves the battlefield|your next turn)\b/g, " ").replace(/\bit's still a land\b|\bthis ability triggers only once each turn\b|\bactivate only (?:as a sorcery|once each turn)\b/g, " ").replace(new RegExp(TR_TOPIF, "g"), " ").replace(/\b(?:cardname|it|that creature) explores\b/g, " ").replace(/\binvestigate(?: twice| three times)?\b/g, " ").replace(/\b(?:at the beginning of (?:the |your )?next end step, )?(?:sacrifice|exile) (?:it|them|that token|those tokens|the token)(?: at the beginning of (?:the |your )?next end step)?(?: unless [^.]*)?/g, " ")
+const trStripHandled = e => e.replace(/\b(?:it|that creature|that permanent|those creatures|they) (?:doesn't|don't|does not|do not) untap during (?:its|their) controllers?'s? next untap step/g, " ").replace(/\bsacrifice [a-z ,'-]+? unless you sacrifice (?:a|an) [a-z ]+/g, " ").replace(/\bas an additional cost to cast (?:this spell|cardname),? (?:you may )?(?:pay x life|pay \d+ life|behold [^.]*|reveal [^.]*|tap [^.]*)?/g, " ").replace(/\b(?:and )?attacks? this combat if able\b|\bif able\b/g, " ").replace(/\buntil (?:an opponent becomes the monarch|cardname leaves the battlefield|your next turn)\b/g, " ").replace(/\bit's still a land\b|\bthis ability triggers only once each turn\b|\bactivate only (?:as a sorcery|once each turn)\b/g, " ").replace(new RegExp(TR_TOPIF, "g"), " ").replace(/\b(?:cardname|it|that creature) explores\b/g, " ").replace(/\binvestigate(?: twice| three times)?\b/g, " ").replace(/\b(?:at the beginning of (?:the |your )?next end step, )?(?:sacrifice|exile) (?:it|them|that token|those tokens|the token)(?: at the beginning of (?:the |your )?next end step)?(?: unless [^.]*)?/g, " ")
   .replace(/\b(?:the|that|those) tokens? (?:gains?|ha(?:s|ve)) haste(?: until end of turn)?/g, " ");
 function trConditional(text){ return /\bif\b|\bunless\b|\binstead\b/i.test(trStripHandled(String(text || "").toLowerCase().replace(/\([^)]*\)/g, "").replace(/^[^,]*,/, ""))); }   // reminder text doesn't count
 function trCovered(eff, actions){
@@ -9061,6 +9106,7 @@ function trCovered(eff, actions){
   for (const a of actions) if (a.span) e = e.split(a.span).join(" ");
   e = trStripHandled(e);
   e = e.replace(/\bwhere x is [^.]+/g, " ").replace(/\bthen shuffle\b|\bshuffle your library\b/g, (x) => actions.some(a => a.t === "searchAuto") ? " " : x);
+  if (actions.some(a => a.t === "search")) e = e.replace(/,? (?:and )?reveal (?:it|them|that card|those cards|the chosen card)\b/g, " ");
   actions = actions.filter(a => !a.span);
   if (TR_HARD.test(e.replace(/create (?:[^.]*?) for each [a-z ]+ you control/, ""))) return false;
   for (const [re, types] of TR_VERBS) { const n = (e.match(re) || []).length, have = actions.filter(a => types.includes(a.t)).length; if (n > have) return false; }
@@ -9240,8 +9286,8 @@ function ptRunTriggers(){
             + (e.ev === "cast" && /\b(Instant|Sorcery)\b/.test(ty) ? mods.spellCast : 0)
             + mods.srcX.filter(d => !(d.other && d.uid === src.uid) && trFits(d.phrase, src)).length;
           for (let k = 0; k < copies; k++)
-          ptAddPrompt({srcUid: src.uid, srcName: faceName, extra: k > 0, img: src.back && src.img ? src.img.replace("/front/", "/back/") : src.img, kind: cond.ev, text: ab.text, actions: acts, eff: effNow, may: ab.may, evUid: e.uid, evName: e.snap ? e.snap.name : "", amount: e.amount, auto: true,
-            xExpr: ab.xExpr, snap: cond.ev === "dies" ? e.snap : undefined, conditional: condl, fresh: true});
+          ptAddPrompt(Object.assign({srcUid: src.uid, srcName: faceName, extra: k > 0, img: src.back && src.img ? src.img.replace("/front/", "/back/") : src.img, kind: cond.ev, text: ab.text, actions: acts, eff: effNow, may: ab.may, evUid: e.uid, evName: e.snap ? e.snap.name : "", amount: e.amount, auto: true,
+            xExpr: ab.xExpr, snap: cond.ev === "dies" ? e.snap : undefined, conditional: condl, fresh: true}, ab.modes ? {modes: ab.modes, pick: ab.pick, upTo: ab.upTo, chosen: [], actions: [], eff: null, choice: true, conditional: true} : {}));
         }));
       }
     }
@@ -9282,12 +9328,15 @@ function ptResolve(p){
     if (a.t === "draw") { ptDraw(a.n); done.push(a.label); }
     else if (a.t === "token") {
       let n = a.each ? PT.bf.filter(c => trFits(a.each, c)).length : p.amount && a.many ? p.amount : a.n;
+      if (a.perOpp) n *= Math.max(1, PT.opps ? ptLiveOpps().length : 1);
       n *= ptTokenMult(a.def);
       if (n > 0) { ptCreateToken(a.def, n); ptTokenArt(a.def); const mk = PT.bf.slice(-n); ctx.made = mk.map(t => t.uid); made = ctx.made; if (a.def.tapped) mk.forEach(t => t.tapped = true); if (a.attacking && PT.combat) mk.forEach(t => PT.combat.push(t.uid)); }
       done.push(a.label);
     }
     else if (a.t === "copy") {
-      const of = a.of === "self" ? src : a.of === "it" ? it : null;
+      let of = a.of === "self" ? src : a.of === "it" ? it : null;
+      // in a card's own "enters" ability, "a copy of it" means something else it found (a card it exiled…): cards that copy themselves name themselves
+      if (a.of === "it" && of && p.kind === "etb" && of.card.uid === p.srcUid && /\b(?:exile|return|search|reveal|choose)\b[^.]*\.\s*create [^.]*cop(?:y|ies) of it\b/.test(p.eff || p.text || "")) { ptLog(`${p.srcName}: the token copy is of the card it found — make it by hand (right-click → Token copy).`); of = null; done.push(a.label); continue; }
       // a sacrificed or dead card is copied from where it is now (Ashling, Feldon…)
       const nCopy = a.squad ? ((of && of.card.paid && of.card.paid.squad) || 1) : a.n;
       if (of) { made = ptCopy(of.card.uid, nCopy * ptTokenMult(of.card)) || []; made.forEach(u => { const t = PT.bf.find(c => c.uid === u); if (!t) return; if (a.haste) t.haste = true; if (a.set) { t.power = String(a.set[0]); t.toughness = String(a.set[1]); } delete t.paid; }); ctx.made = made; }
@@ -9361,7 +9410,9 @@ function ptResolve(p){
     else if (a.t === "fromexile") { const f = ptFind(a.uid); if (f && f.zone === "exile") ptMove(a.uid, "bf", {cast: false}); done.push(a.label); }
     else if (a.t === "counter") {
       const targets = a.on === "self" ? (src && src.zone === "bf" ? [src.card] : []) : a.on === "it" ? (it && it.zone === "bf" ? [it.card] : src && src.zone === "bf" ? [src.card] : [])
-        : a.on === "all" ? PT.bf.filter(ptIsCreature) : a.on === "allOther" ? PT.bf.filter(c => ptIsCreature(c) && c.uid !== p.srcUid) : a.on === "each" ? PT.bf.filter(c => trFits(a.each, c)) : null;
+        : a.on === "all" ? PT.bf.filter(ptIsCreature) : a.on === "allOther" ? PT.bf.filter(c => ptIsCreature(c) && c.uid !== p.srcUid) : a.on === "each" ? PT.bf.filter(c => trFits(a.each, c))
+        : a.on === "host" ? (src && src.card.att != null ? PT.bf.filter(c => c.uid === src.card.att) : [])
+        : a.on === "target" && (a.tn || 1) > 1 && ptAuto() ? PT.bf.filter(c => ptIsCreature(c) && c.uid !== p.srcUid).sort((x, y) => ptPow(y) - ptPow(x)).slice(0, a.tn) : null;
       const tg = targets || (ptAuto() ? (a.kind === "m1m1" ? [] : ptPickOwn({other: /another/.test(p.eff || "")}, p)) : null);
       if (tg) { tg.forEach(c => a.noMods ? ptCounter(c.uid, a.kind, a.n) : ptAddCounters(c.uid, a.kind, a.n)); ptLog(`${p.srcName}: ${a.label}${!targets && tg[0] ? ` (on ${tg[0].name})` : ""}.`); }
       else { ptTarget({kind: "counter", counter: a.kind, n: a.n, label: `Click a creature to put ${a.n > 1 ? a.n + " " : "a "}${ptCounterName(a.kind)} counter${a.n > 1 ? "s" : ""} on it`}); done.push(a.label); }   // (when done, it's logged above)
@@ -9680,7 +9731,7 @@ function ptCombatOf(c){
 const PT_COLOR_WORD = {white: "W", blue: "U", black: "B", red: "R", green: "G"};
 // Can this opponent's creature block that attacker of yours?
 function ptCanBlock(b, a){
-  if (!b || b.tapped || /\bcan't block\b/i.test(b.text || "")) return false;
+  if (!b || b.tapped || b.noBlock === PT.turn || /\bcan't block\b/i.test(b.text || "")) return false;
   const at = a.faceDown ? "" : ptFaceText(a);
   if (/\bcan't be blocked\b(?!\s+(?:by|except))/i.test(at) && !/\bcan't be blocked\b[^.]*\bas long as\b/i.test(at)) return false;
   if (ptHasKw(a, "shadow") || ptHasKw(a, "horsemanship")) return false;
@@ -9738,6 +9789,32 @@ function ptAutoBlocks(atks){
     pass("safe"); pass("trade");
   });
   return res;
+}
+// Removal and other harm can hit the opponents' creatures: which of theirs fit, best target first
+function ptOppTargets(tgt, opts = {}){
+  if (!PT || !PT.opps) return [];
+  const ph0 = String(tgt.phrase || "creature");
+  if (/\byou control\b/.test(ph0) && !/\b(?:don't|an opponent|opponents?) control/.test(ph0)) return [];
+  const ph = ph0.replace(/\b(?:an opponent controls|you don't control|your opponents control|defending player controls|that player controls|target opponent controls)\b/g, "").replace(/\s+/g, " ").trim() || "creature";
+  if (/^(?:player|opponent|spell|card)/.test(ph) || /\b(?:land|artifact|enchantment|planeswalker|battle)\b/.test(ph) && !/\b(?:creature|permanent)\b/.test(ph)) return [];
+  const aim = PT.opps.indexOf(ptOppT()), out = [];
+  PT.opps.forEach((o, oi) => { if (o.out) return; for (const b of o.board) { let ok = false; try { ok = trFits(ph.replace(/\bnonland permanent\b|\bpermanent\b/, "creature"), Object.assign({colors: []}, b)); } catch (e) { ok = /creature|permanent/.test(ph); } if (ok) out.push({o, oi, b}); } });
+  const kw = (b, k) => ptOkw(b, k) ? 1 : 0;
+  const score = x => (x.oi === aim ? 100 : 0) + (+x.b.power || 0) * 2 + (+x.b.toughness || 0) + 3 * (kw(x.b, "flying") + kw(x.b, "deathtouch") + kw(x.b, "double strike")) + (x.b.img ? 2 : 0);
+  const n = opts.dmg || 0, dies = x => n > 0 && (n >= (+x.b.toughness || 0) - (x.b.dmg || 0) || opts.dt) && !ptOkw(x.b, "indestructible");
+  return out.sort((a, b) => (dies(b) - dies(a)) || score(b) - score(a));
+}
+// Do it to one of their creatures: destroy, exile, bounce, tap, damage, or −N/−N until end of turn
+function ptHitOppCre(x, how, nm, n = 0, extra = {}){
+  const {o, b} = x, gone = why => { o.board.splice(o.board.indexOf(b), 1); ptLog(`${nm}: ${o.name}'s ${b.name} ${why}.`); };
+  if (how === "destroy") { if (ptOkw(b, "indestructible")) return ptLog(`${nm}: ${o.name}'s ${b.name} is indestructible.`); return gone("is destroyed"); }
+  if (how === "exile") return gone("is exiled");
+  if (how === "bounce") return gone("goes back to its owner's hand");
+  if (how === "tuck" || how === "tucktop") return gone("goes into its owner's library");
+  if (how === "tap") { b.tapped = true; return ptLog(`${nm}: ${o.name}'s ${b.name} is tapped.`); }
+  if (how === "noblock") { b.noBlock = PT.turn; return ptLog(`${nm}: ${o.name}'s ${b.name} can't block this turn.`); }
+  if (how === "damage") { b.dmg = (b.dmg || 0) + n; if (extra.dt) b.dt = true; ptLog(`${nm}: ${n} damage to ${o.name}'s ${b.name}.`); if (((b.dmg >= (+b.toughness || 0)) || b.dt) && !ptOkw(b, "indestructible")) gone("dies"); return; }
+  if (how === "shrink") { b.eot = b.eot || {p: 0, t: 0}; b.eot.p += extra.p || 0; b.eot.t += extra.t || 0; b.power = String((+b.power || 0) + (extra.p || 0)); b.toughness = String((+b.toughness || 0) + (extra.t || 0)); ptLog(`${nm}: ${o.name}'s ${b.name} gets ${extra.p >= 0 ? "+" : ""}${extra.p}/${extra.t >= 0 ? "+" : ""}${extra.t} until end of turn.`); if ((+b.toughness || 0) <= 0 || ((b.dmg || 0) >= (+b.toughness || 0) && b.dmg > 0)) gone("dies"); }
 }
 function ptBlocksOrDamage(){
   const atks = (PT.combat || []).map(u => PT.bf.find(c => c.uid === u)).filter(Boolean);
@@ -10115,6 +10192,10 @@ function trEvalIf(cond, ctx){
   if (/^(?:it|this spell|cardname) was(?:n't| not) kicked/.test(c)) return !(src && src.kicked);
   if (/^(?:its|the|this spell's|cardname's) (offspring|gift|bargain|squad|spectacle|surge|prowl|freerunning) cost was paid|^(?:it|this spell) was bargained|^the gift was promised/.test(c)) return !!(src && (src.paid || {})[(c.match(/offspring|gift|bargain|squad|spectacle|surge|prowl|freerunning/) || [])[0]]);
   if (/^(?:it|cardname) (?:was cast|entered) from your hand/.test(c)) return !!(src && src.fromHand);
+  if (/^(?:it|cardname|this creature|this permanent) (?:isn't|is not|wasn't|was not) a token/.test(c)) return !(src && src.token);
+  if (/^(?:it|cardname|this creature|this permanent) (?:is|was) a token/.test(c)) return !!(src && src.token);
+  if (/^you cast it|^it was cast|^cardname was cast/.test(c)) return !!(src && src.wasCast);
+  if (/^you didn't cast it|^it wasn't cast/.test(c)) return !(src && src.wasCast);
   if (/^it's your turn|^it is your turn/.test(c)) return true;
   if (/^it's not your turn|^it isn't your turn|^it is not your turn/.test(c)) return false;
   if (/^you attacked(?: with (?:a|one or more) creatures?)? this turn/.test(c)) return PT.attackedTurn === PT.turn;
@@ -10260,13 +10341,13 @@ function trActions2(e, selfName, have){
     add(Object.assign({t: "pump", p: 0, tt: 0, kws, label: `Gains ${kws.join(", ")} until end of turn`}, w), mm);
   }
   // damage to creatures
-  for (const mm of e.matchAll(/\bdeals? (\d+|x) damage to (each (?:other )?creature(?: (?:and each (?:player|opponent)|with flying|without flying|you don't control|your opponents control|with power \d+ or less|that's attacking))?|each creature and planeswalker(?: you don't control)?|each creature and each player|each other creature and each player|each player and each creature)/g)) {
-    const scope = mm[2], opp = /you don't control|your opponents control/.test(scope);
-    add({t: "dmgAll", n: N(mm[1]), x: isX(mm[1]), opp, other: /\bother\b/.test(scope), flying: /without flying/.test(scope) ? false : /with flying/.test(scope) ? true : null, pw: (scope.match(/power (\d+) or less/) || [])[1], players: /player/.test(scope),
+  for (const mm of e.matchAll(/\bdeals? (\d+|x) damage to (each (?:other )?(?:non-?[a-z]+ |tapped |untapped |attacking |blocking )?creature(?: (?:and each (?:player|opponent|planeswalker)|with flying|without flying|you don't control|your opponents control|with power \d+ or less|that's attacking))?(?: and each (?:player|opponent|planeswalker))?|each creature and planeswalker(?: you don't control)?|each creature and each player|each other creature and each player|each player and each creature)/g)) {
+    const scope = mm[2], opp = /you don't control|your opponents control/.test(scope), non = (scope.match(/\bnon-?([a-z]+) creature/) || [])[1];
+    add({t: "dmgAll", n: N(mm[1]), x: isX(mm[1]), opp, other: /\bother\b/.test(scope), flying: /without flying/.test(scope) ? false : /with flying/.test(scope) ? true : null, pw: (scope.match(/power (\d+) or less/) || [])[1], players: /player/.test(scope), opps: /opponent/.test(scope) && !/control/.test(scope), non, tapped: /\btapped creature/.test(scope) ? true : /\buntapped creature/.test(scope) ? false : null,
       label: opp ? `${mm[1].toUpperCase()} damage to the opponent's creatures` : `${mm[1].toUpperCase()} damage to each${/other/.test(scope) ? " other" : ""} creature${/player/.test(scope) ? " and each player" : ""}`}, mm);
   }
   for (const mm of e.matchAll(/\bdeals? (\d+|x|damage equal to [^.]+?) (?:damage )?to (?:up to one |another )?target (creature|creature or planeswalker|planeswalker|attacking creature|blocking creature|attacking or blocking creature|creature an opponent controls|creature or planeswalker an opponent controls|creature you don't control|creature without flying|creature with flying|battle)(?! you control)/g))
-    add({t: "oppNone", label: `Damage to ${/planeswalker|battle/.test(mm[2]) && !/creature/.test(mm[2]) ? "an opponent's " + mm[2] : "an opponent's creature"} (none on this table)`, what: "damage", tgt: /^\d+$|^x$/.test(mm[1]) ? {how: "damage", n: N(mm[1]), x: isX(mm[1]), phrase: /planeswalker/.test(mm[2]) && !/creature/.test(mm[2]) ? "planeswalker" : "creature"} : null}, mm);
+    add({t: "oppNone", label: `Damage to ${/planeswalker|battle/.test(mm[2]) && !/creature/.test(mm[2]) ? "an opponent's " + mm[2] : "an opponent's creature"}`, what: "damage", tgt: /^\d+$|^x$/.test(mm[1]) ? {how: "damage", n: N(mm[1]), x: isX(mm[1]), phrase: /planeswalker/.test(mm[2]) && !/creature/.test(mm[2]) ? "planeswalker" : "creature"} : null}, mm);
   if ((m = e.match(/\bdeals? [^.]*?damage [^.]*?(?:among|to) (?:any number of |up to \w+ |one or two )?(?:other )?targets? ?(?:creatures?|permanents?)? (?:your opponents control|an opponent controls|you don't control)[^.]*/))) add({t: "oppNone", label: "Damage to the opponent's creatures (none on this table)", what: "damage"}, m);
   if ((m = e.match(/\beach of those creatures deals damage[^.]*/))) add({t: "oppNone", label: "Their creatures hit back (none here)", what: "damage"}, m);
   if ((m = e.match(/\bdeals? (\d+|x) damage to you\b/))) add({t: "life", n: -N(m[1]), x: isX(m[1]), label: `${m[1].toUpperCase()} damage to you`}, m);
@@ -10285,20 +10366,25 @@ function trActions2(e, selfName, have){
     if (mm[1] === "untap") continue;
     if (/\bcard\b|graveyard|spell/.test(mm[3])) { add({t: "oppNone", label: `${mm[1][0].toUpperCase() + mm[1].slice(1)} target ${mm[3]} (nothing there on this table)`, what: mm[1]}, mm); continue; }
     if (/you control|you own/.test(mm[4])) { add({t: "pickDo", how: mm[1], phrase: mm[3], n: N(mm[2]), label: `${mm[1][0].toUpperCase() + mm[1].slice(1)} your ${mm[3]}`}, mm); continue; }
-    add({t: "oppNone", label: `${mm[1][0].toUpperCase() + mm[1].slice(1)} an opponent's ${mm[3].trim() || "permanent"} (none on this table)`, what: mm[1], tgt: {how: mm[1], phrase: mm[3].trim() || "permanent", n: N(mm[2])}}, mm);
+    add({t: "oppNone", label: `${mm[1][0].toUpperCase() + mm[1].slice(1)} an opponent's ${mm[3].trim() || "permanent"}`, what: mm[1], tgt: {how: mm[1], phrase: mm[3].trim() || "permanent", n: N(mm[2])}}, mm);
   }
   for (const mm of e.matchAll(/\b(?:return|put) (?:up to (one|two|three|\d+) )?(?:other |another )?target ([a-z ,'-]*?(?:creature|permanent|artifact|enchantment|planeswalker|land|card|spell)s?)((?: an opponent controls| you don't control| you control| you own)?) (?:to its owner's hand|to their owners' hands|on (?:the )?(?:top|bottom) of (?:its|their) owners?['’]? librar(?:y|ies)|into its owner's library[^.]*)/g)) {
     if (/you control|you own/.test(mm[3])) { add({t: "pickDo", how: "bounce", phrase: mm[2], n: N(mm[1]), label: `Return your ${mm[2]} to your hand`}, mm); continue; }
-    add({t: "oppNone", label: `Bounce an opponent's ${mm[2]} (none on this table)`, what: "bounce", tgt: /card|spell/.test(mm[2]) ? null : {how: /library/.test(mm[0]) ? "tuck" : "bounce", phrase: mm[2], n: N(mm[1])}}, mm);
+    add({t: "oppNone", label: `Bounce an opponent's ${mm[2]}`, what: "bounce", tgt: /card|spell/.test(mm[2]) ? null : {how: /library/.test(mm[0]) ? "tuck" : "bounce", phrase: mm[2], n: N(mm[1])}}, mm);
   }
+  if ((m = e.match(/\bcreatures your opponents control can't block(?: this turn)?/))) add({t: "oppAll", how: "noblock", label: "The opponents' creatures can't block this turn"}, m);
+  if ((m = e.match(/\btarget creature (?:can't block|can't attack or block)(?: this turn)?(?=[.,]|$)/))) add({t: "oppNone", label: "An opponent's creature can't block this turn", what: "stop", tgt: {how: "noblock", phrase: "creature", n: 1}}, m);
   if ((m = e.match(/\btarget creature (?:can't block|doesn't untap|can't attack or block)[^.]*|\b(?:creatures your opponents control|target player|target opponent|each opponent|that player)[^.]*?can't (?:block|cast|gain life|attack)[^.]*/))) add({t: "oppNone", label: "Stops the opponent's creatures or plays (nothing to stop here)", what: "stop"}, m);
-  if ((m = e.match(/\b(?:tap all creatures your opponents control|tap all creatures target player controls|creatures your opponents control (?:can't block|get -\d+\/-\d+)[^.]*)/))) add({t: "oppNone", label: "Hits the opponent's creatures (none on this table)", what: "tap"}, m);
+  if ((m = e.match(/\b(?:tap all creatures your opponents control|tap all creatures target player controls|creatures your opponents control (?:can't block|get -\d+\/-\d+)[^.]*)/))) { const sh = m[0].match(/get (-\d+)\/(-\d+)/); add({t: "oppAll", how: /can't block/.test(m[0]) ? "noblock" : sh ? "shrink" : "tap", p: sh ? +sh[1] : 0, tt: sh ? +sh[2] : 0, label: /can't block/.test(m[0]) ? "The opponents' creatures can't block this turn" : sh ? `The opponents' creatures get ${sh[1]}/${sh[2]}` : "Tap all the opponents' creatures"}, m); }
   // sacrifice and discard
   for (const mm of e.matchAll(/(?:^|[.,;] |\bthen |\band |\bto )(?:you )?(?:may )?(?:each player )?sacrifices? (a|an|one|two|three|x|\d+|another|that many) ((?:other |nontoken |non-[a-z]+ )*[a-z -]+?)(?=[.,;]|$| and | then| unless| of their| with | you control)(?! unless you pay)/g)) {
     if (/\bunless\b/.test(e.slice(mm.index + mm[0].length, mm.index + mm[0].length + 12))) continue;
     add({t: "sacYou", n: mm[1] === "another" ? 1 : N(mm[1]), other: mm[1] === "another" || /\bother\b/.test(mm[2]), phrase: mm[2].replace(/\bother\b/, "").trim(), may: /\bmay\b/.test(mm[0]), label: `Sacrifice ${mm[1] === "another" ? "another" : mm[1]} ${mm[2]}`}, mm);
   }
-  if ((m = e.match(/\b(?:each opponent|target opponent|target player|each other player|defending player|that player|the defending player) (?:sacrifices|discards|mills|exiles|loses all|reveals)[^.]*/))) add({t: "oppNone", label: "The opponent " + m[0].replace(/^[a-z ]+? (sacrifices|discards|mills|exiles|loses all|reveals)/, "$1") + " (not tracked here)", what: "opp"}, m);
+  if ((m = e.match(/\b(each opponent|target opponent|target player|each other player|defending player|that player|the defending player) (?:sacrifices|discards|mills|exiles|loses all|reveals)[^.]*(?:\. you (?:may )?(?:look at|choose) [^.]*)?(?:\. (?:that player|they) discards? [^.]*)?/))) {
+    const sac = m[0].match(/\bsacrifices (a|an|one|two|that many) (creature|nonland permanent|permanent|creature or planeswalker)s?\b/);
+    add({t: "oppNone", label: "The opponent " + m[0].replace(/^[a-z ]+? (sacrifices|discards|mills|exiles|loses all|reveals)/, "$1").split(". ")[0] + (sac ? "" : " (not tracked here)"), what: "opp", oppSac: sac ? {n: trNum(sac[1]) || 1, each: /^each/.test(m[1])} : null}, m);
+  }
   if ((m = e.match(/\beach player (?:sacrifices|discards) /)) && !a.some(x => x.t === "sacYou")) {
     const mm = e.slice(m.index).match(/^each player (sacrifices|discards) (a|an|one|two|three|x|\d+) ([a-z ]+?)(?=[.,;]|$| and| of their)/);
     if (mm) add(mm[1] === "sacrifices" ? {t: "sacYou", n: N(mm[2]), phrase: mm[3], label: `You sacrifice ${mm[2]} ${mm[3]} too`} : {t: "discard", n: N(mm[2]), label: `You discard ${mm[2]} too`}, Object.assign(mm, {index: m.index}));
@@ -10392,6 +10478,27 @@ function trActions2(e, selfName, have){
   }
   if ((m = e.match(/\bput cardname onto the battlefield attached to (?:target|a) creature[^.]*/))) add({t: "attachTo", label: "Attach it to a creature"}, m);
   if ((m = e.match(/\battach (cardname|it) to (?:target|up to one target|another target) creature(?: you control)?/))) add({t: "attachTo", label: "Attach it to a creature"}, m);
+  // impulse draw: "exile the top card of your library. You may play that card this turn / until the end of your next turn"
+  if ((m = e.match(/\bexile the top (card|a card|two cards|three cards|four cards|five cards|x cards) of your library(?: face down)?\.? (?:(?:until (?:the )?end of (your next turn|turn|this turn)|until your next end step|this turn),? you may (?:play|cast) (?:that card|those cards|them|it|cards exiled this way|one of those cards)|you may (?:play|cast) (?:that card|those cards|it|them|one of those cards|cards exiled this way)(?: this turn| until (?:the )?end of (your next turn|turn)| until your next end step)?)/))) {
+    const n0 = m[1] === "card" || m[1] === "a card" ? 1 : m[1] === "x cards" ? 1 : trNum(m[1].split(" ")[0]), next = /your next turn|next end step/.test(m[2] || m[3] || "") || /your next end step/.test(m[0]);
+    add({t: "impulse", n: n0, x: m[1] === "x cards", next, label: `Exile the top ${n0 > 1 ? n0 + " cards" : "card"}; you may play ${n0 > 1 ? "them" : "it"} ${next ? "until the end of your next turn" : "this turn"}`}, m);
+  }
+  // things that need an opponent's spell or hand, which this table doesn't have
+  if ((m = e.match(/\bcounter (?:target|that|up to one target|another target) (?:[a-z, ]+ )?(?:spell|ability)(?: [^.]*)?/))) add({t: "note", label: "Counter a spell (the opponents don't cast spells on this table)"}, m);
+  if ((m = e.match(/\b(?:target|each) (?:opponent|player) reveals (?:their|his or her) hand[^.]*(?:\. you (?:may )?choose [^.]*)?(?:\. (?:that player|they) discards? [^.]*)?/))) add({t: "note", label: "Look at an opponent's hand (they have no cards on this table)"}, m);
+  if ((m = e.match(/\b(?:target|each) opponent discards (?:a|one|two|three|that many|x) cards?(?: at random)?/))) add({t: "note", label: "An opponent discards (they have no cards on this table)"}, m);
+  // "target player gains 3 life" (good, so it's you)
+  if (!have.some(x => x.t === "life") && (m = e.match(/\b(?:target player|each player) gains (\d+|x) life\b/))) add({t: "life", n: N(m[1]), x: isX(m[1]), label: `Gain ${m[1]} life`}, m);
+  // the card acting on itself: "return CARDNAME to its owner's hand", "sacrifice CARDNAME", "exile CARDNAME", "put CARDNAME on the bottom of its owner's library"
+  if (!have.some(x => ["blink", "sacUnless", "delay"].includes(x.t))) {
+    for (const mm of e.matchAll(/\b(?:you may )?(return cardname to (?:its owner's|your) hand|sacrifice cardname|exile cardname|put cardname on (?:the )?(top|bottom) of (?:its owner's|your) library|shuffle cardname into (?:its owner's|your) library)(?!:| unless| at the beginning| and return| then return|, then return)/g)) {
+      const w = mm[1], to = /^return/.test(w) ? "hand" : /^sacrifice/.test(w) ? "sac" : /^exile/.test(w) ? "exile" : /^shuffle/.test(w) ? "shuffle" : mm[2] === "top" ? "top" : "bottom";
+      add({t: "selfMove", to, label: {hand: "Return it to your hand", sac: "Sacrifice it", exile: "Exile it", top: "Put it on top of your library", bottom: "Put it on the bottom of your library", shuffle: "Shuffle it into your library"}[to]}, mm);
+    }
+  }
+  // "CARDNAME deals damage equal to its power to any target / target creature"
+  if ((m = e.match(/\b(?:cardname|it|that creature) deals damage equal to (?:its|cardname's) power to (any target|target creature or planeswalker|target creature|each opponent|target opponent|target player|that player|defending player|each creature)/)))
+    add({t: "powDmg", to: m[1], label: `Damage equal to its power to ${m[1].replace(/^target /, "a ")}`}, m);
   return a;
 }
 // Modal spells and abilities: "Choose one —" with "•" modes (and Spree "+ {1} —" modes)
@@ -10542,7 +10649,7 @@ function trActivated(card){
 const trNameRe = new Map();
 function trLower(card, s){
   const key = card.name;
-  if (!trNameRe.has(key)) { const names = new Set([card.name]); for (const part of card.name.split(" // ")) { names.add(part); if (part.includes(",")) names.add(part.split(",")[0]); } trNameRe.set(key, new RegExp("\\b(" + [...names].sort((a, b) => b.length - a.length).map(trEsc).join("|") + ")\\b", "gi")); }
+  if (!trNameRe.has(key)) { const names = new Set([card.name]); for (const p0 of card.name.split(" // ")) for (const part of [p0, p0.replace(/^A-/, "")]) { names.add(part); if (part.includes(",")) names.add(part.split(",")[0]); } trNameRe.set(key, new RegExp("\\b(" + [...names].sort((a, b) => b.length - a.length).map(trEsc).join("|") + ")\\b", "gi")); }
   return String(s || "").replace(/\([^)]*\)/g, "").replace(trNameRe.get(key), "CARDNAME").replace(/\bthis (creature|permanent|artifact|enchantment|land|planeswalker|vehicle|card|spell|equipment|aura|saga|token|battle|class|case|room)\b/gi, "CARDNAME").toLowerCase()
     .replace(/enters the battlefield under your control/g, "enters").replace(/enters the battlefield/g, "enters").replace(/\s+/g, " ").trim();
 }
@@ -10632,7 +10739,7 @@ function ptResolve2(a, p, ctx){
   const n = ptAmt(a, p);
   switch (a.t) {
     case "pump": {
-      if (a.who === "opp") { ptLog(`${nm}: ${a.label}.`); break; }
+      if (a.who === "opp") { const x = ptOppTargets({phrase: "creature"}, {dmg: -Math.min(0, a.tt || 0)})[0]; if (x && (a.p || a.tt)) ptHitOppCre(x, "shrink", nm, 0, {p: a.p || 0, t: a.tt || 0}); else ptLog(`${nm}: ${a.label}.`); break; }
       const list = ptTargets(a, p, ctx); if (list === null) break;
       list.forEach(c => ptPump(c, a, p));
       if (list.length) ptLog(`${nm}: ${list.length > 3 ? list.length + " creatures" : list.map(ptNameOf).join(", ")} ${a.label.replace(/^Gains/, "gain")}.`);
@@ -10640,20 +10747,30 @@ function ptResolve2(a, p, ctx){
     }
     case "dmgAll": {
       const m = ptMods(), dmg = n * m.dmgX, dt = sc && ptHasKw(sc, "deathtouch");
+      const fits = c => (!a.non || !new RegExp("\\b" + a.non + "\\b", "i").test(c.type || "")) && (a.tapped == null || !!c.tapped === a.tapped);
       if (!a.opp) for (const c of PT.bf.filter(x => (ptIsCreature(x) || x.faceDown) && x.att == null)) {
         if (a.other && sc && c.uid === sc.uid) continue;
+        if (!fits(c)) continue;
         if (a.flying === true && !ptHasKw(c, "flying")) continue;
         if (a.flying === false && ptHasKw(c, "flying")) continue;
         if (a.pw && ptPow(c) > +a.pw) continue;
         c.dmg = (c.dmg || 0) + dmg; if (dt) c.dt = true;
         if (sc && ptHasKw(sc, "wither") || sc && ptHasKw(sc, "infect")) ptAddCounters(c.uid, "m1m1", dmg);
       }
-      if (a.players) { PT.life -= dmg; ptEmit("loselife", null, {amount: dmg}); ptDealOpp(n, nm, sc, true); }
+      // and the opponents' creatures
+      for (const o of PT.opps || []) for (const b of o.board.slice()) {
+        if (!fits(b) || a.flying === true && !ptOkw(b, "flying") || a.flying === false && ptOkw(b, "flying") || a.pw && (+b.power || 0) > +a.pw) continue;
+        ptHitOppCre({o, b}, "damage", nm, dmg, {dt});
+      }
+      if (a.players) { PT.life -= dmg; ptEmit("loselife", null, {amount: dmg}); ptDealOpp(n, nm, sc, true, "each"); }
+      else if (a.opps) ptDealOpp(n, nm, sc, true, "each");
+      ptOppsCheck();
       ptLog(`${nm}: ${a.label}.`);
       break;
     }
     case "wipe": {
       const ph = a.phrase.replace(/\b(other|each|all)\b/g, " ").replace(/\band\b/g, "or").replace(/\s+/g, " ").trim();
+      if (/\bcreatures?\b|\bpermanents?\b/.test(ph) && !/\byou control\b/.test(ph) && PT.opps) { let k2 = 0; for (const o of PT.opps) for (const b of o.board.slice()) { if (a.how === "destroy" && ptOkw(b, "indestructible")) continue; o.board.splice(o.board.indexOf(b), 1); k2++; } if (k2) ptLog(`${nm}: ${k2} of the opponents' creatures ${a.how === "bounce" ? "returned to hand" : a.how === "exile" ? "exiled" : "destroyed"}.`); }
       if (/you don't control|your opponents control|an opponent controls|of the chosen color/.test(ph)) { ptLog(`${nm}: ${a.label} (none of yours).`); break; }
       const hit = PT.bf.filter(c => !(/\bother\b/.test(a.phrase) && sc && c.uid === sc.uid) && c.att == null && trFits(ph.replace(/ (?:you control|on the battlefield)$/, ""), c));
       let k = 0;
@@ -10687,7 +10804,54 @@ function ptResolve2(a, p, ctx){
       p.result = "discarded " + pick.map(c => c.name).join(", ");
       break;
     }
-    case "oppNone": case "note": ptLog(`${nm}: ${a.label}.`); break;
+    case "oppNone": {
+      if (a.oppSac && PT.opps) {   // "each opponent sacrifices a creature": they give up their least useful one
+        const who = a.oppSac.each ? ptLiveOpps() : [ptOppT()];
+        let k2 = 0;
+        for (const o of who) for (let k = 0; k < a.oppSac.n && o.board.length; k++) { const b = o.board.slice().sort((x, y) => ((+x.power || 0) + (+x.toughness || 0)) - ((+y.power || 0) + (+y.toughness || 0)))[0]; o.board.splice(o.board.indexOf(b), 1); k2++; ptLog(`${nm}: ${o.name} sacrifices ${b.name}.`); }
+        if (!k2) ptLog(`${nm}: ${a.label} (they have no creatures).`);
+        break;
+      }
+      const t = a.tgt;
+      if (t && t.how) {
+        const dmg = t.how === "damage" ? ptAmt({n: t.n, x: t.x}, p) * ptMods().dmgX : 0, dt = !!(sc && ptHasKw(sc, "deathtouch"));
+        const list = ptOppTargets(t, {dmg, dt}).slice(0, Math.max(1, t.n && t.how !== "damage" ? t.n : 1));
+        if (list.length) { list.forEach(x => ptHitOppCre(x, t.how, nm, dmg, {dt})); ptOppsCheck(); break; }
+      }
+      ptLog(`${nm}: ${a.label}${t && t.how ? " (no opponent has one to hit)" : ""}.`); break;
+    }
+    case "note": ptLog(`${nm}: ${a.label}.`); break;
+    case "oppAll": {
+      for (const o of PT.opps || []) for (const b of o.board.slice()) {
+        if (a.how === "tap") b.tapped = true; else if (a.how === "noblock") b.noBlock = PT.turn; else ptHitOppCre({o, b}, "shrink", nm, 0, {p: a.p, t: a.tt});
+      }
+      ptLog(`${nm}: ${a.label}.`); break;
+    }
+    case "impulse": {
+      const k = Math.min(n || 1, PT.lib.length), got = PT.lib.splice(0, k);
+      got.forEach(c => { c.impulse = PT.turn + (a.next ? 1 : 0); PT.exile.push(c); });
+      ptLog(`${nm}: exiled ${got.map(c => c.name).join(", ") || "nothing (the library is empty)"}${got.length ? `: you may play ${got.length > 1 ? "them" : "it"} ${a.next ? "until the end of your next turn" : "this turn"} (click Exile → Play)` : ""}.`);
+      break;
+    }
+    case "selfMove": {
+      if (!src || src.zone !== "bf" && a.to !== "exile" && a.to !== "hand") { ptLog(`${nm}: ${a.label} (it isn't on the battlefield).`); break; }
+      const u = sc.uid;
+      if (a.to === "sac") { if (src.zone === "bf") ptSacrifice(u); }
+      else if (a.to === "hand") ptMove(u, "hand"); else if (a.to === "exile") ptMove(u, "exile");
+      else if (a.to === "top" || a.to === "bottom") ptMove(u, "lib", {bottom: a.to === "bottom"});
+      else if (a.to === "shuffle") { ptMove(u, "lib", {bottom: true}); ptShuffle(); }
+      ptLog(`${nm}: ${a.label.toLowerCase()}.`); break;
+    }
+    case "powDmg": {
+      const it = ctx.it, who = (it && it.card) || sc, pw = who ? Math.max(0, ptPow(who)) : 0;
+      if (!pw) { ptLog(`${nm}: it has no power, so no damage.`); break; }
+      if (/^(any target|each opponent|target opponent|target player|that player|defending player)$/.test(a.to)) {
+        const x = a.to === "any target" ? ptOppTargets({phrase: "creature"}, {dmg: pw}).find(y => pw >= (+y.b.toughness || 0) && ((+y.b.power || 0) >= 4 || ptOkw(y.b, "deathtouch"))) : null;
+        if (x) ptHitOppCre(x, "damage", nm, pw * ptMods().dmgX); else ptDealOpp(pw, nm, who, true, a.to === "each opponent" ? "each" : undefined);
+      } else if (a.to === "each creature") { for (const o of PT.opps) for (const b of o.board.slice()) ptHitOppCre({o, b}, "damage", nm, pw); }
+      else { const x = ptOppTargets({phrase: "creature"}, {dmg: pw})[0]; if (x) ptHitOppCre(x, "damage", nm, pw * ptMods().dmgX); else ptLog(`${nm}: no creature to hit.`); }
+      ptOppsCheck(); break;
+    }
     case "copySpell": {
       const last = PT.lastSpell;
       if (!last) { ptLog(`${nm}: there's no spell to copy.`); break; }
@@ -11281,7 +11445,7 @@ function ptCastWay2(uid, way){
 /* ----- turn steps the engine looks after ----- */
 function ptCleanup(){
   for (const c of PT.bf) { delete c.eot; c.dmg = 0; c.dt = false; }
-  for (const o of PT.opps || []) for (const b of o.board) { b.dmg = 0; b.dt = false; }
+  for (const o of PT.opps || []) for (const b of o.board) { b.dmg = 0; b.dt = false; if (b.eot) { b.power = String((+b.power || 0) - b.eot.p); b.toughness = String((+b.toughness || 0) - b.eot.t); delete b.eot; } }
   PT.endCombat = [];
 }
 function ptUpkeepRules(){
@@ -11336,7 +11500,7 @@ function ptNeedsPick(a){
     case "blink": return !!a.target;
     case "copy": return a.of === "target";
     case "explore": return a.on === "target";
-    case "oppNone": return !!a.tgt;
+    case "oppNone": return !!a.tgt && !ptOppTargets(a.tgt).length;
   }
   return false;
 }

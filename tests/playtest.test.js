@@ -113,6 +113,14 @@ module.exports = async function () {
   check('tapping a land by hand puts its mana in the pool, untapping takes it back out', tap.pool1 === '{G}' && tap.pool2 === '' && !tap.tapped, tap);
 
   await fresh();
+  const pips = await page.evaluate(() => {
+    ['Forest', 'Island', 'Sol Ring', 'Birds of Paradise', 'Brushland', 'Ancient Ziggurat'].forEach(n => { const c = put(n); ptDo(() => ptTapPick(c.uid)); });
+    ptRender();
+    return [...document.querySelectorAll('#ptTop .pt-pool .mana-pip')].map(e => e.className.replace('mana-pip', '').replace(/\bnew\b/, '').trim() + (e.style.background ? ' split' : ''));
+  });
+  check('the mana pool shows coloured mana symbols (green, blue, colourless, split and any-colour ones)', pips.includes('G') && pips.includes('U') && pips.filter(x => x === 'C').length === 2 && pips.filter(x => /multi/.test(x)).length === 3 && pips.some(x => /only/.test(x)), pips);
+
+  await fresh();
   const x = await page.evaluate(() => {
     ['Forest', 'Forest', 'Forest', 'Island'].forEach(put);
     const c = {uid: 999, name: 'Test X', type: 'Sorcery', cost: '{X}{G}', text: '', colors: ['G']};
@@ -237,6 +245,59 @@ module.exports = async function () {
     return PT.opps.map(o => o.board.length);
   });
   check('an opponent set to "grow like a typical deck" plays creatures each turn', grow.every(n => n >= 3), grow);
+
+  // ---- more cards: removal on their creatures, sweepers, impulse draw, modal triggers, self-copy loops ----
+  await fresh(5);
+  const more = await page.evaluate(() => {
+    const out = {};
+    const spell = (name, type, cost, text, extra) => Object.assign({uid: 0, name, type, cost, text, colors: ['R'], cmc: 2, counters: {}}, extra || {});
+    const cast = card => { const c = ptMakeCard(card); PT.hand.push(c); prefs.ptAutoMana = false; ptCastPaid(c.uid); prefs.ptAutoMana = true; for (let i = 0; i < 10 && PT.trig.length; i++) ptDoPrompt(PT.trig[0].id); return c; };
+    prefs.ptAutoPick = true;
+    const o0 = PT.opps[0], o1 = PT.opps[1];
+    o0.board.push(ptOppCre({name: 'Bear', power: 2, toughness: 2}), ptOppCre({name: 'Dragon', power: 5, toughness: 5, text: 'Flying'}));
+    o1.board.push(ptOppCre({name: 'Elf', power: 1, toughness: 1}));
+    cast(spell('Murder', 'Instant', '{1}{B}{B}', 'Destroy target creature.'));
+    out.murder = o0.board.map(b => b.name);
+    cast(spell('Shock', 'Instant', '{R}', 'Shock deals 2 damage to any target.'));
+    out.shockLife = o0.life;
+    cast(spell('Fire Bolt', 'Sorcery', '{R}', 'Fire Bolt deals 2 damage to target creature.'));
+    out.bolt = o0.board.map(b => b.name).concat(o1.board.map(b => b.name));
+    o0.board.push(ptOppCre({name: 'Bear', power: 2, toughness: 2})); o1.board.push(ptOppCre({name: 'Ogre', power: 4, toughness: 4}));
+    cast(spell('Pyroclasm', 'Sorcery', '{1}{R}', 'Pyroclasm deals 2 damage to each creature.'));
+    out.sweep = o0.board.map(b => b.name).concat(o1.board.map(b => b.name));
+    cast(spell('Light Up the Stage', 'Sorcery', '{2}{R}', 'Exile the top two cards of your library. Until the end of your next turn, you may play those cards.'));
+    out.impulse = PT.exile.filter(c => c.impulse === PT.turn + 1).length;
+    return out;
+  });
+  check('removal hits an opponent\'s creature (Murder kills the biggest threat)', JSON.stringify(more.murder) === '["Bear"]', more);
+  check('"any target" burn still goes to the opponent', more.shockLife === 38, more);
+  check('damage to a creature kills one it can kill', !more.bolt.includes('Bear') || !more.bolt.includes('Elf'), more);
+  check('sweepers hit the opponents\' creatures too (Pyroclasm kills 2/2s, not the 4/4)', JSON.stringify(more.sweep) === '["Ogre"]', more);
+  check('impulse draw exiles cards you can play until the end of your next turn', more.impulse === 2, more);
+
+  await fresh(5);
+  const loops = await page.evaluate(() => {
+    const out = {};
+    prefs.ptAutoPick = true;
+    const mk = (name, type, text, pt) => { const c = ptMakeCard({name, type, text, cost: '', colors: ['G'], power: pt[0], toughness: pt[1]}); PT.hand.push(c); prefs.ptAutoMana = false; ptCastPaid(c.uid); prefs.ptAutoMana = true; for (let i = 0; i < 20 && PT.trig.length; i++) { const p = PT.trig[0]; if (p.modes) ptPickMode(p.id, 0); else ptDoPrompt(p.id); if (PT.trig[0] === p) PT.trig.shift(); } return c; };
+    mk('Gruff Triplets', 'Creature — Satyr Warrior', 'Trample\nWhen Gruff Triplets enters, if it isn\'t a token, create two tokens that are copies of it.', ['3', '3']);
+    out.triplets = PT.bf.filter(c => c.name === 'Gruff Triplets').length;
+    mk('Wingmantle Chaplain', 'Creature — Human Cleric', 'Defender\nWhen Wingmantle Chaplain enters, create a 1/1 white Bird creature token with flying for each creature with defender you control.\nWhenever another creature you control with defender enters, create a 1/1 white Bird creature token with flying.', ['0', '3']);
+    out.birds = PT.bf.filter(c => c.name === 'Bird').length;
+    const ab = trAbilities(ptMakeCard({name: 'Charm Beast', type: 'Creature — Beast', text: 'When Charm Beast enters, choose one —\n• Draw a card.\n• You gain 3 life.'}));
+    out.modes = ab[0] && ab[0].modes ? ab[0].modes.map(m => m.actions.map(a => a.t).join()) : null;
+    const fencer = trAbilities(ptMakeCard({name: 'A-Celebrity Fencer', type: 'Creature — Human Warrior', text: 'Whenever another creature you control enters, put a +1/+1 counter on Celebrity Fencer.'}));
+    out.alchemy = fencer[0] && fencer[0].actions.map(a => a.t + ':' + a.on).join();
+    const kr = {name: "K'rrik", cost: '{4}{B/P}{B/P}{B/P}', type: 'Creature', text: '', colors: ['B']};
+    ['Forest', 'Forest', 'Island', 'Mountain'].forEach(put);
+    const plan = ptPlan(kr.cost, kr); out.phyrexian = plan.missing ? 'missing' : plan.life;
+    return out;
+  });
+  check('"if it isn\'t a token": Gruff Triplets makes two copies, and the copies don\'t copy again', loops.triplets === 3, loops);
+  check('"another creature with defender": Bird tokens (no defender) don\'t set it off', loops.birds === 1, loops);
+  check('"choose one —" triggered abilities offer their modes', JSON.stringify(loops.modes) === '["draw","life"]', loops);
+  check('Alchemy cards (A-…) know their own name', loops.alchemy === 'counter:self', loops);
+  check('Phyrexian mana can be paid with life', loops.phyrexian === 6, loops);
 
   check('no page errors', page.errors.length === 0, page.errors);
   await browser.close();
