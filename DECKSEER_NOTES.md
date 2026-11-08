@@ -281,3 +281,10 @@ Lessons from running it on Colab (all fixed in the script): Scryfall's bulk-data
    - a rules search box
    - (done: convoke in the finder; Arcane Signet and Command Tower limited to the commander's colours; Cavern of Souls keeps {C} for other spells and makes the chosen type uncounterable. The creature type comes from the deck's "choose a creature type" setting in the card report, or the most common type.)
    - convoke in the playtester's rules engine (not checked yet)
+
+## Start-up downloads popup (2026.11.08.8)
+- `#setupDlg` (a modal `<dialog>`) opens on first start (`prefs.seenSetup`), after `lib.loaded` and once the AI has finished loading; skipped if both are already ready. The **⬇ Downloads** button in the header (`#setupOpen`) reopens it.
+- **Card pictures:** scope select + button that drive the existing Picture library (`#libScope`, `#libBuild`), so pause/resume work the same. Status mirrors `#libState`.
+- **AI:** the files can't be downloaded for people (they aren't on the site), so it shows the four steps, a link that opens `stage2/Deckseer_Stage2_Index.ipynb` straight in Google Colab, **Load the files** (same `aiLoadPicked`), and **Show me how** (opens the guide's AI chapter).
+- `libStatus` and `aiStatus` are wrapped to call `setupRender()` so the popup updates live.
+- Not shown under test automation (`navigator.webdriver`) unless `window.DECKSEER_SETUP` is set; tests/setup.test.js does that.
