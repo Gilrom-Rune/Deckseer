@@ -150,7 +150,8 @@ main{max-width:1400px;margin:0 auto;display:grid;grid-template-columns:minmax(0,
 .alts{display:flex;gap:6px;flex-wrap:wrap;font-size:.85rem}
 .alts button{border:1px solid var(--line);background:var(--sunk);border-radius:999px;padding:2px 10px}
 .prints-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.85rem;color:var(--muted)}
-.prints{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px;max-height:260px;overflow:auto;padding:2px}
+.prints{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px;padding:2px}
+.prints-all{margin-top:6px}
 .pr{border:2px solid transparent;border-radius:8px;background:var(--sunk);padding:3px;display:flex;flex-direction:column;gap:2px;text-align:left}
 .pr img{width:100%;aspect-ratio:146/204;border-radius:5px;object-fit:cover;background:var(--line)}
 .pr span{font-family:var(--f-mono);font-size:.66rem;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -3029,6 +3030,12 @@ const CONDS = [["NM","Near Mint"],["LP","Lightly Played"],["MP","Moderately Play
 const FORMATS = [["standard","Standard"],["pioneer","Pioneer"],["modern","Modern"],["legacy","Legacy"],["vintage","Vintage"],["commander","Commander"],["pauper","Pauper"]];
 const condOpts = sel => CONDS.map(([c, n]) => `<option value="${c}" ${c === sel ? "selected" : ""}>${n}</option>`).join("");
 const isValuable = v => prefs.alertAt > 0 && v >= prefs.alertAt;
+const PRINTS_FIRST = 12;
+function printsShown(i){
+  const all = current.showAllPrints || current.prints.length <= PRINTS_FIRST + 2;
+  printsShown.hidden = !all;
+  return all || i < PRINTS_FIRST || i === current.sel;
+}
 function renderCurrent(){
   const el = $("current");
   if (!current) { el.innerHTML = `<div class="cur-empty">The last card you scan shows up here so you can check its printing.</div>`; return; }
@@ -3053,10 +3060,11 @@ function renderCurrent(){
       </div>
     </div>
     <div class="prints-head"><span>${current.prints.length} printing${current.prints.length > 1 ? "s" : ""}${current.allLangs ? " in all languages" : ""}</span>${current.allLangs ? "<span>English first, then newest</span>" : `<button type="button" class="more-langs" id="moreLangs">Show other languages</button>`}</div>
-    <div class="prints" id="prints">${current.prints.map((q, i) => `
+    <div class="prints" id="prints">${current.prints.map((q, i) => (printsShown(i) ? `
       <button type="button" class="pr ${i === current.sel ? "sel" : ""}" data-i="${i}" title="${esc(q.setName)} #${esc(q.number)} (${esc((q.released || "").slice(0,4))})">
         <img loading="lazy" src="${esc(q.img)}" alt=""><span>${esc(q.set)} ${esc(q.number)}${q.lang !== "en" ? `<b class="lang">${esc(q.lang.toUpperCase())}</b>` : ""}</span><span>${priceOf(q, current.foil) ? money(priceOf(q, current.foil)) : "—"}</span>
-      </button>`).join("")}</div>
+      </button>` : "")).join("")}</div>
+    ${printsShown.hidden ? `<button type="button" class="linkbtn prints-all" id="showAllPrints">Show all ${current.prints.length} printings</button>` : ""}
     <div class="cur-actions">
       <button class="btn primary" type="button" id="addBtn" ${current.added ? "disabled" : ""}>${current.added ? "Added" : esc(targetLabel())} <kbd>Enter</kbd></button>
       ${current.added ? `<button class="btn" type="button" id="againBtn">Add another <kbd>R</kbd></button>` : ""}
@@ -3074,6 +3082,7 @@ function renderCurrent(){
   const det = el.querySelector("#curDetails"); if (det) det.addEventListener("toggle", () => { prefs.showText = det.open; savePrefs(); });
 }
 $("current").addEventListener("click", async e => {
+  if (e.target.closest("#showAllPrints") && current) { current.showAllPrints = true; return renderCurrent(); }
   const pr = e.target.closest(".pr");
   if (pr && current) { current.sel = +pr.dataset.i; current.why = "Picked by you"; fixFoil(); current.added = false; renderCurrent(); return; }
   if (e.target.closest("#addBtn")) { addCurrent(false); return; }
@@ -7171,7 +7180,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.08.5";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.08.6";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
