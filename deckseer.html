@@ -5833,7 +5833,7 @@ function fwSearch(plan, pool, cmds, o){
   };
   const cascadeHits = s => {
     const q = s.casc[0], pick = [];
-    if (q.gy) { const c = byName.get(q.gy); return c && s.gy.includes(c.name) ? [{c, after: s.mana, op: {free: true, fromGy: true, how: `${q.how} by ${q.from}`, from: q.from}}] : (s.casc.shift(), []); }
+    if (q.gy) { const c = byName.get(q.gy); return c && s.gy.includes(c.name) ? [{c, after: s.mana, op: {free: true, fromGy: true, how: `${q.how} by ${q.from}`, from: q.from}}] : []; }   // the caller drops the empty entry
     const fits = spells.filter(c => !c.cmd && left(s, c, true) && !c.counterOnly && (c.cmc || 0) <= q.mv && (!q.ph || (c.perm && c.power != null && /\bCreature\b/.test(c.type) && fwFits(q.ph, c))) && !c.guide
       && reqOK(s, c, c.reqs || [], true) && (!c.extra || s.used + c.extra <= s.slots) && (!c.discardLand || lands.some(l => left(s, l))));
     const add2 = list => { for (const c of list) if (!pick.includes(c)) pick.push(c); };
@@ -5971,7 +5971,7 @@ function fwSearch(plan, pool, cmds, o){
         if (n.won) { if (!best || n.won.t < best.won.t || n.order.length < best.order.length) best = n; return; }
         if (n.casc.length) {
           const hits = cascadeHits(n);
-          if (!hits.length) { const m2 = clone(n); const q = m2.casc.shift(); m2.log.push({t, kind: "note", name: `${q.how} from ${q.from}: nothing cheap enough left`}); return dfs(m2, depth); }
+          if (!hits.length) { const m2 = clone(n); const q = m2.casc.shift(); m2.log.push({t, kind: "note", name: q.gy ? `${q.from}: nothing left to cast from the graveyard` : `${q.how} from ${q.from}: nothing cheap enough left`}); return dfs(m2, depth); }
           for (const x of hits) dfs(play(n, x.c, x.after, x.op), depth);
           return;
         }
@@ -7058,7 +7058,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.08.1";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.08.2";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do

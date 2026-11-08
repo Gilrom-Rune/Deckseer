@@ -46,6 +46,15 @@ module.exports = async function () {
   const loop = await run(lands.concat([CARDS.greenwarden, CARDS.solRing, CARDS.birds]), [ASHLING]);
   check('evoked Greenwarden: Ashling\'s copy returns the original from the graveyard', !!loop && loop.log.some(l => /returns Greenwarden of Murasa from your graveyard/.test(l.note)), loop && loop.log.filter(l => /Greenwarden/.test(l.name + l.note)).map(l => l.t + ' ' + l.kind + ' ' + l.note));
   check('Greenwarden returns a card that really went to the graveyard', ret.every(l => { const nm = l.note.match(/returns (.+) from your graveyard/)[1]; return gw2.log.some(m => m.name === nm && m.kind === 'cast'); }), ret);
+  // the buttons themselves, the way the app runs them, on the fuller deck (Risen Reef, Yarok, Twinflame, two Omnaths…)
+  const buttons = await page.evaluate(async d => {
+    const out = {};
+    try { const r = await fastestWin(d); out.fastest = r.results[0] && r.results[0].turn; } catch (e) { out.fastestErr = String(e.stack || e).slice(0, 300); }
+    try { const r = await fwRealistic(d, 12); out.real = r.games; } catch (e) { out.realErr = String(e.stack || e).slice(0, 300); }
+    return out;
+  }, ashlingDeck());
+  check(`"Find fastest win" runs on the full deck without crashing (turn ${buttons.fastest})`, buttons.fastest > 0 && !buttons.fastestErr, buttons);
+  check('"Play realistic games" runs on the full deck without crashing', buttons.real === 12 && !buttons.realErr, buttons);
   check('no page errors', page.errors.length === 0, page.errors);
   await browser.close();
 };
