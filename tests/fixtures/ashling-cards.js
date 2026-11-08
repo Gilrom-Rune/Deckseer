@@ -1,0 +1,27 @@
+// Cards from the user's Ashling deck, with their Oracle text, for the fastest-win interaction tests.
+const c = (name, type, cost, cmc, text, colors, extra) => Object.assign({name, type, cost, cmc, text, colors, ci: colors, qty: 1, board: 'main', power: '', toughness: ''}, extra || {});
+const ASHLING = c('Ashling, the Limitless', 'Legendary Creature — Elemental Sorcerer', '{2}{R}', 3, "Elemental permanent spells you cast from your hand have evoke {4}.\nWhenever you sacrifice a nontoken Elemental, create a token that's a copy of it. The token gains haste until end of turn. At the beginning of the next end step, sacrifice it unless you pay {W}{U}{B}{R}{G}.", ['R'], {ci: ['W', 'U', 'B', 'R', 'G'], power: '2', toughness: '2'});
+const CARDS = {
+  birds: c('Birds of Paradise', 'Creature — Bird', '{G}', 1, 'Flying\n{T}: Add one mana of any color.', ['G'], {power: '0', toughness: '1'}),
+  ziggurat: c('Ancient Ziggurat', 'Land', '', 0, '{T}: Add one mana of any color. Spend this mana only to cast a creature spell.', []),
+  brushland: c('Brushland', 'Land', '', 0, '{T}: Add {C}.\n{T}: Add {G} or {W}. Brushland deals 1 damage to you.', []),
+  cavern: c('Cavern of Souls', 'Land', '', 0, "As Cavern of Souls enters, choose a creature type.\n{T}: Add {C}.\n{T}: Add one mana of any color. Spend this mana only to cast a creature spell of the chosen type, and that spell can't be countered.", []),
+  ritual: c('Pyretic Ritual', 'Instant', '{1}{R}', 2, 'Add {R}{R}{R}.', ['R']),
+  solRing: c('Sol Ring', 'Artifact', '{1}', 1, '{T}: Add {C}{C}.', []),
+  harbinger: c('Flamekin Harbinger', 'Creature — Elemental Shaman', '{R}', 1, 'When Flamekin Harbinger enters, you may search your library for an Elemental card, reveal it, then shuffle and put that card on top.', ['R'], {power: '1', toughness: '1'}),
+  altar: c("Ashnod's Altar", 'Artifact', '{3}', 3, 'Sacrifice a creature: Add {C}{C}.', []),
+  wanderer: c('Maelstrom Wanderer', 'Legendary Creature — Elemental', '{5}{U}{R}{G}', 8, 'Creatures you control have haste.\nCascade, cascade', ['U', 'R', 'G'], {power: '7', toughness: '5'}),
+  animar: c('Animar, Soul of Elements', 'Legendary Creature — Elemental', '{U}{R}{G}', 3, 'Protection from white and from black\nWhenever you cast a creature spell, put a +1/+1 counter on Animar, Soul of Elements.\nCreature spells you cast cost {1} less to cast for each +1/+1 counter on Animar, Soul of Elements.', ['U', 'R', 'G'], {power: '1', toughness: '1'}),
+  impulsivity: c('Impulsivity', 'Creature — Elemental Incarnation', '{6}{R}', 7, 'When Impulsivity enters, you may cast target instant or sorcery card from a graveyard without paying its mana cost. If that spell would be put into a graveyard, exile it instead.', ['R'], {power: '7', toughness: '5'}),
+  summons: c('Kindred Summons', 'Instant', '{5}{G}{G}', 7, 'Choose a creature type. Reveal cards from the top of your library until you reveal X creature cards of the chosen type, where X is the number of creatures you control of the chosen type. Put all creature cards revealed this way onto the battlefield, then shuffle the rest of the revealed cards into your library.', ['G']),
+  titan: c('Titan of Industry', 'Creature — Elemental Giant', '{4}{G}{G}{W}{U}', 8, 'Reach, trample\nWhen Titan of Industry enters, choose two —\n• Destroy target artifact or enchantment.\n• Target player gains 5 life.\n• Create a 4/4 green Rhino Warrior creature token.\n• Put a shield counter on a creature you control.', ['G', 'W', 'U'], {power: '7', toughness: '7'}),
+  cavalier: c('Cavalier of Thorns', 'Creature — Elemental Knight', '{2}{G}{G}{G}', 5, 'Reach\nWhen Cavalier of Thorns enters, reveal the top five cards of your library. Put a land card from among them onto the battlefield and the rest into your graveyard.\nWhen Cavalier of Thorns dies, you may exile it. If you do, put another target card from your graveyard on top of your library.', ['G'], {power: '5', toughness: '6'}),
+  avenger: c('Avenger of Zendikar', 'Creature — Elemental', '{5}{G}{G}', 7, 'When Avenger of Zendikar enters, create a 0/1 green Plant creature token for each land you control.\nLandfall — Whenever a land you control enters, you may put a +1/+1 counter on each Plant creature you control.', ['G'], {power: '5', toughness: '5'}),
+  greenwarden: c('Greenwarden of Murasa', 'Creature — Elemental', '{4}{G}{G}', 6, 'When Greenwarden of Murasa enters, you may return target card from your graveyard to your hand.\nWhen Greenwarden of Murasa dies, you may exile it. If you do, return target card from your graveyard to your hand.', ['G'], {power: '5', toughness: '4'}),
+  wildspeaker: c('Return of the Wildspeaker', 'Instant', '{4}{G}', 5, 'Choose one —\n• Draw cards equal to the greatest power among non-Human creatures you control.\n• Non-Human creatures you control get +3/+3 until end of turn.', ['G']),
+  avengerLand: c('Forest', 'Basic Land — Forest', '', 0, '({T}: Add {G}.)', [], {qty: 12}),
+  island: c('Island', 'Basic Land — Island', '', 0, '({T}: Add {U}.)', [], {qty: 8}),
+  mountain: c('Mountain', 'Basic Land — Mountain', '', 0, '({T}: Add {R}.)', [], {qty: 8})
+};
+const ashlingDeck = () => ({id: 'dAshReal', name: 'Ashling Elementals', format: 'commander', created: 1, updated: 1, fwType: 'elemental', commanders: [ASHLING], cards: Object.values(CARDS)});
+module.exports = { ASHLING, CARDS, ashlingDeck };

@@ -5331,6 +5331,7 @@ function fwRules(f, c){
       if ((m = e.match(/put (?:a|up to one) land cards? from among them onto the battlefield( tapped)?/))) out.push({t: "searchAuto", phrase: "land", to: "bf", tapped: !!m[1], n: 1});
       if (/search your library for an? [a-z ]+? card[^.]*\b(?:put|and put) (?:that card|it) on top/.test(e)) out.push({t: "tutorTop"});
       if ((m = e.match(/put a \+1\/\+1 counter on (?:target|each) ([a-z ]+?) you control/))) out.push({t: "counter", kind: "p1p1", on: "pick", n: 1});
+      if (/\bcast target (?:instant or sorcery|instant|sorcery) card from (?:a|your) graveyard without paying its mana cost/.test(e)) out.push({t: "castGy"});
       if (/\bchoose (?:one|two|three)\b/.test(e) && (m = e.match(/create an? (\d+)\/(\d+) ([a-z ]+?) creature token/))) { const nm = m[3].split(" ").filter(w => !/^(white|blue|black|red|green|colorless)$/.test(w)).map(w => w[0].toUpperCase() + w.slice(1)).join(" "); out.push({t: "token", n: 1, def: {name: nm, type: "Token Creature — " + nm, power: m[1], toughness: m[2], colors: [], text: ""}}); }
       return out;
     };
@@ -5386,7 +5387,7 @@ function fwRules(f, c){
   const modal = t.match(/when [^\n]*? enters, choose (?:one|two|three)[^\n]*(?:\n•[^\n]*)*?\n• create an? (\d+)\/(\d+) ([a-z ]+?) creature token/);
   if (modal) { const nm = modal[3].split(" ").filter(w => !/^(white|blue|black|red|green|colorless)$/.test(w)).map(w => w[0].toUpperCase() + w.slice(1)).join(" "); (f.trigs = f.trigs || []).push({conds: [{ev: "etb", who: "self", phrase: "cardname"}], acts: [{t: "token", n: 1, def: {name: nm, type: "Token Creature — " + nm, power: modal[1], toughness: modal[2], colors: [], text: ""}}], text: `When it enters: create a ${modal[1]}/${modal[2]} ${nm} (the mode used)`}); }
   if (/whenever you create or sacrifice a token, each opponent loses (\d+|one) life/.test(t)) f.tokenDrain = 1;
-  if (/reveal cards from the top of your library until you reveal x creature cards of the chosen type, where x is the number of creatures you control of that type/.test(t)) f.summons = FW_TYPE || "creature";
+  if (/reveal cards from the top of your library until you reveal x creature cards of the chosen type, where x is the number of creatures you control of (?:that|the chosen) type/.test(t)) f.summons = FW_TYPE || "creature";
   // extra land drops: "You may play an additional land on each of your turns"
   const xl = t.match(/you may play (an|two|three) additional lands? on each of your turns/); if (xl) f.extraLand = WORDNUM[xl[1]] || 1;
   // looting: "Draw two cards, then discard a card"; rummaging: "Discard a card, then draw a card"
@@ -5408,10 +5409,10 @@ function fwSearch(plan, pool, cmds, o){
   // srcs: mana sources ready each turn (one array of mana each); next: ones that are ready from next turn; mana: what's left this turn.
   // Each mana remembers where it came from: "G#12" from land/rock 12, "G@12" from creature 12 (so it can't attack if spent),
   // "WUBRG~T" is a Treasure (it stays until used), "WUBRG!elemental" can only pay for Elemental spells.
-  const mk = () => ({names: {}, treas: 0, clues: 0, monarch: false, castN: 0, casc: [], later: [], acq: Array.from({length: o.bonusCard ? 8 : 7}, () => ({t: 0, by: "open"})), hasteFx: [], anth: [], equips: [], perms: [], pid: 0, grave: 0, life: o.life, legCols: "", arts: 0, idle: [], doneT: {}, t: 0, srcs: [], next: [], mana: [], slots: o.bonusCard ? 8 : 7, used: 0, cnt: {}, board: [], opp: o.life, poison: 0, cmdDmg: 0, done: [], cmdOut: [], tax: {}, log: [], order: [], won: null, budget: 0, removed: false, countered: false});
-  const clone = s => Object.assign({}, s, {casc: s.casc.slice(), later: s.later.slice(), acq: s.acq.slice(), hasteFx: s.hasteFx.slice(), anth: s.anth.slice(), equips: s.equips.map(e => Object.assign({}, e)), perms: s.perms.slice(), idle: s.idle.slice(), doneT: Object.assign({}, s.doneT), srcs: s.srcs.slice(), next: s.next.slice(), mana: s.mana.slice(), cnt: Object.assign({}, s.cnt), board: s.board.map(b => Object.assign({}, b)), done: s.done.slice(), cmdOut: s.cmdOut.slice(), tax: Object.assign({}, s.tax), log: s.log.slice(), order: s.order.slice()});
+  const mk = () => ({gy: [], back: [], names: {}, treas: 0, clues: 0, monarch: false, castN: 0, casc: [], later: [], acq: Array.from({length: o.bonusCard ? 8 : 7}, () => ({t: 0, by: "open"})), hasteFx: [], anth: [], equips: [], perms: [], pid: 0, grave: 0, life: o.life, legCols: "", arts: 0, idle: [], doneT: {}, t: 0, srcs: [], next: [], mana: [], slots: o.bonusCard ? 8 : 7, used: 0, cnt: {}, board: [], opp: o.life, poison: 0, cmdDmg: 0, done: [], cmdOut: [], tax: {}, log: [], order: [], won: null, budget: 0, removed: false, countered: false});
+  const clone = s => Object.assign({}, s, {gy: s.gy.slice(), back: s.back.slice(), casc: s.casc.slice(), later: s.later.slice(), acq: s.acq.slice(), hasteFx: s.hasteFx.slice(), anth: s.anth.slice(), equips: s.equips.map(e => Object.assign({}, e)), perms: s.perms.slice(), idle: s.idle.slice(), doneT: Object.assign({}, s.doneT), srcs: s.srcs.slice(), next: s.next.slice(), mana: s.mana.slice(), cnt: Object.assign({}, s.cnt), board: s.board.map(b => Object.assign({}, b)), done: s.done.slice(), cmdOut: s.cmdOut.slice(), tax: Object.assign({}, s.tax), log: s.log.slice(), order: s.order.slice()});
   const seenN = o.lib ? (() => { const m = new Map(); return (nm, k) => { let a = m.get(nm); if (!a) { a = []; let x = 0; for (const n0 of o.lib) { if (n0 === nm) x++; a.push(x); } m.set(nm, a); } return k <= 0 ? 0 : a[Math.min(k, a.length) - 1]; }; })() : null;
-  const left = (s, c, fromLib) => c.cmd ? !s.cmdOut.includes(c.name) : (s.cnt[c.name] || 0) < (seenN && !fromLib ? Math.min(c.qty, seenN(c.name, s.slots)) : c.qty);
+  const left = (s, c, fromLib) => c.cmd ? !s.cmdOut.includes(c.name) : !fromLib && s.back.includes(c.name) ? true : (s.cnt[c.name] || 0) < (seenN && !fromLib ? Math.min(c.qty, seenN(c.name, s.slots)) : c.qty);
   const live = (s, u) => u.startsWith("LEG") ? (s.legCols ? s.legCols + u.slice(3) : null) : u.startsWith("OPAL") ? (s.arts >= 3 ? "WUBRG" + u.slice(4) : null) : u;
   const tapSrc = (s, src) => { const got = src.map(u => live(s, u)); if (got.some(x => x == null)) { s.idle.push(src); return; } s.mana.push(...got); };
   const wake = s => { const w = s.idle; s.idle = []; for (const src of w) tapSrc(s, src); };
@@ -5449,7 +5450,7 @@ function fwSearch(plan, pool, cmds, o){
   const value = p => (pieces && pieces.has(p.name) ? 1000 : 0) + (p.src || 0) * 10 + (p.power || 0) * 3 + (/\bland\b/i.test(p.type) ? 6 : 0) + (p.trigs || p.acts ? 8 : 0) - (p.token ? 4 : 0);
   // throw away n cards you don't need (looting, discard costs)
   const tossCards = (n, k) => { k = Math.min(k, Math.max(0, n.slots - n.used)); for (let i = 0; i < k; i++) n.order.push({name: null, t: n.t}); n.used += k; n.grave += k; return k; };
-  const sacrifice = (n, p, why) => { leave(n, p.id); if (!p.token) n.grave++; const reason = `${p.name} was sacrificed${why ? " (" + why + ")" : ""}`; fire(n, {ev: "sac", card: p, id: p.id, selfTrigs: p.trigs, reason}); if (/\bcreature\b/i.test(p.type)) fire(n, {ev: "dies", reason, card: p, id: p.id, selfTrigs: p.trigs}); };
+  const sacrifice = (n, p, why) => { leave(n, p.id); if (!p.token) { n.grave++; n.gy.push(p.name); } const reason = `${p.name} was sacrificed${why ? " (" + why + ")" : ""}`; fire(n, {ev: "sac", card: p, id: p.id, selfTrigs: p.trigs, reason}); if (/\bcreature\b/i.test(p.type)) fire(n, {ev: "dies", reason, card: p, id: p.id, selfTrigs: p.trigs}); };
   const payReqs = (n, c, reqs, notes) => {
     for (const r of reqs) {
       if (r.k === "life") { n.life -= r.n; notes.push(`pay ${r.n} life`); }
@@ -5462,7 +5463,7 @@ function fwSearch(plan, pool, cmds, o){
         notes.push(`${r.k === "bounce" ? "return" : r.exile ? "exile" : "sacrifice"} ${got.map(p => p.name).join(", ")}`);
       }
       else if (r.k === "tap") { const got = n.board.filter(b => !b.tapped && fwFits(r.ph, b)).sort((a, b) => a.p - b.p).slice(0, r.n); got.forEach(b => { b.tapped = true; }); notes.push(`tap ${got.map(b => b.name).join(", ")}`); }
-      else if (r.k === "grave") { n.grave -= r.n; notes.push(`exile ${r.n} from your graveyard`); }
+      else if (r.k === "grave") { n.grave -= r.n; n.gy.splice(0, r.n); notes.push(`exile ${r.n} from your graveyard`); }
       else if (r.k === "behold") {
         // use something on the battlefield that isn't doing much; otherwise a card from your hand
         const word = r.ph.replace(/^(?:a|an) /, "");
@@ -5564,9 +5565,18 @@ function fwSearch(plan, pool, cmds, o){
         if (!b0 && !p0) return "";
         const base = Object.assign({}, p0 || {}, b0 || {}, {p: b0 ? b0.p : (p0.power || 0)});
         for (let i = 0; i < (a.n || 1); i++) {
-          const tc = {name: base.name, type: base.type, cols: base.cols, changeling: base.changeling, power: a.set ? a.set[0] : base.p, ds: base.ds, haste: base.ownHaste || a.haste, noAttack: base.noAttack, token: true,
-            trigs: (base.trigs || []).concat(base.copyTrigs || []), copyTrigs: base.copyTrigs, acts: base.acts, reduce: base.reduce, grantEvoke: base.grantEvoke};
+          // a copy has everything the card has: start from the card itself (not just what's on the battlefield record)
+          const full = byName.get(base.name) || {};
+          const tc = Object.assign({}, full, {name: base.name, type: base.type || full.type, cols: base.cols || full.cols, changeling: base.changeling, power: a.set ? a.set[0] : base.p, ds: base.ds, haste: base.ownHaste || a.haste, noAttack: base.noAttack, token: true, cmd: false,
+            trigs: (base.trigs || full.trigs || []).concat(base.copyTrigs || full.copyTrigs || []), copyTrigs: base.copyTrigs || full.copyTrigs, acts: base.acts || full.acts, reduce: base.reduce || full.reduce, grantEvoke: base.grantEvoke || full.grantEvoke});
           const pid = arrive(n, tc, {power: tc.power}); n._lastTok = pid;
+          // its always-on abilities: haste for others (Maelstrom Wanderer), anthems, Yarok/Twinflame doubling (via arrive), mana
+          if (tc.giveHaste) for (const g of tc.giveHaste) n.hasteFx.push({id: pid, ph: g.ph, other: g.other});
+          if (tc.anthem) for (const an of tc.anthem) n.anth.push({id: pid, ph: an.ph, other: an.other, n: an.n});
+          if (tc.legend) { for (const k2 of tc.cols || "") if (!n.legCols.includes(k2)) n.legCols += k2; }
+          if (tc.artifact) n.arts++;
+          if (tc.rock) { const s3 = srcOf(tc.rock, pid); if (tc.rockTapped) n.next.push(s3); else { n.srcs.push(s3); tapSrc(n, s3); } }
+          if (tc.dork) { const s3 = srcOf(tc.dork, pid, true); if (a.haste || tc.haste) { n.srcs.push(s3); tapSrc(n, s3); } else n.next.push(s3); }
           if (/\bcreature\b/i.test(tc.type || "")) addCreature(n, tc, pid, null, {token: true, haste: a.haste});
           fire(n, {ev: "etb", card: Object.assign({}, tc, {id: pid}), id: pid}); fire(n, {ev: "token", card: tc, id: pid});
         }
@@ -5626,7 +5636,17 @@ function fwSearch(plan, pool, cmds, o){
         setPerm(n, n._lastTok, {temp: true, keepCost});
         return `it's sacrificed at end of turn${keepCost ? ` unless you pay ${keepCost}` : ""}`;
       } return "";
-      case "fromGrave": if (a.to === "hand" && n.grave > 0) { n.grave--; n.slots++; n.acq.push({t: n.t, by: src.name, log: n._logAt != null ? n._logAt : n.log.length}); return "a card back from your graveyard"; } return "";
+      case "fromGrave": {
+        if (a.to !== "hand" || !n.gy.length) return "";
+        const name = bestFromGy(n, () => true); if (!name) return "";
+        n.gy.splice(n.gy.indexOf(name), 1); n.grave = Math.max(0, n.grave - 1); n.back.push(name);
+        return `returns ${name} from your graveyard to your hand`;
+      }
+      case "castGy": {   // Impulsivity: cast an instant or sorcery from a graveyard for free
+        const name = bestFromGy(n, c => !c.perm); if (!name) return "";
+        n.casc.push({mv: 99, gy: name, how: "cast from the graveyard", from: src.name});
+        return `casts ${name} from your graveyard for free`;
+      }
     }
     return "";
   };
@@ -5679,21 +5699,23 @@ function fwSearch(plan, pool, cmds, o){
   const play = (s, c, after, op) => {
     op = op || {};
     const n = clone(s), pay = op.pay || c.pay, k = pay.gen + taxOf(s, c) + pay.cols.length;
-    n.mana = after; n.budget = 60;
+    n.mana = after.slice(); n.budget = 60;   // its own copy: options can share the array they were priced against
     // the spell's own line goes first; anything its costs or effects set off (sacrifice triggers…) follows
     const logAt = n.log.length; n.log.push({t: n.t, kind: "none"});
     const pre = [];
     // a free spell skips only the mana cost: additional costs (behold and exile, sacrifice, discard…) are still paid
-    if (op.free) { n.casc.shift(); n.cnt[c.name] = (n.cnt[c.name] || 0) + 1; payReqs(n, c, c.reqs || [], pre); }
+    if (op.free) { n.casc.shift(); if (op.fromGy) { const i = n.gy.indexOf(c.name); if (i >= 0) n.gy.splice(i, 1); n.grave = Math.max(0, n.grave - 1); } else n.cnt[c.name] = (n.cnt[c.name] || 0) + 1; payReqs(n, c, c.reqs || [], pre); }
     else payReqs(n, c, op.reqs || c.reqs || [], pre);
     if (op.free) { /* off the top of the library */ }
-    else if (c.cmd) { n.cmdOut.push(c.name); n.tax[c.name] = (n.tax[c.name] || 0) + 1; } else { n.used++; n.cnt[c.name] = (n.cnt[c.name] || 0) + 1; n.order.push({name: c.name, t: n.t}); }
+    else if (c.cmd) { n.cmdOut.push(c.name); n.tax[c.name] = (n.tax[c.name] || 0) + 1; }
+    else if (n.back.includes(c.name) && (n.cnt[c.name] || 0) >= c.qty) { n.back.splice(n.back.indexOf(c.name), 1); n.order.push({name: c.name, t: n.t}); }   // the copy you got back from the graveyard
+    else { n.used++; n.cnt[c.name] = (n.cnt[c.name] || 0) + 1; n.order.push({name: c.name, t: n.t}); }
     const notes = [], tap = spentOf(s, s.mana, after);
     if (op.convoke && op.convoke.length) { const names = []; for (const id of op.convoke) { const b = n.board.find(x => x.id === id); if (b) { b.tapped = true; names.push(b.name); } } if (names.length) pre.push(`convoke: tap ${names.join(", ")}`); }
     // the opponent counters your first spell that costs 3 or more
     const uncounterable = c.noCounter || s.mana.some(u => u.includes("$") && !after.includes(u) && fwFits(fwOnly(u), c));   // Cavern of Souls
     if (o.oppCounter && !n.countered && !op.free && !c.land && (c.cmc || 0) >= 3 && !uncounterable) {
-      n.countered = true; if (!c.cmd) n.grave++;
+      n.countered = true; if (!c.cmd) { n.grave++; n.gy.push(c.name); }
       n.log[logAt] = {t: n.t, kind: c.cmd ? "commander" : "cast", name: c.name, img: c.img, tap, costs: pre, mana: fwCostTxt(op.pay || c.pay), how: op.how || "", note: "countered by the opponent"};
       return n;
     }
@@ -5704,7 +5726,7 @@ function fwSearch(plan, pool, cmds, o){
     // where it ends up: battlefield (remembered), graveyard, or exile
     const stays = c.perm && !c.burst && !op.evoke, evoked = op.evoke && c.perm;
     const pid = stays || evoked ? arrive(n, c, {src: (c.rock || c.dork || []).length, power: c.power || 0}) : null;
-    if (!stays && !c.guide && !evoked) n.grave++;
+    if (!stays && !c.guide && !evoked) { n.grave++; if (!op.fromGy) n.gy.push(c.name); }   // cast from a graveyard (Impulsivity): exiled instead
     if (op.evoke) notes.push("evoked: sacrificed as it enters");
     if (c.extra) { n.used += c.extra; const l = c.discardLand && lands.find(x => left(n, x)); if (l) { n.cnt[l.name] = (n.cnt[l.name] || 0) + 1; n.order.push({name: l.name, t: n.t}); notes.push(`discard ${l.name}`); } else if (!c.discardLand) { n.order.push({name: null, t: n.t}); notes.push("imprint a card from your hand"); } }
     if (c.landsAny && stays) notes.push("your lands tap for any colour");
@@ -5782,8 +5804,9 @@ function fwSearch(plan, pool, cmds, o){
     return true;
   };
   const activate = (s, p, ab, after) => {
-    const n = clone(s); n.mana = after; n.budget = 60;
+    const n = clone(s); n.mana = after.slice(); n.budget = 60;
     const notes = [], tap = spentOf(s, s.mana, after), costs = [];
+    const logAt = n.log.length; n.log.push(null);   // the ability's own line comes first: what its costs set off (a sacrifice → Ashling's copy) follows it
     if (ab.tap) tap.push({id: p.id, name: p.name, kind: "self"});
     if (ab.tap) { setPerm(n, p.id, {tapped: true}); const i = n.mana.findIndex(u => u.endsWith("#" + p.id) || u.endsWith("@" + p.id)); if (i >= 0) n.mana.splice(i, 1); const b = n.board.find(x => x.id === p.id); if (b) b.tapped = true; }
     if (ab.once) setPerm(n, p.id, {used: Object.assign({}, p.used, {[ab.label]: n.t})});
@@ -5791,7 +5814,6 @@ function fwSearch(plan, pool, cmds, o){
     if (ab.discard) { const t0 = tossCards(n, ab.discard); notes.push(`discard ${t0}`); }
     if (ab.sac) { const got = n.perms.filter(q => q.id !== p.id && fwFits(ab.sac.ph, q)).sort((a, b) => value(a) - value(b)).slice(0, ab.sac.n); for (const q of got) if (n.mana.some(u => u.endsWith("@" + q.id))) notes.push(`tap ${q.name} for mana first (the mana stays after it's gone)`); got.forEach(q => sacrifice(n, q, `to ${p.name}`)); notes.push(`sacrifice ${got.map(q => q.name).join(", ")}`); }
     if (ab.sacSelf) { sacrifice(n, n.perms.find(q => q.id === p.id) || p, "for its own ability"); notes.push("sacrifice it"); }
-    const logAt = n.log.length; n.log.push(null);
     n._logAt = logAt; for (const a of ab.effs) { const r = fwEff(n, a, {id: p.id, name: p.name}, null); if (r) notes.push(r); } n._logAt = null;
     grantSrcs(n);
     n.log[logAt] = {t: n.t, kind: "ability", name: p.name, cost: ab.costText, mana: ab.pay.gen + ab.pay.cols.length ? fwCostTxt(ab.pay) : "", costs: notes.filter(x => /^(discard|sacrifice)/.test(x)).concat(ab.life ? [`pay ${ab.life} life`] : []), tap, note: notes.filter(x => !/^(discard|sacrifice)/.test(x)).join(", ")};
@@ -5799,8 +5821,19 @@ function fwSearch(plan, pool, cmds, o){
     return n;
   };
   // which plays are worth trying from here (keeps the search small); each with the mana left after paying
+  // the card in your graveyard worth most right now: a combo piece, then a pump or draw spell, then the biggest creature
+  const bestFromGy = (n, ok) => {
+    let best = null, bv = -1;
+    for (const name of new Set(n.gy)) {
+      const c = byName.get(name); if (!c || !ok(c)) continue;
+      const v = (pieces && pieces.has(c.name) && !n.done.includes(c.name) ? 1000 : 0) + (c.pump ? 60 : 0) + (c.burst ? 40 + c.burst.length : 0) + (c.draw || 0) * 8 + (c.power || 0) * 3 + (c.trigs ? 5 : 0);
+      if (v > bv) { bv = v; best = c.name; }
+    }
+    return best;
+  };
   const cascadeHits = s => {
     const q = s.casc[0], pick = [];
+    if (q.gy) { const c = byName.get(q.gy); return c && s.gy.includes(c.name) ? [{c, after: s.mana, op: {free: true, fromGy: true, how: `${q.how} by ${q.from}`, from: q.from}}] : (s.casc.shift(), []); }
     const fits = spells.filter(c => !c.cmd && left(s, c, true) && !c.counterOnly && (c.cmc || 0) <= q.mv && (!q.ph || (c.perm && c.power != null && /\bCreature\b/.test(c.type) && fwFits(q.ph, c))) && !c.guide
       && reqOK(s, c, c.reqs || [], true) && (!c.extra || s.used + c.extra <= s.slots) && (!c.discardLand || lands.some(l => left(s, l))));
     const add2 = list => { for (const c of list) if (!pick.includes(c)) pick.push(c); };
@@ -5890,7 +5923,7 @@ function fwSearch(plan, pool, cmds, o){
     if (s.clues) { const after = fwPay(s.mana, {cols: [], gen: 2}, 0); if (after && s.used >= s.slots - 1) add([{c: {name: "Clue"}, clue: true, after, op: {how: "clue"}}]); }
     return out.slice(0, WIDE);
   };
-  const doChoice = (n, x) => x.clue ? (() => { const m = clone(n); m.mana = x.after; m.clues--; m.budget = 60; m.slots++; m.acq.push({t: m.t, by: "Clue", log: m.log.length}); m.log.push({t: m.t, kind: "ability", name: "Clue", cost: "{2}, sacrifice it", mana: "{2}", costs: ["sacrifice the Clue"], tap: spentOf(n, n.mana, x.after), note: "draw 1"}); fire(m, {ev: "sac", card: {name: "Clue", type: "Token Artifact — Clue", token: true}, id: -2}); return m; })()
+  const doChoice = (n, x) => x.clue ? (() => { const m = clone(n); m.mana = x.after.slice(); m.clues--; m.budget = 60; m.slots++; m.acq.push({t: m.t, by: "Clue", log: m.log.length}); m.log.push({t: m.t, kind: "ability", name: "Clue", cost: "{2}, sacrifice it", mana: "{2}", costs: ["sacrifice the Clue"], tap: spentOf(n, n.mana, x.after), note: "draw 1"}); fire(m, {ev: "sac", card: {name: "Clue", type: "Token Artifact — Clue", token: true}, id: -2}); return m; })()
     : x.ab ? activate(n, x.p, x.ab, x.after) : play(n, x.c, x.after, x.op);
   const score = s => pieces ? s.done.length * 1000 + potential(s) * 25 + colorsHave(s).size * 12 + (s.slots - s.used) * 6 + s.mana.length
     : (o.life - Math.max(0, s.opp)) * 9 + s.poison * o.life + boardDmg(s, true) * 11 + potential(s) * 14 + colorsHave(s).size * 6 + (s.slots - s.used) * 4 + s.cmdDmg * 2 + s.perms.filter(p => p.trigs || p.acts).length * 5;
@@ -7025,7 +7058,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.07.4";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.08.1";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do

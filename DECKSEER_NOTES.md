@@ -159,6 +159,18 @@ Plays your deck against a model opponent: a bracket or speed (`BRACKETS`, `SPEED
 
 The fastest-win finder also keeps a delayed-sacrifice copy when the leftover mana pays its cost (`keepCost`).
 
+### Finder fixes from a real Ashling game (Nov 2026)
+
+The user's turn table showed impossible plays. Found and fixed:
+- **Leaked mana between options.** Cascade candidates (and some other choices) shared the parent's `s.mana` array. When one option's effect pushed mana into it (a land fetched by Cavalier of Thorns), the others saw it too: phantom mana appeared as "a mana source". That's how Kindred Summons was "paid" with nothing. `play`, `activate` and Clues now copy `after` (`after.slice()`).
+- **Token copies lost always-on abilities.** A copy (Ashling) now starts from the full card (`byName`) and registers haste-granting (Maelstrom Wanderer: all creatures haste), anthems, mana abilities, legend colours and artifacts. Doublers (Yarok, Twinflame) come through `arrive`.
+- **A real graveyard.** `n.gy` lists the cards there (sacrificed or evoked nontoken permanents, resolved or countered spells), and `n.back` lists cards returned to hand. Greenwarden (`fromGrave`) returns the best real card (`bestFromGy`), not any card you like. That includes the evoked original Greenwarden via its Ashling copy, a real loop.
+- **Impulsivity-style** "cast target instant or sorcery card from a graveyard without paying its mana cost" (`castGy`) queues a free cast (`casc` entry with `gy`) and exiles the card.
+- **Kindred Summons:** today's Oracle wording ("…of the chosen type") is read as well as the old one.
+- **Turn table order:** an activated ability's line comes before the triggers its costs set off.
+
+Tests: `tests/interactions.test.js` with real Oracle text in `tests/fixtures/ashling-cards.js`. Add cards from the user's deck there as new interactions come up. Known simplifications left: Cavalier of Thorns' land comes out as a basic of a needed colour ("Wastes" if none), and the other four revealed cards aren't put in the graveyard.
+
 ## Deck check
 
 - **Mana base**: `dcMana()` with hypergeometric odds.
