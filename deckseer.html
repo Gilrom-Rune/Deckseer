@@ -5477,7 +5477,7 @@ function fwRules(f, c){
   finally { PT = keep; }
   const t = (c.text || "").toLowerCase().replace(/\([^)]*\)/g, "");
   // "Goblin spells you cast cost {1} less to cast", "Spells you cast cost {1} less"
-  for (const m of t.matchAll(/(?:^|\n|\. )([a-z ,-]*?)spells you cast cost \{(\d+)\} less to cast/g)) if (!/opponent/.test(m[1])) (f.reduce = f.reduce || []).push({n: +m[2], ph: m[1].replace(/\b(each|other)\b/g, "").trim()});
+  for (const m of t.matchAll(/(?:^|\n|\. )([a-z ,-]*?)spells? you cast costs? \{(\d+)\} less to cast(?! for each)/g)) if (!/opponent/.test(m[1])) (f.reduce = f.reduce || []).push({n: +m[2], ph: m[1].replace(/\b(each|other)\b/g, "").trim()});
   // evoke for other cards: Ashling, the Limitless ("Elemental permanent spells you cast from your hand gain evoke {4}")
   const ge = t.match(/([a-z ,-]+?) (?:permanent )?spells you cast(?: from your hand)? (?:gain|have) evoke ((?:\{[^}]+\})+)/);
   if (ge) f.grantEvoke = {ph: ge[1].replace(/\b(permanent|nonland)\b/g, "").trim(), pay: fwCost({cost: ge[2], cmc: 0}), txt: ge[2]};
@@ -7276,7 +7276,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.08.10";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.08.11";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
@@ -8077,7 +8077,89 @@ function ptCastCost(c, zone, way){
   let cost = way && way.cost != null ? way.cost : c.castFace === 1 && (c.cost || "").includes(" // ") ? c.cost.split(" // ")[1] : (c.cost || "").split(" // ")[0];
   if (way && way.k === "cascade") cost = (c.cost || "").split(" // ")[0];
   if (zone === "cmd" && PT.tax[c.uid]) cost += `{${PT.tax[c.uid] * 2}}`;
-  return cost;
+  if (!/\{/.test(cost) || way && way.k === "cascade") return cost;
+  return ptReduceCost(cost, ptCostCuts(c).cuts);
+}
+// What a "choose a type" card named: what you set, else the deck's most common creature type (or card type, for Cloud Key)
+function ptChosenOf(c){
+  if (c.chosenType) return c.chosenType;
+  if (!/choose artifact, creature/i.test(ptFaceText(c))) return ptChosenType() || "creature";
+  const d = (typeof decks !== "undefined" ? decks : []).find(x => x.id === PT.deckId), n = {};
+  for (const k of (d ? d.cards : []).filter(k => k.board === "main" && !/\bLand\b/.test(k.type || ""))) for (const t of ["artifact", "creature", "enchantment", "instant", "sorcery"]) if (new RegExp("\\b" + t + "\\b", "i").test((k.type || "").split(" // ")[0])) n[t] = (n[t] || 0) + (k.qty || 1);
+  return Object.entries(n).sort((a, b) => b[1] - a[1])[0]?.[0] || "creature";
+}
+// The creature type a "choose a creature type" card names here: the deck's setting, else its most common type
+function ptChosenType(){
+  if (PT._type != null) return PT._type;
+  const d = (typeof decks !== "undefined" ? decks : []).find(x => x.id === PT.deckId);
+  let t = ""; try { t = d ? (d.fwType || fwDeckType(d.cards.filter(c => c.board === "main").concat(d.commanders))) : ""; } catch (e) { t = ""; }
+  return PT._type = String(t || "").toLowerCase();
+}
+// Cost reductions for casting this spell (rule 601.2f): from your permanents ("Elemental spells you cast cost {1} less",
+// "Each creature spell you cast costs {1} less", Urza's Incubator's chosen type, Morophon's {W}{U}{B}{R}{G}, "the first … each turn")
+// and from the spell itself ("This spell costs {1} less to cast for each …", affinity). Returns {cuts: [{gen, pips}], why: [names]}.
+function ptCostCuts(spell){
+  const cuts = [], why = [];
+  const fitsSpell = ph => {
+    ph = String(ph || "").replace(/\b(?:each|the|a|an|other)\b/g, " ").replace(/\bof the chosen type\b/, "").replace(/\s+/g, " ").trim();
+    if (!ph) return true;
+    const alt = ph.replace(/,? and |, /g, " or ").replace(/\bspell\b/g, "");
+    try { return trFits(alt.trim() || "card", spell); } catch (e) { return false; }
+  };
+  // "for each +1/+1 counter on Animar", "for each creature you control with a +1/+1 counter on it"
+  const count = (expr, src) => {
+    const e = String(expr).trim(); let m;
+    if ((m = e.match(/^([+-]1\/[+-]1|[a-z]+) counters? on cardname$/))) return ((src.counters || {})[{"+1/+1": "p1p1", "-1/-1": "m1m1"}[m[1]] || m[1]] || 0);
+    if (/\byou control\b/.test(e)) return PT.bf.filter(x => trFits(e, x)).length;
+    try { return ptCount(e, {src: {card: src}}); } catch (er) { return 0; }
+  };
+  const chosenOk = (src) => {
+    if (src && /choose artifact, creature, enchantment/i.test(src.text || "")) { const t = ptChosenOf(src); return new RegExp("\\b" + t + "\\b", "i").test((spell.type || "").split(" // ")[0]); }
+    const t = src ? ptChosenOf(src) : ptChosenType(); return !t || new RegExp("\\b" + t + "s?\\b", "i").test(spell.type || "") || /\bchangeling\b/i.test(spell.text || ""); };
+  const amount = sym => { const m = [...String(sym).matchAll(/\{([^}]+)\}/g)].map(x => x[1].toUpperCase()); return {gen: m.filter(x => /^\d+$/.test(x)).reduce((t, x) => t + +x, 0), pips: m.filter(x => /^[WUBRGC]$/.test(x))}; };
+  for (const src of PT.bf) {
+    if (src.faceDown || src.uid === spell.uid) continue;
+    const lines = ptFaceText(src).split("\n").flatMap(l => trLower(src, l).split(/(?<=\.)\s+/));
+    for (const ln of lines) {
+      const m = ln.match(/\b(the first |each )?((?:[a-z-]+(?:,| and| or)? )*?)spells? (?:you cast )?(of the chosen type |that share a creature type with [^c]+? )?(?:you cast )?(?:with (mana value (\d+) or (greater|less)|[a-z ]+?) )?(?:each turn )?costs? ((?:\{[^}]+\})+) less to cast(?: for each ([^.]+))?/);
+      if (!m || /\b(?:your opponents|an opponent|opponents)\b/.test(ln.slice(0, m.index + m[0].length)) || /\btarget\b/.test(m[2])) continue;
+      if (/cardname/.test(m[2])) continue;   // its own reduction is read from the spell below
+      if (m[1] === "the first " && (PT.castN || 0) > 0) continue;
+      if (!fitsSpell(m[2])) continue;
+      if (m[3] && /chosen type/.test(m[3]) && !chosenOk(src)) continue;
+      if (m[5] && !(m[6] === "less" ? (spell.cmc || 0) <= +m[5] : (spell.cmc || 0) >= +m[5])) continue;
+      if (m[4] && !m[5] && !fitsSpell("with " + m[4])) continue;
+      let a = amount(m[7]); if (m[8]) { const k = count(m[8], src); a = {gen: a.gen * k, pips: [].concat(...Array(k).fill(a.pips))}; }
+      if (!a.gen && !a.pips.length) continue;
+      cuts.push(a); why.push(ptFaceName(src));
+    }
+  }
+  // the spell's own: "This spell costs {1} less to cast for each creature you control", "… if you control a Dragon", affinity for artifacts
+  const own = ptFaceText(spell).split("\n").map(l => trLower(spell, l)).join("\n");
+  for (const m of own.matchAll(/\bcardname costs ((?:\{[^}]+\})+) less to cast(?: for each ([^.]+?)| if ([^.]+?))?(?:\.|$)/g)) {
+    let a = amount(m[1]);
+    if (m[2]) { const k = count(m[2], spell); a = {gen: a.gen * k, pips: []}; }
+    else if (m[3]) { let ok = null; try { ok = trEvalIf(m[3], {src: spell}); } catch (e) { ok = null; } if (ok !== true) continue; }
+    if (a.gen || a.pips.length) { cuts.push(a); why.push("its own text"); }
+  }
+  const wx = own.match(/\bcardname costs \{x\} less to cast,? where x is ([^.]+)/);
+  if (wx) { let k = 0; try { k = ptCount(wx[1], {src: {card: spell}}); } catch (e) { k = 0; } if (k > 0) { cuts.push({gen: k, pips: []}); why.push("its own text"); } }
+  const aff = (ptFaceText(spell).match(/(?:^|\n)Affinity for ([a-z ]+?)s?(?:\s*\(|\n|$)/i) || [])[1];
+  if (aff) { const k = PT.bf.filter(x => trFits(aff.toLowerCase(), x)).length; if (k) { cuts.push({gen: k, pips: []}); why.push(`affinity (${k})`); } }
+  return {cuts, why};
+}
+// Take reductions off a cost: generic first ({X} stays as chosen), coloured reductions remove a matching pip
+function ptReduceCost(cost, cuts){
+  if (!cuts.length) return cost;
+  const syms = [...String(cost).matchAll(/\{([^}]+)\}/g)].map(x => x[1].toUpperCase());
+  let gen = syms.filter(x => /^\d+$/.test(x)).reduce((t, x) => t + +x, 0);
+  const rest = syms.filter(x => !/^\d+$/.test(x));
+  for (const c of cuts) {
+    gen = Math.max(0, gen - c.gen);
+    for (const p of c.pips) { const i = rest.indexOf(p); if (i >= 0) rest.splice(i, 1); else { const h = rest.findIndex(x => x.includes(p) && x.includes("/")); if (h >= 0) rest.splice(h, 1); } }
+  }
+  const xs = rest.filter(x => x === "X"), others = rest.filter(x => x !== "X");
+  return xs.map(x => "{X}").join("") + (gen ? `{${gen}}` : "") + others.map(x => `{${x}}`).join("") || "{0}";
 }
 // Can this card be cast right now (for the glow in your hand)?
 function ptAffordable(c, zone){
@@ -8103,7 +8185,8 @@ function ptCastPaid(uid, wayKey, x){
   if (/\{X\}/i.test(cost) && x == null) return ptAskX(c, cost, n => ptCastPaid(uid, wayKey, n));
   const plan = ptPlan(cost, c, {x: x || 0});
   if (plan.missing) return ptAskAnyway(`Not enough mana for ${esc(ptFaceName(c))} (${esc(ptManaTxt(cost.replace(/\{X\}/gi, `{${x || 0}}`)))}): you're missing ${esc(ptManaTxt(plan.missing))}.`, "Cast it anyway (without paying)", () => ptDo(cast));
-  ptDo(() => { ptApplyPlan(plan, ptFaceName(c) + (x ? ` (X = ${x})` : "")); if (x != null) c.xPaid = x; cast(); });
+  const cutBy = way && way.k === "cascade" ? [] : ptCostCuts(c).why;
+  ptDo(() => { ptApplyPlan(plan, ptFaceName(c) + (x ? ` (X = ${x})` : "") + (cutBy.length ? ` (cost reduced by ${[...new Set(cutBy)].join(", ")})` : "")); if (x != null) c.xPaid = x; cast(); });
 }
 function ptNoteLand(){ if (PT.landTurn !== PT.turn) { PT.landTurn = PT.turn; PT.landN = 0; } PT.landN++; }
 function ptAskAnyway(msg, yes, fn){
@@ -8242,6 +8325,7 @@ function ptCardMenu(uid, x, y){
   const abil = c.faceDown ? [] : trActivated(c).map((ab, i) => ({ab, i})).filter(x => x.ab.zone === z);
   if (abil.length) h += `<div class="ptm-sep">Abilities</div>${abil.map(({ab, i}) => { const why = PT.phase === "play" ? ptCanPay(c, ab) : "Keep your hand first."; return `<button type="button" class="ptm-abil" data-m="act" data-i="${i}" ${why ? `aria-disabled="true" title="${esc(why)}"` : `title="${esc(ab.text)}"`}><span>${esc(ab.label.length > 90 ? ab.label.slice(0, 88) + "…" : ab.label)}</span>${why ? `<small>${esc(why)}</small>` : ""}</button>`; }).join("")}`;
   if (z === "bf" && (/\b(Equipment|Aura|Fortification)\b/.test(ptFaceType(c)) || c.att != null)) h += `<div class="ptm-ways">${c.att != null ? `<button type="button" data-m="unattach">Unattach</button>` : ""}<button type="button" data-m="attachpick">Attach to… (click it)</button></div>`;
+  if (z === "bf" && /\bchoose (?:a creature type|artifact, creature)/i.test(ptFaceText(c))) h += it("chooseType", `Chosen type: ${esc(trCap(ptChosenOf(c)))} (change)`);
   if (z === "bf") {
     const same = PT.bf.filter(o => o.name === c.name);
     h += it("tap", c.tapped ? "Untap" : "Tap", "T");
@@ -8679,6 +8763,7 @@ function ptInit(){
         const k = "x-" + name.toLowerCase().replace(/[^a-z0-9]+/g, "-"); if (!PT_COUNTERS.some(x => x[0] === k)) PT_COUNTERS.push([k, name]);
         ptDo(() => ptCounter(uid, k, 1)); return ptCardMenu(uid, f.x, f.y);
       }
+      if (act === "chooseType") { const f = ptFind(uid); ptCloseMenu(); if (!f) return; const v = prompt(`The type ${f.card.name} named:`, trCap(ptChosenOf(f.card))); if (v && v.trim()) ptDo(() => { f.card.chosenType = v.trim().toLowerCase().replace(/s$/, ""); ptLog(`${f.card.name}: chose ${trCap(f.card.chosenType)}.`); }); return; }
       if (act === "copy") { const n = Math.max(1, Math.min(50, parseInt($("ptmCopyN").value) || 1)); ptCloseMenu(); return ptDo(() => ptCopy(uid, n)); }
       ptCloseMenu();
       if (act === "act") { if (m.getAttribute("aria-disabled") === "true") return toast(m.title || "Can't use that right now."); return ptActivate(uid, +m.dataset.i); }

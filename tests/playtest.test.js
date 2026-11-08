@@ -299,6 +299,39 @@ module.exports = async function () {
   check('Alchemy cards (A-…) know their own name', loops.alchemy === 'counter:self', loops);
   check('Phyrexian mana can be paid with life', loops.phyrexian === 6, loops);
 
+  // ---- cost reductions from your other cards ----
+  await fresh(4);
+  const red = await page.evaluate(() => {
+    const out = {};
+    const on = (name, type, text, extra) => { const c = ptMakeCard(Object.assign({name, type, text, cost: '{2}', colors: []}, extra || {})); [c.x, c.y] = ptPlace(c); c.since = 1; PT.bf.push(c); return c; };
+    const avenger = PT.lib.find(c => c.name === 'Avenger of Zendikar') || PT.hand.find(c => c.name === 'Avenger of Zendikar');
+    const horn = on("Herald's Horn", 'Artifact', 'As this artifact enters, choose a creature type.\nCreature spells you cast of the chosen type cost {1} less to cast.\nAt the beginning of your upkeep, look at the top card of your library.');
+    out.horn = ptCastCost(avenger, 'hand');
+    on('Goblin Warchief', 'Creature — Goblin Warrior', 'Goblin spells you cast cost {1} less to cast.\nGoblins you control have haste.', {power: '2', toughness: '2'});
+    out.warchiefNotGoblin = ptCastCost(avenger, 'hand');
+    on('Hidden Reducer', 'Enchantment', 'Each creature spell you cast costs {1} less to cast.');
+    out.each = ptCastCost(avenger, 'hand');
+    const animar = on('Animar, Soul of Elements', 'Legendary Creature — Elemental', 'Protection from white and from black\nWhenever you cast a creature spell, put a +1/+1 counter on Animar, Soul of Elements.\nCreature spells you cast cost {1} less to cast for each +1/+1 counter on Animar, Soul of Elements.', {power: '1', toughness: '1'});
+    animar.counters = {p1p1: 2};
+    out.animar = ptCastCost(avenger, 'hand');
+    horn.chosenType = 'goblin';
+    out.changed = ptCastCost(avenger, 'hand');
+    const ash = PT.cmd[0]; PT.tax[ash.uid] = 1;
+    out.tax = ptCastCost(ash, 'cmd');
+    ['Forest', 'Forest', 'Forest', 'Forest'].forEach(n => { const c = PT.lib.find(x => x.name === n); if (c) { PT.lib.splice(PT.lib.indexOf(c), 1); [c.x, c.y] = ptPlace(c); PT.bf.push(c); } });
+    for (const z of ['lib', 'hand']) { const i = PT[z].indexOf(avenger); if (i >= 0) PT[z].splice(i, 1); } PT.hand.push(avenger);
+    ptRender(); out.glow = !!document.querySelector(`#ptHand .ptc.can-cast[data-uid="${avenger.uid}"]`);
+    ptCastPaid(avenger.uid); out.paid = PT.log.find(l => /Paid for Avenger/.test(l)) || '';
+    return out;
+  });
+  check('Herald\'s Horn takes {1} off your chosen type (Elemental)', red.horn === '{4}{G}{G}', red);
+  check('Goblin Warchief doesn\'t help a non-Goblin', red.warchiefNotGoblin === '{4}{G}{G}', red);
+  check('"Each creature spell you cast costs {1} less" counts too', red.each === '{3}{G}{G}', red);
+  check('Animar takes {1} off per +1/+1 counter on it', red.animar === '{1}{G}{G}', red);
+  check('changing the chosen type changes what it helps', red.changed === '{2}{G}{G}', red);
+  check('reductions apply after commander tax ({2}{R} + {2} tax − 3)', red.tax === '{1}{R}', red);
+  check('reduced spells glow when you can now afford them, and the log says what reduced the cost', red.glow && /cost reduced by/.test(red.paid) && /Animar/.test(red.paid), red);
+
   check('no page errors', page.errors.length === 0, page.errors);
   await browser.close();
 };

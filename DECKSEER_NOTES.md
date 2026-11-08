@@ -308,3 +308,13 @@ Lessons from running it on Colab (all fixed in the script): Scryfall's bulk-data
 - Fixed from the full run: Phyrexian mana with life in `ptPlan`; endless self-copies (Gruff Triplets "if it isn't a token", Skitterbeam Battalion "if you cast it", `card.wasCast`; Blastoneuron's "copy of it" in its own enter ability); `trFits` now honours "with/without <keyword>", "+1/+1 counter on it" and toughness limits (Wingmantle Chaplain looped).
 - Now read and carried out: "choose one —" triggered abilities (modes, `ptPickMode`); Alchemy "A-" names; removal, damage, −N/−N, tap and "can't block" on the opponents' creatures (`ptOppTargets`, `ptHitOppCre`, best threat first, aimed opponent first); sweepers and "each creature" damage on their boards; "each opponent sacrifices a creature"; self moves (`selfMove`: return to hand, sacrifice, exile, top/bottom, shuffle); damage equal to its power (`powDmg`); impulse draw (`impulse`, with a Play button in Exile); "for each opponent, create…"; "you draw a card and gain/lose N life"; "target player gains N life"; counters on "each of up to two target creatures", "another target creature you control", and enchanted or equipped creatures; reveal during a search; counterspells and hand attack marked as nothing to act on.
 - Mana pool: `ptPoolHtml` draws coloured mana symbols (split circles for "or", a rainbow for any colour, a gold dot for restricted mana, a pop animation for new mana).
+
+## Playtest cost reductions (2026.11.08.11)
+- `ptCastCost` applies `ptCostCuts(spell)` via `ptReduceCost`, after commander tax, so the glow, the payment and the log all use the reduced cost. The log names the cards that reduced it.
+- **From your permanents**, read sentence by sentence (lines split before `trLower`):
+  - "[types] spells you cast cost {N} less", including the singular "Each creature spell you cast costs…", "the first … each turn", "with mana value N or greater/less", and "for each …".
+  - Counting covers counters on the card itself (Animar) and "creature you control with a +1/+1 counter on it" (Hamza).
+  - Coloured reductions remove a matching pip (Morophon's {W}{U}{B}{R}{G}); generic reductions never touch coloured pips (Electromancer can't reduce {R}).
+- **The chosen type** (Herald's Horn, Urza's Incubator, Morophon): `ptChosenOf(card)` uses `card.chosenType`, else the deck's type (`d.fwType` or `fwDeckType`). Cloud Key's card type defaults to the deck's most common one. Right-click → "Chosen type: … (change)" sets it.
+- **The spell's own text**: "This spell costs {N} less to cast for each … / if …", "costs {X} less, where X is…" (Ghalta), and affinity.
+- The finder's reducer reader now also takes the singular "spell … costs" wording.
