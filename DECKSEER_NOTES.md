@@ -159,6 +159,23 @@ Plays your deck against a model opponent: a bracket or speed (`BRACKETS`, `SPEED
 
 The fastest-win finder also keeps a delayed-sacrifice copy when the leftover mana pays its cost (`keepCost`).
 
+### Deep check: looking for the fastest win, not just a win
+
+The quick search (`fwSearch` defaults) uses rules of thumb:
+- about 11 options per step (`choices`), at most 12 plays a turn
+- the 120 best positions kept per turn (`BEAM`)
+- greedy land drops
+- abilities only when they look useful
+
+It stops at the first win. **Every "Find the fastest win" now adds a deep check** (`fastestWin(d, cb, {deep: true, budget})`). From the best turn T it searches every plan again with `maxT = T-1`, then T-2… with `o.deep`:
+- every castable card and every payable ability are options
+- every kind of land is tried as the land drop (`s0land`)
+- up to 40 plays a turn
+- `beam`/`wide` raised (500/26 by default; "🔎 Search harder" uses 1500/40 and a 60 s budget)
+- up to 40 combo plans
+
+The search records what limited it (`o._cut` time, `_depthCut`, `_wideCut`, `_beamCut`). The panel says **"every possible line"** only when nothing was cut. Otherwise it says "searched hard … not every possible line could be checked", or that it ran out of time. On the Ashling test deck it finds a legal turn-2 win (the quick search found turn 3), and turn 1 is checked exhaustively. Test: `tests/fastest.test.js`.
+
 ### Finder fixes from a real Ashling game (Nov 2026)
 
 The user's turn table showed impossible plays. Found and fixed:

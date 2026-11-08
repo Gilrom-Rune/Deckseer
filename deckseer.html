@@ -384,6 +384,8 @@ a.btn{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
 .fw-bar{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:2px;font-size:.68rem}
 .fw-bar span{width:100%;max-width:34px;background:var(--accent);border-radius:4px 4px 0 0;min-height:2px}
 .fw-bar b{font-weight:600}.fw-bar i{font-style:normal;color:var(--muted)}
+.fw-deep{margin:8px 0;padding:8px 12px;border-left:3px solid var(--line);background:var(--sunk);border-radius:6px}
+.fw-deep.yes{border-left-color:var(--ok)}
 .fw-why{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:.86rem;max-width:980px}
 .fw-why li::before{content:"✓ ";color:var(--ok);font-weight:700}.fw-why li.no{color:var(--muted)}.fw-why li.no::before{content:"– ";color:var(--muted)}
 .fw-audit{max-width:980px;margin-top:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:8px 12px}
@@ -5929,6 +5931,8 @@ function fwSearch(plan, pool, cmds, o){
       if (s.board.length) add(cands.filter(x => x.c.pump || x.c.oneHaste).slice(0, 2));
       add(cands.filter(x => x.c.burn).sort((a, b) => b.c.burn / Math.max(1, b.c.cmc) - a.c.burn / Math.max(1, a.c.cmc)).slice(0, 2));
     }
+    // "Search harder": everything else you could cast is an option too, not only what the rules of thumb pick
+    if (o.deep) add(cands.slice().sort((a, b) => (b.c.cmc || 0) - (a.c.cmc || 0)));
     // activated abilities of your permanents, and cracking Clues
     const acts = [];
     for (const p of s.perms) for (const ab of p.acts || []) {
@@ -5945,10 +5949,12 @@ function fwSearch(plan, pool, cmds, o){
           good = spells.concat(cmds).some(c => left(s, c) && !c.counterOnly && (c.cmd || s.used < s.slots) && !fwPay(s.mana, c.pay, taxOf(s, c), c) && fwPay(more, c.pay, taxOf(s, c), c));
         }
       }
+      if (o.deep && !good) good = true;   // "Search harder": try it anyway
       if (good) acts.push({c: {name: p.name}, ab, p, after, op: {how: "ability"}});
     }
-    add(acts.slice(0, 4));
+    add(o.deep ? acts : acts.slice(0, 4));
     if (s.clues) { const after = fwPay(s.mana, {cols: [], gen: 2}, 0); if (after && s.used >= s.slots - 1) add([{c: {name: "Clue"}, clue: true, after, op: {how: "clue"}}]); }
+    if (out.length > WIDE) o._wideCut = true;
     return out.slice(0, WIDE);
   };
   const doChoice = (n, x) => x.clue ? (() => { const m = clone(n); m.mana = x.after.slice(); m.clues--; m.budget = 60; m.slots++; m.acq.push({t: m.t, by: "Clue", log: m.log.length}); m.log.push({t: m.t, kind: "ability", name: "Clue", cost: "{2}, sacrifice it", mana: "{2}", costs: ["sacrifice the Clue"], tap: spentOf(n, n.mana, x.after), note: "draw 1"}); fire(m, {ev: "sac", card: {name: "Clue", type: "Token Artifact — Clue", token: true}, id: -2}); return m; })()
@@ -5977,12 +5983,14 @@ function fwSearch(plan, pool, cmds, o){
       // land drops for the turn (more with Exploration-style cards): ones that make a colour you still need first
       const drops = 1 + s.perms.reduce((x, p) => x + (p.extraLand || 0), 0);
       const starts = [];
+      const s0land = o.deep ? {st: clone(s), played: null} : null;   // the turn before any land drop, to try the others from
       for (let d = 0; d < drops; d++) {
         const have = colorsHave(s);
         const landsLeft = lands.filter(l => left(s, l));
         const gain = l => [...new Set(l.units.join("").replace(/C/g, ""))].reduce((tt, k) => tt + (have.has(k) ? 0 : (demand[k] || 0)), 0);
         const land = landsLeft.slice().sort((a, b) => (gain(b) - gain(a)) || (b.yield - a.yield) || (a.tapped - b.tapped))[0];
         if (!land || s.used >= s.slots) break;
+        if (s0land && d === 0) s0land.played = land.name;
         // when cards are tight, also try keeping that card for something else instead of the land drop
         if (d === 0 && s.slots - s.used <= 2) starts.push(clone(s));
         s.used++; s.cnt[land.name] = (s.cnt[land.name] || 0) + 1; s.order.push({name: land.name, t});
@@ -5993,6 +6001,20 @@ function fwSearch(plan, pool, cmds, o){
       }
       grantSrcs(s);
       starts.unshift(s);
+      // "Search harder": each other land you could play instead (once per kind of land)
+      if (o.deep && s0land) {
+        const tried = new Set([s0land.played]);
+        for (const l of lands.filter(x => left(s0land.st, x)).sort((a, b) => b.yield - a.yield)) {
+          if (tried.has(l.name) || tried.size >= 5 || s0land.st.used >= s0land.st.slots) continue; tried.add(l.name);
+          const alt = clone(s0land.st);
+          alt.used++; alt.cnt[l.name] = (alt.cnt[l.name] || 0) + 1; alt.order.push({name: l.name, t});
+          const lid = arrive(alt, l, {src: l.yield}), lsrc = srcOf(l.units, lid);
+          if (l.tapped) alt.next.push(lsrc); else { alt.srcs.push(lsrc); tapSrc(alt, lsrc); }
+          alt.log.push({t, kind: "land", name: l.name, img: l.img, note: (l.tapped ? "enters tapped, " : "") + `taps for ${fmt(l.units.slice(0, 1))}` + (l.tapped ? " from next turn" : "")});
+          fire(alt, {ev: "landplay", card: l, id: lid}); fire(alt, {ev: "etb", card: l, id: lid}); grantSrcs(alt);
+          starts.push(alt);
+        }
+      }
       // plays this turn (depth-first, a few deep)
       const seen = new Set();
       const dfs = (n, depth) => {
@@ -6032,11 +6054,13 @@ function fwSearch(plan, pool, cmds, o){
         if (e.monarch) e.later.push({by: "the monarch", log: null});
         const k2 = key + "|" + Math.max(0, e.opp);
         if (!next.has(k2) || score(next.get(k2)) < score(e)) next.set(k2, e);
-        if (depth >= 12 || (depth > 3 && Date.now() > deadline)) return;
+        if (depth >= (o.deep ? 40 : 12)) { o._depthCut = true; return; }
+        if (depth > 3 && Date.now() > deadline) { o._cut = true; return; }
         for (const x of choices(n)) dfs(doChoice(n, x), depth + 1);
       };
       for (const st of starts) dfs(st, 0);
     }
+    if (next.size > BEAM) o._beamCut = true;
     beam = [...next.values()].sort((a, b) => score(b) - score(a)).slice(0, BEAM);
   }
   return best;
@@ -6058,7 +6082,7 @@ function fwExplain(best, o){
   return {hand, draws, spellDraws, extra: []};
 }
 // The deck read for the finder, and the ways it can win (damage, plus each winning combo it contains)
-async function fwPlans(d){
+async function fwPlans(d, opts = {}){
   const isCmd = d.format === "commander";
   FW_TYPE = d.fwType || fwDeckType(d.cards.filter(c => c.board === "main").concat(d.commanders)); FW_CI = fwIdentity(d);
   const pool = d.cards.filter(c => c.board === "main").map(c => fwCard(c));
@@ -6075,14 +6099,14 @@ async function fwPlans(d){
       plans.push({kind: "combo", label: v.cards.join(" + "), pieces: cards.map(c => c.name), need, produces: v.produces, cost: cards.reduce((t, c) => t + c.cmc, 0) + need, combo: v});
     }
     plans.sort((a, b) => (a.kind === "damage" ? -1 : b.kind === "damage" ? 1 : a.cost - b.cost));
-    if (plans.length > 16) plans.length = 16;
+    if (plans.length > (opts.maxPlans || 16)) plans.length = opts.maxPlans || 16;
   } else comboNote = "Combo database not downloaded yet (see Combos below), so only damage wins were checked.";
   const fo = prefs.fwOpts || {};
   const o = {life: isCmd ? 40 : 20, isCmd, drawFirst: isCmd, maxT: 10, beam: 120, wide: 11, ms: 6000, oppRemoval: fo.opp === "removal", oppCounter: fo.opp === "counter"};
   return {isCmd, pool, cmds, plans, comboNote, o};
 }
-async function fastestWin(d, onProgress){
-  const {pool, cmds, plans, comboNote, o} = await fwPlans(d);
+async function fastestWin(d, onProgress, opts = {}){
+  const {pool, cmds, plans, comboNote, o} = await fwPlans(d, opts.deep ? {maxPlans: 40} : {});
   const results = [];
   for (let i = 0; i < plans.length; i++) {
     const pl = plans[i];
@@ -6092,6 +6116,33 @@ async function fastestWin(d, onProgress){
     await sleep(0);
   }
   results.sort((a, b) => a.turn - b.turn || a.best.order.length - b.best.order.length);
+  // Search harder: is there a faster win? Each plan again, one turn sooner, trying every card, ability and land drop,
+  // keeping many more positions. Stops at the time limit, and says whether it finished.
+  let deep = null;
+  if (opts.deep) {
+    const budget = opts.budget || 30000, until = Date.now() + budget;
+    deep = {checked: [], found: [], cut: false, budget, beam: opts.beam || 500};
+    let target = (results[0] ? results[0].turn : (o.maxT || 10) + 1) - 1;
+    while (target >= 1 && Date.now() < until) {
+      let hit = null, cutThisTurn = false;
+      for (let i = 0; i < plans.length; i++) {
+        const left2 = until - Date.now(); if (left2 <= 0) { cutThisTurn = true; break; }
+        const oo = Object.assign({}, o, {deep: true, beam: opts.beam || 500, wide: opts.wide || 26, maxT: target, ms: Math.max(700, Math.min(opts.planMs || 8000, left2 / (plans.length - i)))});
+        const b = fwSearch(plans[i], pool, cmds, oo);
+        if (oo._cut) cutThisTurn = true;
+        for (const k of ["_depthCut", "_wideCut", "_beamCut"]) if (oo[k]) deep[k] = true;
+        if (onProgress) onProgress(i + 1, plans.length, `Looking for a turn-${target} win… ${i + 1}/${plans.length}`);
+        await sleep(0);
+        if (b) { hit = {plan: plans[i], best: b, turn: b.won.t, how: b.won.how, deep: true}; break; }
+      }
+      if (hit) { results.unshift(hit); deep.found.push(hit.turn); target = hit.turn - 1; continue; }
+      deep.checked.push({turn: target, complete: !cutThisTurn, exhaustive: !cutThisTurn && !deep._depthCut && !deep._wideCut && !deep._beamCut});
+      deep.cut = cutThisTurn;
+      break;
+    }
+    if (target >= 1 && Date.now() >= until) deep.cut = true;
+    results.sort((a, b) => a.turn - b.turn || a.best.order.length - b.best.order.length);
+  }
   const win = results[0];
   if (win && win.plan.combo && win.plan.combo._src) { try { await stepsFor([win.plan.combo._src]); win.plan.steps = win.plan.combo._src.steps || ""; } catch (e) {} }
   // Why not faster: would one turn sooner work with a little more of something?
@@ -6106,7 +6157,7 @@ async function fastestWin(d, onProgress){
       await sleep(0);
     }
   }
-  return {results, o, comboNote, combosTried: plans.length - 1, why};
+  return {results, o, comboNote, combosTried: plans.length - 1, why, deep};
 }
 // Realistic: the same search, but the cards come from a shuffled library in order (no picking your draws)
 async function fwRealistic(d, games, onProgress){
@@ -6267,6 +6318,7 @@ function renderFast(){
   let html = `<div class="sim-head"><h3>Fastest possible win</h3><span class="cur-sub">The best case: you get to choose every card you draw. It finds the quickest win and shows the hand and draws that get you there.</span></div>
     <div class="sim-controls"><button class="btn primary" type="button" id="fwRun" ${st && st.busy ? "disabled" : ""}>${st && st.busy ? `Searching… ${st.done || 0}/${st.total || "?"}` : st && st.res ? "Search again" : "Find the fastest win"}</button>
     <label class="inline-field">Opponent <select id="fwOpp">${[["none", "Never interacts"], ["removal", "Removes your best attacker once"], ["counter", "Counters your first 3+ mana spell"]].map(([v, l]) => `<option value="${v}" ${((prefs.fwOpts || {}).opp || "none") === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+    ${st && st.res && !st.busy ? `<button class="btn" type="button" id="fwDeep" title="Look again for a faster win, much more thoroughly: up to a minute.">🔎 Search harder</button>` : ""}
     <button class="btn" type="button" id="fwReal" ${st && (st.busy || st.realBusy) ? "disabled" : ""}>${st && st.realBusy ? `Playing games… ${st.realDone || 0}/${st.realTotal || "?"}` : "How fast in real games?"}</button>
     ${st && st.stale && st.res ? `<span class="cur-sub">The deck changed since this search.</span>` : ""}</div>`;
   if (st && st.real) {
@@ -6282,6 +6334,11 @@ function renderFast(){
     if (!top) html += `<p class="cur-sub">No win found within ${R.o.maxT} turns, even with perfect draws. ${R.comboNote}</p>`;
     else {
       const ex = fwExplain(top.best, R.o), how = top.plan.kind === "combo" ? `Combo: ${top.plan.label}` : top.how === "commander damage" ? "Commander damage" : top.how === "poison" ? "Poison counters" : "Damage";
+      const D = R.deep;
+      if (D) {
+        const last = D.checked[D.checked.length - 1];
+        html += `<p class="fw-deep ${D.found.length ? "yes" : ""}">${D.found.length ? `🔎 Searching harder found a faster win: <b>turn ${top.turn}</b>. ` : ""}${last ? (last.exhaustive ? `Checked every possible line for a turn-${last.turn} win (every card, ability, land drop and order): none exists. <b>Turn ${top.turn} is the fastest possible.</b>` : last.complete ? `Searched hard for a turn-${last.turn} win (every card, ability and land drop, ${D._beamCut ? "keeping the ${D.beam || 500} most promising positions each turn" : "many lines"}${D._depthCut ? ", up to 40 plays a turn" : ""}): none found. Turn ${top.turn} is the fastest found, though not every possible line could be checked.` : `Checked for a turn-${last.turn} win but ran out of time (${Math.round(D.budget / 1000)} s) before finishing: one might still exist.`) : top.turn <= 1 ? "Turn 1 can't be beaten." : `Ran out of time (${Math.round(D.budget / 1000)} s) before finishing.`}</p>`;
+      }
       html += `<div class="sim-big"><div><b>Turn ${top.turn}</b><span>fastest possible win</span></div><div class="fw-how"><b>${esc(how)}</b><span>${top.plan.kind === "combo" ? esc((top.plan.produces || []).slice(0, 3).join(" · ")) : `opponent starts at ${R.o.life} life`}</span></div></div>
         <h4 class="fw-h">Best opening hand</h4><div class="fw-row">${ex.hand.map(n => cardImg(n)).join("")}</div>
         <h4 class="fw-h">Turn by turn</h4>
@@ -6312,13 +6369,16 @@ $("deckFast").addEventListener("click", async e => {
     catch (err) { console.warn(err); toast("Couldn't finish the games."); }
     fwState.realBusy = false; renderFast(); return;
   }
-  if (!e.target.closest("#fwRun")) return;
+  const deepRun = !!e.target.closest("#fwDeep");
+  if (!e.target.closest("#fwRun") && !deepRun) return;
   const d = prefs.deckView && deckById(prefs.deckView); if (!d) return;
   if (d.cards.filter(c => c.board === "main").reduce((t, c) => t + (c.qty || 1), 0) < 7) return toast("Add at least 7 cards to the main deck first.");
   fwState = {deckId: d.id, busy: true, done: 0, total: 0, res: fwState && fwState.deckId === d.id ? fwState.res : null};
   renderFast();
   try {
-    const res = await fastestWin(d, (i, n) => { fwState.done = i; fwState.total = n; const b = $("fwRun"); if (b) b.textContent = `Searching… ${i}/${n}`; });
+    // the normal search always checks for a faster win too (about 12 s); "Search harder" goes much further (up to a minute)
+    const res = await fastestWin(d, (i, n, txt) => { fwState.done = i; fwState.total = n; const b = $("fwRun"); if (b) b.textContent = txt || `Searching… ${i}/${n}`; },
+      deepRun ? {deep: true, budget: 60000, beam: 1500, wide: 40, planMs: 20000} : {deep: true, budget: 12000});
     fwState = {deckId: d.id, res, busy: false, sig: simSig(d), real: fwState && fwState.real};
   } catch (err) { console.warn(err); fwState = {deckId: d.id, busy: false}; toast("Couldn't finish the search."); }
   renderFast();
@@ -7087,7 +7147,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.08.3";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.08.4";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
