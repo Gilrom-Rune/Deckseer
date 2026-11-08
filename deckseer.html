@@ -691,7 +691,7 @@ body.lit #status .spin{border-color:#bbb;border-top-color:#000}
 :root{--pt-felt:#e3eae6;--pt-felt2:#d3ddd8;--pt-cell:rgba(30,60,50,.09);--pt-cell2:rgba(30,60,50,.2);--pt-band:#5b6d66}
 @media (prefers-color-scheme: dark){:root{--pt-felt:#142420;--pt-felt2:#0d1714;--pt-cell:rgba(160,210,190,.07);--pt-cell2:rgba(160,210,190,.16);--pt-band:#8fa69d}}
 body.pt-open{overflow:hidden}
-.pt{position:fixed;inset:0;z-index:900;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;background:var(--pt-felt2);color:var(--ink);user-select:none;-webkit-user-select:none;--g:18px;--cell:calc(var(--g) * 6.6)}
+.pt{position:fixed;inset:0;z-index:900;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;background:var(--pt-felt2);color:var(--ink);user-select:none;-webkit-user-select:none;--g:18px;--cell:calc(var(--g) * 6.6)}
 .pt[hidden]{display:none}
 .pt-top{display:flex;align-items:center;gap:8px 10px;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--line);flex-wrap:wrap;box-shadow:0 1px 6px rgba(0,0,0,.08)}
 .pt-title{display:flex;flex-direction:column;line-height:1.15;margin-right:6px;min-width:0}
@@ -829,6 +829,35 @@ body.pt-open{overflow:hidden}
 .pt-res-meta{display:flex;gap:4px;align-items:center}
 .pt-res-meta em{font:700 .68rem var(--f-mono);font-style:normal;color:var(--ink);background:var(--sunk);border-radius:999px;padding:0 5px}
 .atk-list{display:flex;flex-direction:column;gap:5px}
+.atk-wrap{display:flex;gap:4px;align-items:stretch}.atk-wrap .atk-row{flex:1;min-width:0}
+.atk-tgt{border:1px solid var(--line);border-radius:9px;background:var(--surface);font-size:.74rem;font-weight:600;padding:0 8px;white-space:nowrap;cursor:pointer}
+.atk-to{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin:0 0 8px}
+.pt-opps{display:flex;gap:8px;padding:6px 10px;background:var(--surface);border-bottom:1px solid var(--line);overflow-x:auto}
+.pt-opp{flex:1 1 0;min-width:220px;border:1px solid var(--line);border-radius:10px;padding:5px 8px;background:var(--sunk);display:flex;flex-direction:column;gap:4px}
+.pt-opp.aimed{border-color:#c0392b;box-shadow:0 0 0 1px #c0392b inset}
+.pt-opp.out{opacity:.55}
+.po-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.po-name{border:0;background:none;font:inherit;font-weight:700;font-size:.85rem;color:var(--ink);cursor:pointer;padding:0}
+.po-life{display:inline-flex;align-items:center;gap:3px}.po-life b{min-width:2ch;text-align:center;font-size:1rem}
+.po-life button{width:22px;height:22px;border-radius:6px;border:1px solid var(--line);background:var(--surface);line-height:1;cursor:pointer}
+.po-tag{font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}.po-tag.out{color:#c0392b}
+.po-more{margin-left:auto;border:0;background:none;cursor:pointer;font-size:1rem;color:var(--muted)}
+.po-board{display:flex;gap:4px;flex-wrap:wrap;align-items:center;min-height:24px}
+.po-cre{display:inline-flex;align-items:center;gap:4px;font-size:.74rem;padding:2px 3px 2px 7px;border-radius:7px;background:var(--surface);border:1px solid var(--line)}
+.po-cre.hurt{border-color:#c0392b}.po-cre small{color:var(--muted);font-size:.66rem}
+.po-cre button{border:0;background:none;cursor:pointer;color:var(--muted);font-size:.85rem;padding:0 3px}
+.po-add{font-size:.72rem;border:1px dashed var(--line);background:none;border-radius:7px;padding:2px 7px;cursor:pointer;color:var(--muted)}
+.po-mode{font-size:.68rem;color:var(--muted)}
+.po-quick{display:flex;flex-wrap:wrap;gap:5px}.po-quick .btn{font-size:.78rem;padding:4px 8px}.po-quick small{color:var(--muted)}
+.po-custom{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:end}.po-custom input[type=number]{width:4.5em}.po-kws{display:flex;flex-wrap:wrap;gap:2px 10px;width:100%}
+.blk-list{display:flex;flex-direction:column;gap:8px}
+.blk-row{border:1px solid var(--line);border-radius:9px;padding:7px 8px;background:var(--sunk);display:flex;flex-direction:column;gap:5px}
+.blk-atk{display:flex;align-items:center;gap:7px}.blk-atk .pt-si-img{width:30px}
+.blk-opts{display:flex;flex-wrap:wrap;gap:4px}
+.blk-b{border:1px solid var(--line);border-radius:7px;background:var(--surface);font-size:.74rem;padding:3px 7px;cursor:pointer}.blk-b small{color:var(--muted)}
+.blk-b[aria-pressed=true]{background:#c0392b;border-color:#c0392b;color:#fff}.blk-b[aria-pressed=true] small{color:#fde}
+.blk-out{color:var(--muted)}
+@media (max-width:700px){.pt-opps{padding:4px 6px;gap:6px}.pt-opp{min-width:150px;padding:3px 6px;gap:2px}.po-board{flex-wrap:nowrap;overflow-x:auto;min-height:0}.po-cre{white-space:nowrap}.po-cre small,.po-mode{display:none}.po-life button{width:26px;height:26px}}
 .atk-row{display:grid;grid-template-columns:22px 34px minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;border:1px solid var(--line);border-radius:9px;background:var(--sunk);padding:5px 8px;font-size:.8rem}
 .atk-row .pt-si-img{width:34px}
 .atk-row.on{border-color:var(--danger);background:color-mix(in srgb,var(--danger) 10%,var(--sunk))}
@@ -942,6 +971,9 @@ img.noimg{visibility:hidden}
 .pt-log li:first-child{background:color-mix(in srgb,var(--accent) 14%,var(--sunk))}
 .pt-hand{min-width:0;background:var(--surface);border-top:1px solid var(--line);padding:4px 12px 6px;box-shadow:0 -1px 6px rgba(0,0,0,.08);position:relative}
 .pt-hand-head{display:flex;gap:8px;align-items:baseline;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin-bottom:0}
+.pt-hand-note{text-transform:none;letter-spacing:0;font-weight:500;font-size:.72rem}
+.pt-hand .ptc.can-cast{box-shadow:0 0 0 3px #f0b429,0 0 14px 3px rgba(240,180,41,.7)}
+.pt-pool{cursor:pointer;border-color:#3fb950;color:var(--ink);font-family:var(--mono,monospace)}
 .pt-hand-head b{font:700 .85rem var(--f-mono);color:var(--ink)}
 .pt-hand-cards{display:flex;gap:8px;overflow-x:auto;overflow-y:visible;padding:8px 4px 2px;min-height:calc(var(--g) * 7.28 + 10px);border:1px dashed transparent;border-radius:10px;align-items:flex-end}
 .pt-hand-cards .ptc{flex:0 0 auto;width:calc(var(--g) * 5.2);height:calc(var(--g) * 7.28);transition:transform .12s}
@@ -993,6 +1025,9 @@ img.noimg{visibility:hidden}
 .ptd-acts{display:flex;flex-wrap:wrap;gap:3px}
 .ptd-acts button{border:1px solid var(--line);background:var(--sunk);border-radius:5px;font-size:.72rem;padding:2px 6px}
 .ptd-acts button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.ptd-acts button.ptd-main{flex-basis:100%;border-color:var(--accent);font-weight:600}
+.ptd-acts button.ptd-main[aria-pressed=true]{color:var(--accent-ink)}
+.pt-search-for .linkish{margin-left:6px}
 .ptd-card.chosen-bottom .ptd-img,.ptd-card.chosen-grave .ptd-img{opacity:.5}
 .dig-bar,.dig-dest{display:flex;gap:10px 18px;align-items:center;flex-wrap:wrap}
 .dig-bar input{width:58px;border:1px solid var(--line);border-radius:6px;padding:4px 6px;background:var(--sunk)}
@@ -1456,6 +1491,7 @@ label.btn{display:inline-flex;align-items:center;justify-content:center}
 <img id="hoverCard" class="hover-card" alt="" hidden>
 <div id="pt" class="pt" hidden aria-label="Playtest">
   <div class="pt-top" id="ptTop" role="toolbar" aria-label="Game controls"></div>
+  <div class="pt-opps" id="ptOpps" aria-label="Opponents"></div>
   <div class="pt-main">
     <aside class="pt-left" id="ptLeft" aria-label="Command zone, library, graveyard and exile"></aside>
     <div class="pt-bf" id="ptBf" aria-label="Battlefield"></div>
@@ -7229,7 +7265,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.08.8";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.08.9";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
@@ -7415,7 +7451,8 @@ function ptNew(d){
   const cmd = d.commanders.map(c => ptMakeCard(c, {commander: true}));
   const st = {deckId: d.id, name: d.name, isCmd: d.format === "commander", turn: 0, life: d.format === "commander" ? 40 : 20, poison: 0, energy: 0,
     lib: shuffle(lib), hand: [], grave: [], exile: [], cmd, bf: [], mull: 0, phase: "mull", toBottom: 0, tax: {}, log: [], undo: [], z: 0,
-    opp: d.format === "commander" ? 40 : 20, trig: [], muted: {}, targeting: null, castN: 0, drawN: 0, endDone: 0, exp: 0};
+    opp: d.format === "commander" ? 40 : 20, oppT: 0, trig: [], muted: {}, targeting: null, castN: 0, drawN: 0, endDone: 0, exp: 0};
+  const on = ptOppN(st.isCmd); st.opps = Array.from({length: on}, (_, i) => ptOppMake(i, on, st.isCmd));
   for (let i = 0; i < 7 && st.lib.length; i++) st.hand.push(st.lib.shift());
   st.log.unshift("New game. Opening hand drawn: keep it or take a mulligan.");
   return st;
@@ -7453,6 +7490,12 @@ const ptPileOf = c => { const k = c && ptPileKey(c); return k && c.x != null ? p
 // clicking a land pile taps the next untapped land in it (or untaps one when they're all tapped)
 function ptTapPick(uid){
   const f = ptFind(uid); if (!f || f.zone !== "bf") return;
+  if (ptAutoMana() && PT.phase === "play") {
+    const pile = ptIsPileLand(f.card) ? ptPileOf(f.card) : [f.card], up = pile.filter(c => !c.tapped), c = up.length ? up[up.length - 1] : pile[pile.length - 1];
+    const src = !c.tapped ? ptManaSource(c) : null;
+    if (src && !src.sac && !src.mana) { c.tapped = true; c.z = ++PT.z; const us = src.units.map(u => u.map(o => Object.assign({}, o, {from: c.name}))); PT.pool = (PT.pool || []).concat(us); ptLog(`Tapped ${c.name} for mana.`); return; }
+    if (c.tapped) { const i = (PT.pool || []).findIndex(u => u[0] && u[0].from === c.name); if (i >= 0) { PT.pool.splice(i, 1); c.tapped = false; ptLog(`Untapped ${c.name} (its mana left the pool).`); return; } }
+  }
   const pile = ptIsPileLand(f.card) ? ptPileOf(f.card) : [f.card];
   if (pile.length < 2) return ptTap(uid);
   const up = pile.filter(c => !c.tapped);
@@ -7554,6 +7597,7 @@ function ptNextTurn(){
   });
   PT.castN = 0; PT.drawN = 0; PT.exileCastN = 0;
   ptLog(`${extra ? "Extra turn! " : ""}Turn ${PT.turn}: untapped.`);
+  if (!extra) { ptOppsFix(); ptOppGrow(); }
   ptEmit("upkeep"); ptUpkeepRules();
   for (const u of PT.rebound || []) { const f = ptFind(u); if (f && f.zone === "exile") ptAddPrompt({srcUid: u, srcName: f.card.name, img: f.card.img, kind: "rebound", text: "Rebound: cast it again from exile without paying its mana cost.", actions: [{t: "recast", uid: u, label: `Cast ${f.card.name} again`}], fresh: true}); }
   PT.rebound = [];
@@ -7785,10 +7829,11 @@ function ptGain(n, why){
   return n;
 }
 // Damage to the opponent goes through Torbran and damage doublers; life loss doesn't
-function ptDealOpp(n, why, srcCard, isDamage){
+function ptDealOpp(n, why, srcCard, isDamage, who){
   if (n <= 0) return 0;
   if (isDamage) { const m = ptMods(); if (srcCard && (srcCard.colors || []).includes("R")) n += m.torbran; n *= m.dmgX; }
-  ptHitOpp(n, why); return n;
+  const k = who === "each" ? ptLiveOpps().length : 1;
+  ptHitOpp(n, why, who); PT.lastLost = n * k; return n * k;
 }
 // Counters from effects go through Hardened Scales, Winding Constrictor, Doubling Season…
 function ptAddCounters(uid, kind, n){
@@ -7839,6 +7884,211 @@ function ptReveal(limit, strict, why){
   ptMove(hit.uid, ptIsPermanentType(hit) ? "bf" : "grave", {cast: true, how: why.toLowerCase()});
 }
 
+/* ----- mana: paying for spells by tapping the right lands, rocks and creatures ----- 
+   A mana unit is a list of the ways it can be spent: [{c: "G"}, {c: "W", pain: 1}, {c: "R", only: "creature"}].
+   PT.pool holds mana already made (rituals, Treasures, lands you tapped by hand). Clicking a card in your hand
+   pays its cost from the pool first, then from untapped sources, choosing so every colour can be paid. */
+const PT_WUBRG = ["W", "U", "B", "R", "G"];
+const PT_BASIC_MANA = {Plains: "W", Island: "U", Swamp: "B", Mountain: "R", Forest: "G", Wastes: "C"};
+const ptAutoMana = () => prefs.ptAutoMana !== false;
+function ptCI(){
+  if (PT._ci) return PT._ci;
+  const d = (typeof decks !== "undefined" ? decks : []).find(x => x.id === PT.deckId);
+  const ci = new Set(); for (const c of (d && d.commanders) || []) for (const x of c.ci || c.colors || []) ci.add(x);
+  return PT._ci = ci.size ? PT_WUBRG.filter(x => ci.has(x)) : PT_WUBRG.slice();
+}
+// "{g} or {w}", "{c}{c}", "one mana of any color", "three mana of any one color", "{r}{r}{r}" → units
+function ptManaUnits(what, extra = {}){
+  const w = String(what || "").toLowerCase(), words = {one: 1, two: 2, three: 3, four: 4, five: 5, x: 1};
+  const any = /commander's color identity/.test(w) ? ptCI() : PT_WUBRG;
+  const mk = list => list.map(c => Object.assign({c}, extra));
+  let m;
+  if ((m = w.match(/^(one|two|three|four|five) mana (?:of any (?:one )?colou?r|in any combination of colou?rs)/))) return Array.from({length: words[m[1]]}, () => mk(any));
+  if ((m = w.match(/^(one|two|three) mana of any colou?r in your commander/))) return Array.from({length: words[m[1]]}, () => mk(any));
+  if (/ or /.test(w) && !/\}\{/.test(w)) { const cs = [...w.matchAll(/\{([wubrgc])\}/g)].map(x => x[1].toUpperCase()); return cs.length ? [mk(cs)] : []; }
+  const syms = [...w.matchAll(/\{([wubrgc])\}/g)].map(x => x[1].toUpperCase());
+  return syms.map(c => mk([c]));
+}
+// What an untapped permanent can make, as one choice of units (abilities that each make one unit are merged)
+function ptManaSource(c){
+  if (c.faceDown || c.tapped) return null;
+  if (ptIsCreature(c) && c.since === PT.turn && !c.haste && !ptHasKw(c, "haste")) return null;   // summoning sick
+  const out = [];
+  let abs = [];
+  try { abs = trActivated(c).filter(a => a.kind === "mana" && a.actions[0] && a.actions[0].t === "mana"); } catch (e) { abs = []; }
+  const singles = [], multis = [];
+  for (const a of abs) {
+    const cs = a.cost || {};
+    if (!cs.tap || cs.sac.length || cs.discard.length || cs.tapCre.length || cs.remove.length || cs.exileGrave.length || cs.returnLand.length || cs.untap) continue;
+    const lbl = String(a.label || "").toLowerCase(), pain = (lbl.match(/deals (\d+) damage to you/) || [])[1];
+    const only = /spend this mana only to cast (?:a |an )?creature spell/.test(lbl) ? "creature" : /spend this mana only to cast (?:an? )?(artifact|instant or sorcery|noncreature)/.test(lbl) ? lbl.match(/only to cast (?:an? )?([a-z ]+?) spell/)[1] : null;
+    const units = ptManaUnits(a.actions[0].what, only ? {only} : {});
+    if (!units.length) continue;
+    if (pain) units.forEach(u => u.forEach(o => { if (o.c !== "C" || /\{c\}\{c\}/.test(lbl)) o.pain = +pain; }));
+    const r = {units, sac: !!cs.sacSelf, mana: cs.mana || "", label: a.label};
+    (units.length === 1 && !cs.mana && !cs.sacSelf ? singles : multis).push(r);
+  }
+  if (!abs.length && ptIsLand(c)) {   // basic land types: "({T}: Add {G}.)" is only reminder text
+    const ty = ptFaceType(c), cs = Object.keys(PT_BASIC_MANA).filter(k => new RegExp("\\b" + k + "\\b").test(ty)).map(k => PT_BASIC_MANA[k]);
+    if (cs.length) singles.push({units: [cs.map(x => ({c: x}))], sac: false, mana: ""});
+  }
+  if (singles.length) out.push({units: [[].concat(...singles.map(s => s.units[0]))], sac: false, mana: ""});
+  out.push(...multis);
+  if (!out.length) return null;
+  // the best single way: the plain merged one, else one that makes the most
+  const best = out.find(o => !o.sac && !o.mana) || out.slice().sort((a, b) => b.units.length - a.units.length)[0];
+  return {card: c, units: best.units, sac: best.sac, mana: best.mana, alts: out};
+}
+// "{3}{G}{G}", "{X}{R}", "{2/W}", "{G/P}", "{G/U}" → pips
+function ptCostPips(cost, x = 0){
+  const pips = []; let generic = 0;
+  for (const m of String(cost || "").split(" // ")[0].matchAll(/\{([^}]+)\}/g)) {
+    const s = m[1].toUpperCase();
+    if (/^\d+$/.test(s)) generic += +s;
+    else if (s === "X") generic += x;
+    else if (s === "S") generic += 1;
+    else if (PT_WUBRG.includes(s) || s === "C") pips.push([s]);
+    else if (/^[WUBRG]\/P$/.test(s)) pips.push([s[0], "life"]);
+    else if (/^2\/[WUBRG]$/.test(s)) pips.push([s[2], "2"]);
+    else if (/^[WUBRGC]\/[WUBRG]$/.test(s)) pips.push([s[0], s[2]]);
+  }
+  return {pips, generic};
+}
+const ptUnitFits = (o, need, spell) => (need === "*" || o.c === need) && (!o.only || ptOnlyOk(o.only, spell));
+const ptOnlyOk = (only, spell) => !spell ? false : only === "creature" ? ptIsCreature(spell) || /\bCreature\b/.test(ptFaceType(spell)) : only === "noncreature" ? !/\bCreature\b/.test(ptFaceType(spell)) : new RegExp("\\b(" + only.split(" or ").join("|") + ")\\b", "i").test(ptFaceType(spell));
+// Work out a payment. Returns {use: [{src|pool, unit, as}], tap: [cards], sac: [cards], pain, life, left: [units back to the pool]} or {missing}
+function ptPlan(cost, spell, opts = {}){
+  const {pips, generic} = ptCostPips(cost, opts.x || 0);
+  const pool = (PT.pool || []).map((u, i) => ({pool: i, unit: u, score: 0}));
+  const srcs = [];
+  for (const c of PT.bf) {
+    if (spell && c.uid === spell.uid) continue;
+    const s = ptManaSource(c); if (!s) continue;
+    const flex = s.units.reduce((t, u) => t + u.length, 0);
+    s.score = (s.sac ? 50 : 0) + (s.mana ? 30 : 0) + (ptIsCreature(c) ? 8 : 0) + flex + (s.units.some(u => u.some(o => o.pain)) ? 3 : 0) + (s.units.some(u => u.some(o => o.only)) ? -2 : 0);
+    srcs.push(s);
+  }
+  srcs.sort((a, b) => a.score - b.score);
+  // convoke: untapped creatures (even summoning sick) can pay generic or one pip of their colour
+  const convoke = spell && ptKwPrinted(spell).some(k => k.key === "convoke") ? PT.bf.filter(c => ptIsCreature(c) && !c.tapped && !srcs.some(s => s.card === c) && c.uid !== spell.uid) : [];
+  // every unit that could be spent, cheapest first
+  const supply = [];
+  pool.forEach(p => supply.push({kind: "pool", i: p.pool, unit: p.unit, score: -10}));
+  srcs.forEach((s, si) => s.units.forEach((u, ui) => supply.push({kind: "src", si, ui, unit: u, score: s.score + ui * 0.01})));
+  convoke.forEach(c => supply.push({kind: "convoke", card: c, unit: (c.colors && c.colors.length ? c.colors : ["C"]).map(x => ({c: x})).concat([{c: "*", convoke: true}]), score: 100}));
+  supply.sort((a, b) => a.score - b.score);
+  // colored pips first (fewest ways to pay first), then generic
+  const order = pips.map((p, i) => ({p, i, ways: supply.filter(s => s.unit.some(o => p.some(n => n.length === 1 && ptUnitFits(o, n, spell)))).length})).sort((a, b) => a.ways - b.ways);
+  const used = new Set(), assign = []; let nodes = 0, best = null;
+  const key = s => s.kind === "pool" ? "p" + s.i : s.kind === "src" ? "s" + s.si + ":" + s.ui : "v" + s.card.uid;
+  const dfs = k => {
+    if (++nodes > 20000 || best) return;
+    if (k === order.length) {
+      // generic: anything left, cheapest first; a multi-unit source already tapped is free to finish
+      const tapped = new Set(assign.filter(a => a.s.kind === "src").map(a => a.s.si));
+      const rest = supply.filter(s => !used.has(key(s)) && s.unit.some(o => !o.only || ptOnlyOk(o.only, spell))).sort((a, b) => ((a.kind === "src" && tapped.has(a.si)) ? -20 : a.score) - ((b.kind === "src" && tapped.has(b.si)) ? -20 : b.score));
+      let g = generic; const gen = [];
+      for (const s of rest) { if (g <= 0) break; const o = s.unit.find(o => !o.only || ptOnlyOk(o.only, spell)); gen.push({s, o}); if (s.kind === "src") tapped.add(s.si); g--; }
+      if (g > 0) return;
+      best = assign.concat(gen.map(x => ({s: x.s, o: x.o, as: "generic"})));
+      return;
+    }
+    const {p} = order[k];
+    for (const s of supply) {
+      if (used.has(key(s))) continue;
+      const o = s.unit.find(o => p.some(n => n.length === 1 && ptUnitFits(o, n, spell)));
+      if (!o) continue;
+      used.add(key(s)); assign.push({s, o, as: o.c}); dfs(k + 1); if (best) return; assign.pop(); used.delete(key(s));
+    }
+    if (p[1] === "life") { assign.push({life: 2}); dfs(k + 1); if (best) return; assign.pop(); }
+  };
+  dfs(0);
+  // {2/W}: if that colour can't be found, it costs {2} instead
+  if (!best && /\{2\/[WUBRG]\}/i.test(cost)) return ptPlan(String(cost).replace(/\{2\/[WUBRG]\}/gi, "{2}"), spell, opts);
+  if (!best) {
+    const have = supply.reduce((t, s) => t + 1, 0), need = pips.length + generic;
+    const miss = []; const counts = {}; for (const {p} of order) { const c = p[0]; if (!supply.some(s => s.unit.some(o => p.some(n => n.length === 1 && ptUnitFits(o, n, spell))))) counts[c] = (counts[c] || 0) + 1; }
+    for (const [c, n] of Object.entries(counts)) miss.push(`{${c}}`.repeat(n));
+    return {missing: miss.join("") || (need > have ? `${need - have} more mana` : "the right colours"), have, need};
+  }
+  // what gets tapped / sacrificed, and leftovers from multi-mana sources go to the pool
+  const tapSrc = new Map();
+  for (const a of best) if (a.s && a.s.kind === "src") { if (!tapSrc.has(a.s.si)) tapSrc.set(a.s.si, new Set()); tapSrc.get(a.s.si).add(a.s.ui); }
+  const left = [];
+  for (const [si, uis] of tapSrc) srcs[si].units.forEach((u, ui) => { if (!uis.has(ui)) left.push(u.map(o => Object.assign({}, o, {from: srcs[si].card.name}))); });
+  const painBy = new Map(); for (const a of best) if (a.s && a.s.kind === "src" && a.o && a.o.pain) painBy.set(a.s.si, Math.max(painBy.get(a.s.si) || 0, a.o.pain));
+  const pain = [...painBy.values()].reduce((t, v) => t + v, 0);
+  return {
+    pool: best.filter(a => a.s && a.s.kind === "pool").map(a => a.s.i),
+    tap: [...tapSrc.keys()].map(si => srcs[si]),
+    convoke: best.filter(a => a.s && a.s.kind === "convoke").map(a => a.s.card),
+    life: best.reduce((t, a) => t + (a.life || 0), 0), pain, left,
+    paidWith: best.map(a => a.life ? "2 life" : a.s.kind === "pool" ? "floating mana" : a.s.kind === "convoke" ? a.s.card.name + " (convoke)" : srcs[a.s.si].card.name)
+  };
+}
+// Carry out a plan: tap, sacrifice, lose life, spend the pool, float the leftovers
+function ptApplyPlan(plan, what){
+  PT.pool = (PT.pool || []).filter((u, i) => !plan.pool.includes(i));
+  for (const s of plan.tap) { s.card.tapped = true; s.card.z = ++PT.z; }
+  for (const c of plan.convoke) { c.tapped = true; ptEmit("tapconvoke", c); }
+  for (const s of plan.tap) if (s.sac) ptSacrifice(s.card.uid);
+  const loss = plan.pain + plan.life;
+  if (loss) { PT.life -= loss; ptEmit("loselife", null, {amount: loss}); }
+  if (plan.left.length) PT.pool.push(...plan.left);
+  const names = [...new Set(plan.paidWith)];
+  ptLog(`Paid for ${what} with ${names.join(", ") || "nothing"}${loss ? ` (lost ${loss} life)` : ""}${plan.left.length ? ` · ${plan.left.length} mana left floating` : ""}.`);
+}
+const ptPoolTxt = () => (PT.pool || []).map(u => u.length >= 5 ? "{any}" : u.length > 1 ? "{" + u.map(o => o.c).join("/") + "}" : "{" + u[0].c + "}").join("");
+// Add mana to the pool: rituals, Treasures and lands you tap by hand
+function ptAddMana(what, from){ const us = ptManaUnits(what, {from}); PT.pool = (PT.pool || []).concat(us); return us.length; }
+function ptEmptyPool(){ if ((PT.pool || []).length) ptLog(`${PT.pool.length} unspent mana emptied from your pool.`); PT.pool = []; }
+// What a card costs to cast this way: its mana cost, or the cost of the way (evoke, flashback…), plus commander tax
+function ptCastCost(c, zone, way){
+  let cost = way && way.cost != null ? way.cost : c.castFace === 1 && (c.cost || "").includes(" // ") ? c.cost.split(" // ")[1] : (c.cost || "").split(" // ")[0];
+  if (way && way.k === "cascade") cost = (c.cost || "").split(" // ")[0];
+  if (zone === "cmd" && PT.tax[c.uid]) cost += `{${PT.tax[c.uid] * 2}}`;
+  return cost;
+}
+// Can this card be cast right now (for the glow in your hand)?
+function ptAffordable(c, zone){
+  if (ptIsLand(c)) return zone === "hand" && ptLandOk();
+  const cost = ptCastCost(c, zone); if (!/\{/.test(cost)) return true;
+  return !ptPlan(cost, c).missing;
+}
+function ptLandsThisTurn(){ return PT.landTurn === PT.turn ? PT.landN || 0 : 0; }
+function ptLandDrops(){ let n = 1; for (const s of PT.bf) { if (s.faceDown) continue; const t = ptFaceText(s).toLowerCase(); const m = t.match(/you may play (an|one|two|three) additional lands?/); if (m) n += {an: 1, one: 1, two: 2, three: 3}[m[1]]; } return n; }
+const ptLandOk = () => PT.phase === "play" && ptLandsThisTurn() < ptLandDrops();
+// Cast from hand or command zone (or with a way like evoke), paying with mana first when that's switched on
+function ptCastPaid(uid, wayKey, x){
+  const f = ptFind(uid); if (!f) return;
+  const c = f.card, zone = f.zone, cast = () => wayKey ? ptCastWay(uid, wayKey) : zone === "cmd" ? ptMove(uid, "bf") : ptPlay(uid);
+  if (ptIsLand(c) && zone === "hand" && !wayKey) {
+    if (!ptLandOk() && PT.phase === "play") return ptAskAnyway(`You've already played ${ptLandsThisTurn() === 1 ? "a land" : ptLandsThisTurn() + " lands"} this turn.`, "Play it anyway", () => ptDo(() => { ptNoteLand(); cast(); }));
+    return ptDo(() => { ptNoteLand(); cast(); });
+  }
+  if (!ptAutoMana() || PT.phase !== "play") return ptDo(cast);
+  const way = wayKey ? ptCastWays(c, zone).find(w => w.k === wayKey) : null;
+  let cost = ptCastCost(c, zone, way);
+  if (!/\{/.test(cost)) return ptDo(cast);
+  if (/\{X\}/i.test(cost) && x == null) return ptAskX(c, cost, n => ptCastPaid(uid, wayKey, n));
+  const plan = ptPlan(cost, c, {x: x || 0});
+  if (plan.missing) return ptAskAnyway(`Not enough mana for ${esc(ptFaceName(c))} (${esc(ptManaTxt(cost.replace(/\{X\}/gi, `{${x || 0}}`)))}): you're missing ${esc(ptManaTxt(plan.missing))}.`, "Cast it anyway (without paying)", () => ptDo(cast));
+  ptDo(() => { ptApplyPlan(plan, ptFaceName(c) + (x ? ` (X = ${x})` : "")); if (x != null) c.xPaid = x; cast(); });
+}
+function ptNoteLand(){ if (PT.landTurn !== PT.turn) { PT.landTurn = PT.turn; PT.landN = 0; } PT.landN++; }
+function ptAskAnyway(msg, yes, fn){
+  ptModal("Hold on", `<p>${msg}</p>`, `<button class="btn ghost" type="button" data-d="close">Cancel</button><button class="btn primary" type="button" id="ptAnyway">${esc(yes)}</button>`);
+  $("ptAnyway").onclick = () => { ptCloseModal(); fn(); };
+}
+function ptAskX(c, cost, fn){
+  let max = 0; for (let x = 1; x <= 30; x++) { if (ptPlan(cost, c, {x}).missing) break; max = x; }
+  ptModal(`Choose X for ${esc(ptFaceName(c))}`, `<p class="cur-sub">${esc(ptManaTxt(cost))}. With what you have, X can be up to <b>${max}</b>.</p>
+    <label class="inline-field">X <input type="number" id="ptXval" min="0" max="99" value="${max}"></label>`,
+    `<button class="btn ghost" type="button" data-d="close">Cancel</button><button class="btn primary" type="button" id="ptXgo">Cast</button>`);
+  const go = () => { const v = Math.max(0, parseInt($("ptXval").value) || 0); ptCloseModal(); fn(v); };
+  $("ptXgo").onclick = go; $("ptXval").addEventListener("keydown", e => { if (e.key === "Enter") go(); }); $("ptXval").select();
+}
+
 /* ----- drawing the table ----- */
 const PT_COLOR = {W: "#e9e1c4", U: "#5c94c9", B: "#4a423f", R: "#c9563f", G: "#4f8f5b"};
 function ptFace(c, cls){
@@ -7869,8 +8119,8 @@ function ptRender(){
   const lifeCtl = (key, label, icon) => `<div class="pt-stat" title="${label}: click − / +, Shift-click for 5"><span class="pt-ico">${icon}</span><button type="button" data-life="${key}" data-d="-1" aria-label="${label} down">−</button><b data-lifeval="${key}">${PT[key]}</b><button type="button" data-life="${key}" data-d="1" aria-label="${label} up">+</button><small>${label}</small></div>`;
   $("ptTop").innerHTML = `
     <div class="pt-title"><b>${esc(PT.name)}</b><span class="pt-turn">${PT.phase === "play" ? `Turn ${PT.turn}` : "Opening hand"}</span></div>
-    ${lifeCtl("life", "Life", "♥")}${lifeCtl("opp", "Opponent", "⚔")}${PT.poison || PT.showPoison ? lifeCtl("poison", "Poison", "☠") : ""}${PT.energy || PT.showEnergy ? lifeCtl("energy", "Energy", "ϟ") : ""}
-    ${PT.oppPoison ? `<span class="pt-chip" title="Your opponent's poison counters (10 wins)">☠ ${PT.oppPoison}</span>` : ""}${PT.speed ? `<span class="pt-chip" title="Your speed (goes up once a turn when the opponent loses life on your turn)">Speed ${PT.speed}</span>` : ""}${PT.monarch ? `<span class="pt-chip" title="You're the monarch: draw at your end step">👑 Monarch</span>` : ""}${PT.day ? `<span class="pt-chip">${PT.day === "night" ? "☾ Night" : "☀ Day"}</span>` : ""}${PT.extraTurns ? `<span class="pt-chip">+${PT.extraTurns} extra turn${PT.extraTurns > 1 ? "s" : ""}</span>` : ""}${PT.story ? `<span class="pt-chip" title="You have an enduring story">Storied</span>` : ""}
+    ${lifeCtl("life", "Life", "♥")}${PT.poison || PT.showPoison ? lifeCtl("poison", "Poison", "☠") : ""}${PT.energy || PT.showEnergy ? lifeCtl("energy", "Energy", "ϟ") : ""}
+    ${(PT.pool || []).length ? `<button type="button" class="pt-chip pt-pool" data-pt="pool" title="Mana in your pool. It's spent first when you cast something, and empties at the end of the turn. Click to empty it now.">Mana ${esc(ptManaTxt(ptPoolTxt()))}</button>` : ""}${PT.speed ? `<span class="pt-chip" title="Your speed (goes up once a turn when the opponent loses life on your turn)">Speed ${PT.speed}</span>` : ""}${PT.monarch ? `<span class="pt-chip" title="You're the monarch: draw at your end step">👑 Monarch</span>` : ""}${PT.day ? `<span class="pt-chip">${PT.day === "night" ? "☾ Night" : "☀ Day"}</span>` : ""}${PT.extraTurns ? `<span class="pt-chip">+${PT.extraTurns} extra turn${PT.extraTurns > 1 ? "s" : ""}</span>` : ""}${PT.story ? `<span class="pt-chip" title="You have an enduring story">Storied</span>` : ""}
     <span class="sp"></span>
     <div class="pt-actions">
       <button class="btn" type="button" data-pt="draw" title="Draw a card (D)">Draw</button>
@@ -7885,6 +8135,7 @@ function ptRender(){
       <button class="btn ghost" type="button" data-pt="help" title="How it works">?</button>
       <button class="btn ghost pt-x" type="button" data-pt="close" aria-label="Close playtest">✕</button>
     </div>`;
+  $("ptOpps").innerHTML = ptOppsHtml();
   // battlefield: one table ruled in squares; cards sit on exact squares
   const {cols, rows} = ptTableSize();
   const sameName = new Map(); for (const c of PT.bf) sameName.set(c.name, (sameName.get(c.name) || 0) + 1);
@@ -7923,7 +8174,8 @@ function ptRender(){
   // hand
   const banner = PT.phase === "mull" ? `<div class="pt-banner"><span>${PT.mull ? `Mulligan ${PT.mull}. ` : ""}Keep this hand?</span><button class="btn primary" type="button" data-pt="keep">Keep</button><button class="btn" type="button" data-pt="mulligan">Mulligan</button>${PT.isCmd ? `<label class="chk"><input type="checkbox" id="ptFreeMull" ${prefs.ptFreeMull !== false ? "checked" : ""}> First mulligan is free</label>` : ""}</div>`
     : PT.phase === "bottom" ? `<div class="pt-banner warn"><span>Click ${PT.toBottom} card${PT.toBottom === 1 ? "" : "s"} in your hand to put on the bottom of your library.</span></div>` : "";
-  $("ptHand").innerHTML = `${banner}<div class="pt-hand-head"><span>Hand</span><b>${PT.hand.length}</b></div><div class="pt-hand-cards" data-drop="hand" style="--n:${PT.hand.length}">${PT.hand.map(c => ptCardHtml(c, "hand")).join("") || `<div class="pt-empty">No cards in hand</div>`}</div>`;
+  const glow = ptAutoMana() && PT.phase === "play", can = c => glow && ptAffordable(c, "hand") ? " can-cast" : "";
+  $("ptHand").innerHTML = `${banner}<div class="pt-hand-head"><span>Hand</span><b>${PT.hand.length}</b>${glow ? `<small class="pt-hand-note">Cards you can cast now glow. Clicking one pays for it.</small>` : ""}</div><div class="pt-hand-cards" data-drop="hand" style="--n:${PT.hand.length}">${PT.hand.map(c => ptCardHtml(c, "hand", can(c))).join("") || `<div class="pt-empty">No cards in hand</div>`}</div>`;
   if (ptHover != null && !ptFind(ptHover)) ptHover = null;
   ptPreview(ptHover, ptLastX);
 }
@@ -8020,7 +8272,8 @@ function ptModal(title, body, foot){
   const m = $("ptModal"); m.hidden = false; $("ptSide").classList.add("drawer-open");
   m.innerHTML = `<div class="ptd" role="region" aria-label="${esc(title)}"><div class="ptd-head"><button class="ptd-back" type="button" data-d="close" aria-label="Back to the stack">‹</button><h3>${esc(title)}</h3><button class="btn ghost ptd-x" type="button" data-d="close" aria-label="Close">✕</button></div><div class="ptd-body">${body}</div>${foot ? `<div class="ptd-foot">${foot}</div>` : ""}</div>`;
 }
-function ptCloseModal(){ const m = $("ptModal"); if (!m) return; if (PT_PICK && !PT_PICK.done) { ptPickAbandon(); setTimeout(ptRender, 0); } m.hidden = true; m.innerHTML = ""; $("ptSide").classList.remove("drawer-open"); PT_VIEW = null;
+function ptCloseModal(){ const m = $("ptModal"); if (!m) return;
+  if (PT && PT_VIEW && PT_VIEW.kind === "blocks" && !PT_VIEW.done && (PT.combat || []).length && !PT.trig.some(x => x.kind === "combatdmg")) { PT.trig.push({id: ++ptTrigId + "-dmg", srcUid: null, srcName: "Combat damage", img: "", kind: "combatdmg", text: "Blockers, then combat damage.", actions: [{t: "combat", label: "Blocks and damage"}]}); setTimeout(ptRender, 0); } if (PT_PICK && !PT_PICK.done) { ptPickAbandon(); setTimeout(ptRender, 0); } m.hidden = true; m.innerHTML = ""; $("ptSide").classList.remove("drawer-open"); PT_VIEW = null;
   document.querySelectorAll("#ptBf .ptc.attacking, #ptBf .ptc.pickable").forEach(el => el.classList.remove("attacking", "pickable", "picked")); }
 let PT_VIEW = null;   // what the open card list dialog is showing
 // A list of cards with buttons: used for graveyard, exile, searching, looking at the top and scrying
@@ -8080,20 +8333,41 @@ function ptDigApply(){
   });
   ptCloseModal();
 }
+// Finish a library search: shuffle (when ticked), then whatever was set aside goes on top, in the order picked
+function ptSearchDone(){
+  const v = PT_VIEW, shuf = ($("ptdShuffle") || {checked: true}).checked, held = (v && v.held || []).slice();
+  ptDo(() => {
+    if (shuf) ptShuffle();
+    for (const u of held.slice().reverse()) { const i = PT.lib.findIndex(c => c.uid === u); if (i >= 0) PT.lib.unshift(PT.lib.splice(i, 1)[0]); }
+    if (held.length) ptLog(`Put ${held.map(u => PT.lib.find(c => c.uid === u).name).join(", ")} on top of the library${shuf ? " after shuffling" : ""}.`);
+  });
+  ptCloseModal();
+}
 function ptRenderView(){
   const v = PT_VIEW; if (!v) return;
   if (v.kind === "dig") return ptRenderDig();
   const zone = v.kind === "grave" ? "grave" : v.kind === "exile" ? "exile" : "lib";
   let list = PT[zone].slice(); if (zone !== "lib") list.reverse();
   if (v.kind === "scry" || v.kind === "look") list = list.slice(0, v.n);
+  const all = list.length;
+  if (v.kind === "search" && v.what && !v.showAll) list = list.filter(c => trFits(v.what, c));
   const q = (v.q || "").toLowerCase(); if (q) list = list.filter(c => c.name.toLowerCase().includes(q) || (c.type || "").toLowerCase().includes(q));
   const title = {grave: "Graveyard", exile: "Exile", search: "Search your library", scry: `Scry ${v.n}`, look: `Top ${v.n} of your library`}[v.kind];
   const acts = v.kind === "scry" ? [["top", "Keep on top"], ["bottom", "Bottom"], ["grave", "Graveyard"]]
     : [["hand", "Hand"], ["bf", "Battlefield"], ...(zone !== "grave" ? [["grave", "Graveyard"]] : []), ...(zone !== "exile" ? [["exile", "Exile"]] : []), ...(zone !== "lib" ? [["lib", "Library top"]] : [["libBottom", "Bottom"]])];
+  if (v.kind === "search") {
+    acts.splice(acts.findIndex(x => x[0] === "libBottom"), 0, ["top", "Top"]);
+    if (v.to) { const want = {hand: "hand", bf: v.tapped ? "bfTapped" : "bf", top: "top", grave: "grave", bottom: "libBottom"}[v.to]; const lbl = {hand: "Into your hand", bf: "Onto the battlefield", bfTapped: "Onto the battlefield tapped", top: "On top (after the shuffle)", grave: "Into your graveyard", libBottom: "On the bottom"}[want];
+      const i = acts.findIndex(x => x[0] === (want === "bfTapped" ? "bf" : want)); if (i >= 0) acts.splice(i, 1); acts.unshift([want, lbl, true]); }
+  }
+  const held = v.held || [];
   const body = `${v.kind === "search" || list.length > 12 ? `<input type="search" class="ptd-find" id="ptdFind" placeholder="Find by name or type" value="${esc(v.q || "")}">` : ""}
+    ${v.kind === "search" && (v.what || v.to) ? `<p class="cur-sub pt-search-for">${v.src ? `<b>${esc(v.src)}</b>: ` : ""}looking for ${v.max > 1 && v.max < 99 ? `up to ${v.max} <b>${esc(trCap(v.what || "card"))}</b> cards` : v.max === 99 ? `any number of <b>${esc(trCap(v.what || "card"))}</b> cards` : `${/^[aeiou]/i.test(v.what || "card") ? "an" : "a"} <b>${esc(trCap(v.what || "card"))}</b>${v.what ? " card" : ""}`}${v.to ? `, which goes <b>${{hand: "into your hand", bf: "onto the battlefield" + (v.tapped ? " tapped" : ""), top: "on top of your library after the shuffle", grave: "into your graveyard", bottom: "on the bottom"}[v.to]}</b>` : ""}.
+      ${v.what ? `<button type="button" class="linkish" data-d="searchall">${v.showAll ? `Show only ${esc(trCap(v.what))} cards` : `Show all ${all} cards`}</button>` : ""}</p>` : ""}
+    ${held.length ? `<p class="cur-sub">Goes on top after the shuffle: <b>${held.map(u => esc((PT.lib.find(c => c.uid === u) || {}).name || "")).join(", ")}</b></p>` : ""}
     ${v.kind === "scry" ? `<p class="cur-sub">Top of the library is first. Choose where each card goes, then press Done. Cards kept on top stay in this order.</p>` : ""}
     <div class="ptd-grid">${list.map(c => `<div class="ptd-card${v.choice[c.uid] ? " chosen-" + v.choice[c.uid] : ""}"><div class="ptd-img" data-uid-view="${c.uid}">${ptFace(c)}</div><b>${esc(c.name)}</b>
-      <div class="ptd-acts">${acts.map(([k, n]) => `<button type="button" data-v="${k}" data-uid="${c.uid}" aria-pressed="${v.kind === "scry" ? (v.choice[c.uid] || "top") === k : false}">${n}</button>`).join("")}</div></div>`).join("") || `<div class="pt-empty">${q ? "No matches." : "Nothing here."}</div>`}</div>`;
+      <div class="ptd-acts">${acts.map(([k, n, main]) => `<button type="button" data-v="${k}" data-uid="${c.uid}"${main ? ` class="ptd-main"` : ""} aria-pressed="${v.kind === "scry" ? (v.choice[c.uid] || "top") === k : v.kind === "search" && k === "top" ? held.includes(c.uid) : false}">${n}</button>`).join("")}</div></div>`).join("") || `<div class="pt-empty">${q ? "No matches." : v.kind === "search" && v.what && !v.showAll ? `No ${esc(trCap(v.what))} cards in your library.` : "Nothing here."}</div>`}</div>`;
   const foot = v.kind === "scry" ? `<button class="btn primary" type="button" data-d="scrydone">Done</button>`
     : v.kind === "search" ? `<label class="chk"><input type="checkbox" id="ptdShuffle" ${v.noShuffle ? "" : "checked"}> Shuffle when done</label><button class="btn primary" type="button" data-d="done">Done</button>`
     : `<button class="btn primary" type="button" data-d="done">Done</button>`;
@@ -8173,14 +8447,18 @@ function ptHelp(){
   ptModal("How the playtest works", `<div class="pt-help">
     <p><b>Click</b> a card on the battlefield to tap or untap it. <b>Click</b> a card in your hand to play it: permanents land in the right row, instants and sorceries go to the graveyard.</p>
     <p>Matching tokens stack in one spot, 10 to a stack (the count shows on top); more start a new stack beside it. Dragging a stack moves the whole stack; hold <kbd>Shift</kbd> while dragging to take just the top one. Right-click a stack to tap or untap all of it.</p>
+    <p><b>Mana.</b> Click a card in your hand (or your commander) and Deckseer pays for it: it uses mana in your pool first, then taps the lands, mana rocks and mana creatures that leave you the most options (painlands only when needed, Treasures last, convoke creatures if the card has convoke), and adds commander tax. Cards you can afford right now glow gold. If you can't pay, it says what's missing and lets you cast it anyway. Rituals, Treasures and lands you tap by hand go into your <b>mana pool</b> (shown at the top), which empties at the end of the turn. Dragging a card onto the table puts it there without paying. Turn this off in ⋯ → Settings.</p>
     <p><b>Drag</b> any card to a grid square, your hand, the graveyard, exile, the command zone, or the top or bottom of your library. Cards snap to the squares wherever you drop them, and you can overlap them (an Aura on a creature, say).</p>
     <p><b>Right-click</b> a card for counters, token copies, face down, transform and moving it. Right-click the library to draw, scry, look at, mill or exile several cards, or search it.</p>
     <p>Click a counter on a card to add one, right-click it to remove one. Tokens that leave the battlefield stop existing.</p>
     <p><b>⚡ Trigger helper.</b> When something happens that one of your cards cares about (a card enters, you cast a spell, a creature dies, your upkeep or end step, you gain life, you attack…), the helper steps in. In <b>Auto</b> mode the simple ones just happen (draw, tokens, life, counters, damage to your opponent, mill) and a green note says what it did. Anything with a choice, a target or an “if” waits in the tray: <b>Do it</b> carries out the parts it understands, the rest is a reminder to do by hand. <b>Ask</b> mode puts every trigger in the tray. Click the ⚡ button to switch. It reads the card's wording, so now and then it asks when a condition isn't met: just Skip. Mute stops a card asking for the rest of the game.</p>
     <p>It also knows the usual rules-changers on your table: token and counter doublers (Doubling Season, Parallel Lives, Hardened Scales, Winding Constrictor), life and damage doublers (Boon Reflection, Torbran, Fiery Emancipation), extra triggers (Panharmonicon, Yarok, Teysa, Drivnod, Isshin, Veyran), stat boosts and abilities other cards give (anthems, lords, haste, vigilance, lifelink, double strike), blinking and rebound (Ephemerate), clones, cascade, discover and afterlife.</p>
     <p><b>Rules engine.</b> All 195 keyword abilities and 71 keyword actions from the Comprehensive Rules are recognised (hover a card to see its keywords; ⋯ → Rules lookup to read any of them). In Auto mode these happen on their own: keyword triggers (prowess, exalted, afterlife, mobilize, evolve, training, extort and the rest), instants and sorceries (removal, wipes, pumps, burn, card draw, tutors for lands and typed cards, reanimation, extra turns, modal spells: click the mode), sagas, planeswalker loyalty, Equipment and Auras (drag one onto a creature to attach it), vehicles, and the state-based actions: 0 toughness, lethal damage, legend rule, auras falling off, poison. Right-click a permanent to use its abilities (mana rocks, Clues, Treasures, equip, crew, loyalty…). When a card needs you to choose (a target, what to sacrifice, discard, return or search for, what to equip or crew with, what a Clone copies), the choices open in the side panel: click the cards and press Done, or press <b>Pick for me</b>. Close the panel to decide later: the choice waits on the stack. To have every choice made for you, turn on ⋯ → Make choices for me. The opponent is only a life total here, so anything aimed at their permanents or spells is noted and skipped. Mana isn't counted: costs are assumed paid, and X is your land count minus the rest of the cost.</p>
-    <p><b>Attack</b> taps your attackers, sets off attack triggers and takes their damage off your opponent's life, as if nothing blocked. <b>Next turn</b> runs your end step, untap, upkeep and draw in order.</p>
+    <p><b>Opponents.</b> The strip under the top bar shows each opponent (3 in Commander; change it in ⋯ → Settings) with their life, poison and commander damage. Click a name to aim at that opponent: "target opponent" and "any target" effects hit them, "each opponent" effects hit everyone. Give them creatures with <b>+ Creature</b> (quick ones, your own, or a real card), or use their ⋯ menu to let their board grow each turn like a typical deck or like one of your decks. An opponent is out at 0 life, 10 poison or 21 damage from one commander, and you win when they're all out.</p>
+    <p><b>Attack</b> taps your attackers and sets off attack triggers. Choose who each creature attacks. Your opponents then block the way a careful player would (good blocks, safe blocks, and chump blocks only to stay alive), and you can change any block. Damage follows the rules: first strike and double strike, trample, deathtouch, lifelink, menace, flying and reach, infect and toxic. <b>Next turn</b> runs your end step, untap, upkeep and draw in order.</p>
     <p class="keys"><span><kbd>D</kbd> draw</span><span><kbd>U</kbd> untap all</span><span><kbd>N</kbd> next turn</span><span><kbd>S</kbd> shuffle</span><span><kbd>K</kbd> tokens</span><span><kbd>A</kbd> attack</span><span><kbd>E</kbd> end turn</span><span><kbd>T</kbd> tap card under the pointer</span><span><kbd>+</kbd>/<kbd>−</kbd> +1/+1 counter on it</span><span><kbd>C</kbd> copy it</span><span><kbd>Ctrl</kbd>+<kbd>Z</kbd> undo</span><span><kbd>Esc</kbd> close</span></p>
+    <label class="inline-field">Opponents <select id="ptOppNsel">${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${PT && PT.opps && PT.opps.length === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+    <label class="chk"><input type="checkbox" id="ptAutoMana" ${ptAutoMana() ? "checked" : ""}> Pay mana automatically (clicking a card taps the right lands; cards you can afford glow)</label>
     <label class="chk"><input type="checkbox" id="ptDrawT1" ${prefs.ptDrawT1 ? "checked" : ""}> Draw a card on turn 1 (you're on the draw)</label>
     <label class="inline-field">Card size <input type="range" id="ptCellSize" min="12" max="30" step="1" value="${ptGrid()}"></label>
   </div>`);
@@ -8223,6 +8501,7 @@ function ptApplyDrop(uid, drop, wholePile){
       if (host) { if (f.zone !== "bf") ptMove(uid, "bf", {x: host.x, y: host.y}); fc.att = host.uid; ptLog(`${fc.name} attached to ${ptNameOf(host)}.`); ptEmit("attach", fc); return; }
       if (fc.att != null) { delete fc.att; ptLog(`Unattached ${fc.name}.`); }
     }
+    if (drop.to === "bf" && f && f.zone === "hand" && ptIsLand(fc)) ptNoteLand();
     if (drop.to === "bf") ptMove(uid, "bf", drop.x != null ? {x: drop.x, y: drop.y} : {});
     else if (drop.to === "libBottom") ptMove(uid, "lib", {bottom: true});
     else ptMove(uid, drop.to);
@@ -8237,8 +8516,8 @@ function ptClick(el){
     if (PT_VIEW && PT_VIEW.kind === "attack") { const f = ptFind(uid); if (f && (ptIsCreature(f.card) || f.card.faceDown) && !f.card.tapped) { PT_VIEW.pick.has(uid) ? PT_VIEW.pick.delete(uid) : PT_VIEW.pick.add(uid); ptRenderAttack(); } return; }
     return ptDo(() => ptTapPick(uid));
   }
-  if (zone === "hand") { if (PT.phase === "mull") return toast("Keep or mulligan first."); return ptDo(() => ptPlay(uid)); }
-  if (zone === "cmd") return ptDo(() => ptMove(uid, "bf"));
+  if (zone === "hand") { if (PT.phase === "mull") return toast("Keep or mulligan first."); return ptCastPaid(uid); }
+  if (zone === "cmd") return ptCastPaid(uid);
   if (zone === "lib") { if (PT.phase === "mull") return toast("Keep or mulligan first."); return ptDo(() => ptDraw(1)); }
   if (zone === "grave" || zone === "exile") return ptView(zone);
 }
@@ -8295,6 +8574,7 @@ function ptInit(){
   root.addEventListener("click", async e => {
     if (!PT) return;
     if (ptTrayClick(e)) return;
+    if (ptOppClick(e)) return;
     const badge = e.target.closest(".ptc-badge"); if (badge) return ptDo(() => ptCounter(+badge.dataset.uid, badge.dataset.cnt, 1));
     const atk = e.target.closest("[data-atk]"); if (atk && PT_VIEW && PT_VIEW.kind === "attack") { const us = atk.dataset.atk.split(",").map(Number), on = us.every(u => PT_VIEW.pick.has(u)); us.forEach(u => on ? PT_VIEW.pick.delete(u) : PT_VIEW.pick.add(u)); return ptRenderAttack(); }
     if (e.target.closest("[data-atkgo]") && PT_VIEW && PT_VIEW.kind === "attack") return ptAttack();
@@ -8317,6 +8597,7 @@ function ptInit(){
       if (act === "untap") { ptCloseMenu(); return ptDo(ptUntapAll); }
       if (act === "next") return ptDo(ptNextTurn);
       if (act === "shuffle") return ptDo(ptShuffle);
+      if (act === "pool") return ptDo(() => { ptEmptyPool(); });
       if (act === "mill") return ptDo(() => ptMill(1));
       if (act === "undo") return ptUndo();
       if (act === "keep") return ptDo(ptKeep);
@@ -8383,7 +8664,7 @@ function ptInit(){
       if (act === "remove") return ptDo(() => { PT.bf.splice(PT.bf.indexOf(fc.card), 1); ptLog(`Removed ${fc.card.name} token.`); });
       if (act === "sac") return ptDo(() => ptSacrifice(uid));
       if (act === "kw") { const k = m.dataset.k; ptDo(() => { fc.card.kw = Object.assign({}, fc.card.kw, {[k]: !(fc.card.kw && fc.card.kw[k])}); ptLog(`${fc.card.name} ${fc.card.kw[k] ? "gains" : "loses"} ${k}.`); }); return ptCardMenu(uid, f.x, f.y); }
-      if (act === "way") { const way = m.dataset.way; return ptDo(() => ptCastWay(uid, way)); }
+      if (act === "way") { const way = m.dataset.way; ptCloseMenu(); return ptCastPaid(uid, way); }
       if (act === "move") { const to = m.dataset.to; return ptDo(() => to === "libBottom" ? ptMove(uid, "lib", {bottom: true}) : ptMove(uid, to)); }
       return;
     }
@@ -8407,9 +8688,10 @@ function ptInit(){
         return ptCloseModal();
       }
       if (act === "done") {
-        if (PT_VIEW && PT_VIEW.kind === "search" && ($("ptdShuffle") || {}).checked) ptDo(ptShuffle);
+        if (PT_VIEW && PT_VIEW.kind === "search") return ptSearchDone();
         return ptCloseModal();
       }
+      if (act === "searchall") { PT_VIEW.showAll = !PT_VIEW.showAll; return ptRenderView(); }
     }
     const dg = e.target.closest("[data-dig]");
     if (dg && PT_VIEW && PT_VIEW.kind === "dig") {
@@ -8428,7 +8710,13 @@ function ptInit(){
     if (vb && PT_VIEW) {
       const uid = +vb.dataset.uid, to = vb.dataset.v;
       if (PT_VIEW.kind === "scry") { PT_VIEW.choice[uid] = to; return ptRenderView(); }
-      ptDo(() => to === "libBottom" ? ptMove(uid, "lib", {bottom: true}) : ptMove(uid, to));
+      const v = PT_VIEW;
+      if (v.kind === "search" && to === "top") { v.held = v.held || []; const i = v.held.indexOf(uid); if (i >= 0) v.held.splice(i, 1); else v.held.push(uid);
+        if (v.to === "top" && v.max && v.max < 99 && v.held.length >= v.max) return ptSearchDone();
+        return ptRenderView(); }
+      if (v.held) v.held = v.held.filter(u => u !== uid);
+      ptDo(() => { to === "libBottom" ? ptMove(uid, "lib", {bottom: true}) : ptMove(uid, to === "bfTapped" ? "bf" : to); if (to === "bfTapped") { const f = ptFind(uid); if (f) f.card.tapped = true; } });
+      if (v.kind === "search") { v.got = (v.got || 0) + 1; if (v.max && v.max < 99 && v.got >= v.max && !(v.held || []).length) return ptSearchDone(); }
       return ptRenderView();
     }
     const pl = e.target.closest("[data-pile]");
@@ -8438,6 +8726,7 @@ function ptInit(){
   });
   root.addEventListener("submit", e => {
     e.preventDefault();
+    if (ptOppSubmit(e)) return;
     if (e.target.id === "ptTokSearch") { const q = $("ptTokQ").value.trim(); if (q) ptSearchTokens(q); }
     if (e.target.id === "ptTokCustom") {
       const kind = $("ptcKind").value, col = $("ptcCol").value, isCre = /Creature/.test(kind);
@@ -8453,6 +8742,8 @@ function ptInit(){
   root.addEventListener("change", e => {
     if (e.target.id === "ptFreeMull") { prefs.ptFreeMull = e.target.checked; savePrefs(); }
     if (e.target.id === "ptDrawT1") { prefs.ptDrawT1 = e.target.checked; savePrefs(); }
+    if (e.target.id === "ptOppNsel") { ptSetOppN(+e.target.value); return; }
+    if (e.target.id === "ptAutoMana") { prefs.ptAutoMana = e.target.checked; savePrefs(); if (PT) ptRender(); }
     if (e.target.id === "ptdShuffle" && PT_VIEW) PT_VIEW.noShuffle = !e.target.checked;
     if (PT_VIEW && PT_VIEW.kind === "dig") {
       // redraw after the browser has finished with the field that changed
@@ -8636,8 +8927,8 @@ function trActions(eff, selfName){
   // life
   if ((m = e.match(/\byou gain (\d+|x|that much) life(?! for each| equal)/))) a.push({t: "life", n: trNum(m[1]), x: m[1] === "x", much: m[1] === "that much", label: m[1] === "that much" ? "Gain that much life" : `Gain ${trNum(m[1])} life`});
   if ((m = e.match(/\byou lose (\d+|x) life/))) a.push({t: "life", n: -trNum(m[1]), x: m[1] === "x", label: `Lose ${trNum(m[1])} life`});
-  if ((m = e.match(/\b(?:each opponent|target opponent|target player|that player|defending player) loses (\d+|x|that much) life/))) a.push({t: "opp", n: trNum(m[1]), x: m[1] === "x", much: m[1] === "that much", label: m[1] === "that much" ? "Opponent loses that much" : `Opponent loses ${trNum(m[1])}`});
-  else if ((m = e.match(/\bdeals? (\d+|x|that much) damage to (?:each opponent|target opponent|any target|target player|that player|target player or planeswalker|each player|defending player)/))) a.push({t: "opp", n: trNum(m[1]), x: m[1] === "x", much: m[1] === "that much", dmg: true, label: `${m[1] === "that much" ? "That much" : trNum(m[1])} damage to opponent`});
+  if ((m = e.match(/\b(each opponent|target opponent|target player|that player|defending player) loses (\d+|x|that much) life/))) { const each = m[1] === "each opponent"; a.push({t: "opp", n: trNum(m[2]), x: m[2] === "x", much: m[2] === "that much", each, defending: /defending|that player/.test(m[1]), label: `${each ? "Each opponent" : "Opponent"} loses ${m[2] === "that much" ? "that much" : trNum(m[2])}`}); }
+  else if ((m = e.match(/\bdeals? (\d+|x|that much) damage to (each opponent|target opponent|any target|target player|that player|target player or planeswalker|each player|defending player)/))) { const each = /^each/.test(m[2]); a.push({t: "opp", n: trNum(m[1]), x: m[1] === "x", much: m[1] === "that much", dmg: true, each, defending: /defending|that player/.test(m[2]), label: `${m[1] === "that much" ? "That much" : trNum(m[1])} damage to ${each ? "each opponent" : "an opponent"}`}); }
   // counters
   const cRe = /\bput (a|an|one|two|three|four|five|x|\d+) (\+1\/\+1|-1\/-1|loyalty|charge|lore|time|oil|shield|stun|quest|level|fade|age|verse|ki|study|blood|divinity|flood|growth|page) counters? on (cardname|it|that creature|this creature|each (?:other )?[a-z ]*?(?:creature )?you control|target creature(?: you control)?|up to one target creature|each creature|target permanent)/g;
   while ((m = cRe.exec(e))) {
@@ -8654,7 +8945,7 @@ function trActions(eff, selfName){
   if ((m = e.match(/\b(?:you )?mills? (a|one|two|three|four|five|x|\d+) cards?\b/)) && !/\b(?:target|each) (?:player|opponent) mills/.test(e)) a.push({t: "mill", n: trNum(m[1]), x: m[1] === "x", label: `Mill ${trNum(m[1])}`});
   if ((m = e.match(/\blook at the top (a|one|two|three|four|five|six|seven|x|\d+) cards? of your library/))) a.push({t: "dig", n: trNum(m[1]), label: `Look at the top ${trNum(m[1])}`});
   if ((m = e.match(/\bexile the top (card|a card|two cards|three cards|\w+ cards) of your library/))) a.push({t: "exiletop", n: m[1] === "card" || m[1] === "a card" ? 1 : trNum(m[1].split(" ")[0]), label: "Exile from the top"});
-  if (/\bsearch your library\b/.test(e)) a.push({t: "search", label: "Search your library", dialog: true});
+  if (/\bsearch your library\b/.test(e)) a.push(trSearch(e));
   if (/\breturn [^.]*from your graveyard\b/.test(e) || /\bfrom your graveyard to\b/.test(e)) a.push({t: "grave", label: "Open your graveyard", dialog: true});
   // untap / energy
   if ((m = e.match(/\buntap (cardname|it|that creature|all creatures you control|each creature you control|all lands you control|target [a-z ]+)/))) a.push({t: "untap", on: m[1] === "cardname" ? "self" : /^(it|that creature)$/.test(m[1]) ? "it" : /creatures/.test(m[1]) ? "creatures" : /lands/.test(m[1]) ? "lands" : "target", label: "Untap " + (m[1] === "cardname" ? selfName : m[1].replace(/^target /, "a "))});
@@ -8741,7 +9032,26 @@ const TR_VERBS = [[/\btransform\b/g, ["transform"]], [/\bdraws?\b/g, ["draw"]], 
   [/\bdeals?\b/g, ["opp"]], [/\bput\b/g, ["counter"]], [/\b(?:scry|surveil)\b/g, ["scry"]], [/\bmills?\b/g, ["mill"]], [/\blook at\b/g, ["dig"]], [/\bexile\b/g, ["exiletop", "blink"]],
   [/\bsearch\b/g, ["search"]], [/\breturn\b/g, ["grave", "blink"]], [/\buntap\b/g, ["untap"]], [/\byou get\b/g, ["energy", "pcounter"]], [/\bproliferate\b/g, ["proliferate"]], [/\bshuffle\b/g, ["shuffle", "search"]]];
 const TR_HARD = /\b(sacrifices?|destroy|discards?|tap (?:target|up to|an?|all|two|that)|add \{|add (?:one|two|three|x) mana|add an amount|choose|counter target|reveal|attach|fights?|becomes? the monarch|amass|connive|explore|venture|populate|goad|regenerate|exchange|gain control|copy target|cast|play|phase|double|distribute|for each)\b/;
-const TR_TOPIF = String.raw`\b(?:look at|reveal) the top card of your library\.? (?:if it's|if it is|if that card is|if it's a|if it's an) (?:an? )?([a-z ]+?) card,? (you may )?(?:put it|put that card|reveal it and put it) (onto the battlefield(?: tapped)?|into your hand)\.?\s*(?:(?:if you don't put the card onto the battlefield|if you don't|otherwise),? (?:put (?:it|that card|the card) )?(into your hand|on the bottom of your library|into your graveyard|on top of your library|back)?)?`;
+const trA = w => (/^[aeiou]/i.test(w) ? "an " : "a ") + w;
+const trCap = w => String(w || "").replace(/\b([a-z])/g, (m, x, i, all) => /\b(?:card|cards|with|or|and|of|the|mana|value|power|toughness|less|greater|named)$/.test(all.slice(i).split(" ")[0]) ? m : x.toUpperCase());
+// "search your library for an Elemental card, reveal it, then shuffle and put that card on top": what to look for, how many, and where it goes
+function trSearch(e){
+  const out = {t: "search", label: "Search your library", dialog: true};
+  const m = e.match(/\bsearch your library for (up to (one|two|three|four|five|x|\w+) |an? |one |two |three |any number of )?(?:([^.]*?) )?cards?\b(?: with [^,.]*?)?(?: and (?:put|reveal)[^.]*)?(?:[,.]|$)/);
+  if (m) {
+    const words = {one: 1, two: 2, three: 3, four: 4, five: 5};
+    out.n = m[1] && /any number/.test(m[1]) ? 99 : words[m[2] || (m[1] || "").trim()] || 1;
+    let what = (m[3] || "").replace(/^(?:a|an|basic|basic land|land) (?=card)/, "").trim();
+    if (what && !/^(?:card|cards)$/.test(what)) out.what = what;
+  }
+  const rest = e.slice(e.indexOf("search your library"));
+  const to = rest.match(/\b(?:put|puts) (?:it|that card|them|those cards|the cards?|one of them|that land|those lands|it or them)[^.]*?(into your hand|onto the battlefield(?: tapped)?|on top(?: of your library)?|into your graveyard|on the bottom)/);
+  if (to) { out.to = /hand/.test(to[1]) ? "hand" : /battlefield/.test(to[1]) ? "bf" : /top/.test(to[1]) ? "top" : /graveyard/.test(to[1]) ? "grave" : "bottom"; if (/tapped/.test(to[1])) out.tapped = true; }
+  const W = {hand: "into your hand", bf: "onto the battlefield" + (out.tapped ? " tapped" : ""), top: "on top after shuffling", grave: "into your graveyard", bottom: "on the bottom"};
+  if (out.what || out.to) out.label = `Search for ${out.n > 1 && out.n < 99 ? out.n + " " + trCap(out.what || "card") : out.n === 99 ? "any number of " + trCap(out.what || "card") : trA(trCap(out.what || "card"))}${out.to ? " → " + W[out.to] : ""}`;
+  return out;
+}
+const TR_TOPIF = String.raw`\b(?:look at|reveal) the top card of your library\.? (?:if it's|if it is|if that card is|if it's a|if it's an) (?:an? )?([a-z ]+?) card,? (you may )?(?:put it|put that card|reveal it and put it) (onto the battlefield(?: tapped)?|into your hand)\.?\s*(?:(?:if you don't put the card onto the battlefield|if you don't|otherwise),? (?:you may )?(?:put (?:it|that card|the card) )?(into your hand|on the bottom of your library|into your graveyard|on top of your library|back)?)?`;
 // Parts of the text that are handled by a later step, so they don't count as "needs a person" now
 const trStripHandled = e => e.replace(/\bsacrifice [a-z ,'-]+? unless you sacrifice (?:a|an) [a-z ]+/g, " ").replace(/\bas an additional cost to cast (?:this spell|cardname),? (?:you may )?(?:pay x life|pay \d+ life|behold [^.]*|reveal [^.]*|tap [^.]*)?/g, " ").replace(/\b(?:and )?attacks? this combat if able\b|\bif able\b/g, " ").replace(/\buntil (?:an opponent becomes the monarch|cardname leaves the battlefield|your next turn)\b/g, " ").replace(/\bit's still a land\b|\bthis ability triggers only once each turn\b|\bactivate only (?:as a sorcery|once each turn)\b/g, " ").replace(new RegExp(TR_TOPIF, "g"), " ").replace(/\b(?:cardname|it|that creature) explores\b/g, " ").replace(/\binvestigate(?: twice| three times)?\b/g, " ").replace(/\b(?:at the beginning of (?:the |your )?next end step, )?(?:sacrifice|exile) (?:it|them|that token|those tokens|the token)(?: at the beginning of (?:the |your )?next end step)?(?: unless [^.]*)?/g, " ")
   .replace(/\b(?:the|that|those) tokens? (?:gains?|ha(?:s|ve)) haste(?: until end of turn)?/g, " ");
@@ -8846,7 +9156,7 @@ function ptRunTriggers(){
       const p = auto ? PT.trig.find(x => x.fresh && (ptSimple(x) || ptPartial(x))) : null;
       if (!p) break;
       if (autoN >= 80) { PT.chain = {paused: true, ran: (PT.chain && PT.chain.ran || 0) + autoN}; break; }   // a big (maybe endless) chain: pause and ask
-      if (PT.opp <= 0 && PT.won && p.actions.every(a => ["opp", "life"].includes(a.t))) { PT.trig = PT.trig.filter(x => !(x.fresh && x.actions.every(a => ["opp", "life"].includes(a.t)))); ptLog("The combo loops: your opponent is out of life."); break; }
+      if (PT.won && p.actions.every(a => ["opp", "life"].includes(a.t))) { PT.trig = PT.trig.filter(x => !(x.fresh && x.actions.every(a => ["opp", "life"].includes(a.t)))); ptLog("The combo loops: your opponent is out of life."); break; }
       PT.trig.splice(PT.trig.indexOf(p), 1); autoN++;
       const part = !ptSimple(p);
       ptResolve(p); ptNoteResolved(p, true);
@@ -9010,7 +9320,7 @@ function ptResolve(p){
       if (a.n > 0) ptGain(n, p.srcName); else { PT.life -= n; ptLog(`Lost ${n} life (${p.srcName}).`); ptEmit("loselife", null, {amount: n}); }
       done.push(a.label);
     }
-    else if (a.t === "opp") { ptDealOpp(a.much && p.amount ? p.amount : a.n, p.srcName, src ? src.card : null, a.dmg); done.push(a.label); }
+    else if (a.t === "opp") { const ev = p.evUid != null && PT.atkOpp && PT.atkOpp[p.evUid] != null ? PT.atkOpp[p.evUid] : undefined; ptDealOpp(a.much && p.amount ? p.amount : a.n, p.srcName, src ? src.card : null, a.dmg, a.each ? "each" : a.defending && ev != null ? ev : undefined); done.push(a.label); }
     else if (a.t === "blink") {
       if (a.on === "self" && src && src.zone === "bf") ptBlink(src.card.uid, false);
       else if (ptAuto()) { const pick = PT.bf.filter(c => ptIsCreature(c) && !c.token && (!src || c.uid !== src.card.uid || !/another/.test(p.eff || ""))).sort((x, y) => (ptHasEtb(y) - ptHasEtb(x)) || (y.cmc || 0) - (x.cmc || 0))[0]; if (pick) { ptBlink(pick.uid, !!a.delay); p.result = `blinked ${pick.name}`; } }
@@ -9054,8 +9364,7 @@ function ptResolve(p){
         : a.on === "all" ? PT.bf.filter(ptIsCreature) : a.on === "allOther" ? PT.bf.filter(c => ptIsCreature(c) && c.uid !== p.srcUid) : a.on === "each" ? PT.bf.filter(c => trFits(a.each, c)) : null;
       const tg = targets || (ptAuto() ? (a.kind === "m1m1" ? [] : ptPickOwn({other: /another/.test(p.eff || "")}, p)) : null);
       if (tg) { tg.forEach(c => a.noMods ? ptCounter(c.uid, a.kind, a.n) : ptAddCounters(c.uid, a.kind, a.n)); ptLog(`${p.srcName}: ${a.label}${!targets && tg[0] ? ` (on ${tg[0].name})` : ""}.`); }
-      else ptTarget({kind: "counter", counter: a.kind, n: a.n, label: `Click a creature to put ${a.n > 1 ? a.n + " " : "a "}${ptCounterName(a.kind)} counter${a.n > 1 ? "s" : ""} on it`});
-      done.push(a.label);
+      else { ptTarget({kind: "counter", counter: a.kind, n: a.n, label: `Click a creature to put ${a.n > 1 ? a.n + " " : "a "}${ptCounterName(a.kind)} counter${a.n > 1 ? "s" : ""} on it`}); done.push(a.label); }   // (when done, it's logged above)
     }
     else if (a.t === "proliferate") { PT.bf.forEach(c => Object.keys(c.counters).forEach(k => { if (k !== "m1m1") ptAddCounters(c.uid, k, 1); })); ptLog("Proliferated (added one of each counter already there)."); done.push(a.label); }
     else if (a.t === "mill") { ptMill(a.n); done.push(a.label); }
@@ -9070,7 +9379,7 @@ function ptResolve(p){
     else if (a.t === "energy") { PT.energy += a.n; done.push(a.label); }
     else if (a.t === "pcounter") { PT.exp = (PT.exp || 0) + 1; ptLog(`Experience counters: ${PT.exp}.`); done.push(a.label); }
     else if (a.t === "shuffle") { ptShuffle(); done.push(a.label); }
-    else if (a.t === "combat") ptCombatDamage();
+    else if (a.t === "combat") setTimeout(ptBlocksOrDamage, 0);
     else if (a.t === "scry" && ptAuto()) { ptAutoScry(a.n, a.surveil || /surveil/i.test(a.label)); done.push(a.label); }
     else if (a.t === "dig" && a.auto && ptAuto()) {
       const top = PT.lib.splice(0, Math.min(a.n, PT.lib.length)), fits = top.filter(c => !a.phrase || trFits(a.phrase, c));
@@ -9082,7 +9391,7 @@ function ptResolve(p){
     }
     else if (["scry", "dig", "search", "grave"].includes(a.t)) {
       // a window opens: whatever comes after it waits as a follow-up prompt, so "scry 1, then draw" happens in order
-      dialog = a;
+      dialog = Object.assign({}, a, {src: p.srcName});
       const rest = p.actions.slice(p.actions.indexOf(a0) + 1);
       if (rest.length) PT.trig.unshift(Object.assign({}, p, {id: ++ptTrigId + "-then", actions: rest, text: "Then: " + rest.map(x => x.label).join(", "), may: false}));
       break;
@@ -9091,21 +9400,13 @@ function ptResolve(p){
   if (done.length) ptLog(`${p.srcName}: ${done.join(", ")}.`);
   return dialog;
 }
-function ptHitOpp(n, why){
-  const was = PT.opp;
-  PT.opp = Math.max(0, PT.opp - n);
-  if (n > 0 && was > 0) ptEmit("opploss", null, {amount: n});
-  if (n > 0) { PT.oppLostTurn = PT.turn; if (PT.speed && PT.speed < 4 && PT.speedTurn !== PT.turn) { PT.speed++; PT.speedTurn = PT.turn; ptLog(`Your speed goes up to ${PT.speed}${PT.speed === 4 ? " (max speed!)" : ""}.`); } }
-  ptLog(`Opponent takes ${n}${why ? ` (${why})` : ""}. Opponent at ${PT.opp}.`);
-  if (PT.opp <= 0 && !PT.won) { PT.won = PT.turn; toast(`Your opponent is at 0 life: you win on turn ${PT.turn}!`); ptLog(`Opponent is at 0 life. You win on turn ${PT.turn}.`); }
-}
 function ptTarget(t){ PT.targeting = t; }
 function ptOpenDialog(a){
   if (!a) return;
   if (a.t === "pick") return ptOpenPick(a.a, a.p, {restId: a.restId});
   if (a.t === "scry") ptView("scry", a.n);
   else if (a.t === "dig") ptDigOpen(a.n);
-  else if (a.t === "search") ptView("search");
+  else if (a.t === "search") { ptView("search"); if (a.what || a.to) { Object.assign(PT_VIEW, {what: a.what, to: a.to, tapped: a.tapped, max: a.n || 1, src: a.src || ""}); ptRenderView(); } }
   else if (a.t === "grave") ptView("grave");
 }
 function ptDoPrompt(id){
@@ -9241,75 +9542,398 @@ function ptApplyTarget(uid){
   });
   return true;
 }
-// Attack: pick attackers, they tap (unless vigilance), attack triggers fire, unblocked damage hits the opponent
+/* ----- opponents: life, poison, commander damage, and the creatures that block -----
+   A Commander game has 3 opponents (1 otherwise; ⋯ → Settings changes it). Each has a life total, poison counters,
+   commander damage taken, and a board of creatures that can block. Their creatures are added by hand, or the board
+   grows by itself each turn like a typical deck (or like one of your decks). "Each opponent" effects hit them all;
+   "target opponent" and "any target" hit the one you're aiming at (click an opponent to aim at them). */
+const PT_OPP_TYPICAL = [
+  [2, {name: "Bear", power: 2, toughness: 2}], [2, {name: "Wall", power: 0, toughness: 4, text: "Defender"}], [2, {name: "Elf", power: 1, toughness: 1}],
+  [3, {name: "Knight", power: 2, toughness: 3, text: "First strike"}], [3, {name: "Spider", power: 2, toughness: 4, text: "Reach"}], [3, {name: "Bird", power: 2, toughness: 2, text: "Flying"}],
+  [4, {name: "Drake", power: 3, toughness: 3, text: "Flying"}], [4, {name: "Ogre", power: 4, toughness: 4}], [4, {name: "Assassin", power: 2, toughness: 2, text: "Deathtouch"}],
+  [5, {name: "Angel", power: 4, toughness: 4, text: "Flying, vigilance"}], [5, {name: "Treefolk", power: 3, toughness: 6, text: "Reach"}],
+  [6, {name: "Wurm", power: 6, toughness: 6, text: "Trample"}], [6, {name: "Dragon", power: 5, toughness: 5, text: "Flying"}], [7, {name: "Titan", power: 7, toughness: 7, text: "Indestructible"}]];
+const PT_OPP_QUICK = [{name: "Soldier", power: 1, toughness: 1}, {name: "Bear", power: 2, toughness: 2}, {name: "Wall", power: 0, toughness: 4, text: "Defender"}, {name: "Knight", power: 2, toughness: 2, text: "First strike"},
+  {name: "Spider", power: 2, toughness: 4, text: "Reach"}, {name: "Bird", power: 1, toughness: 1, text: "Flying"}, {name: "Drake", power: 3, toughness: 3, text: "Flying"}, {name: "Ogre", power: 4, toughness: 4},
+  {name: "Assassin", power: 1, toughness: 1, text: "Deathtouch"}, {name: "Angel", power: 4, toughness: 4, text: "Flying"}, {name: "Wurm", power: 6, toughness: 6, text: "Trample"}, {name: "God", power: 6, toughness: 6, text: "Indestructible"}];
+const PT_OPP_KWS = ["Flying", "Reach", "First strike", "Double strike", "Deathtouch", "Indestructible", "Defender", "Trample", "Lifelink", "Vigilance"];
+const ptOppN = isCmd => Math.max(1, Math.min(5, +prefs.ptOppN || (isCmd ? 3 : 1)));
+function ptOppMake(i, n, isCmd){ return {name: n > 1 ? `Opponent ${i + 1}` : "Opponent", life: isCmd ? 40 : 20, poison: 0, cmd: {}, board: [], out: 0, mode: prefs.ptOppMode || "hand"}; }
+function ptOppsFix(){   // an older game (or an undo from one) without opponents
+  if (!PT.opps) { PT.opps = [Object.assign(ptOppMake(0, 1, PT.isCmd), {life: PT.opp != null ? PT.opp : PT.isCmd ? 40 : 20, poison: PT.oppPoison || 0, cmd: PT.cmdDmg || {}})]; PT.oppT = 0; }
+}
+const ptLiveOpps = () => PT.opps.filter(o => !o.out);
+function ptOppT(){ ptOppsFix(); const o = PT.opps[PT.oppT]; if (!o || o.out) { const i = PT.opps.findIndex(x => !x.out); if (i >= 0) PT.oppT = i; } return PT.opps[PT.oppT] || PT.opps[0]; }
+const ptOppSync = () => { PT.opp = Math.max(0, ptOppT().life); };
+const ptOkw = (o, k) => new RegExp(`(?:^|\\n|,\\s*)${k}\\b`, "i").test(o.text || "");
+function ptOppCre(def){
+  return {uid: ++ptUid, name: def.name, power: String(def.power ?? 0), toughness: String(def.toughness ?? 1), text: def.text || "", type: def.type || "Creature",
+    colors: def.colors || [], img: def.img || "", token: !def.img, dmg: 0, since: PT.turn};
+}
+// Damage and life loss to opponents: "each" (every opponent still in), an opponent's number, or the one you're aiming at
+function ptHitOpp(n, why, who){
+  ptOppsFix();
+  const list = who === "each" ? ptLiveOpps() : [typeof who === "number" ? PT.opps[who] : ptOppT()].filter(o => o && !o.out);
+  if (!list.length) return;
+  for (const o of list) {
+    const was = o.life; o.life = Math.max(0, o.life - n);
+    if (n > 0 && was > 0) ptEmit("opploss", null, {amount: n});
+    ptLog(`${o.name} ${why === "combat" ? "is dealt" : "takes"} ${n}${why && why !== "combat" ? ` (${why})` : why === "combat" ? " combat damage" : ""}. ${o.name} at ${o.life}.`);
+  }
+  if (n > 0) { PT.oppLostTurn = PT.turn; if (PT.speed && PT.speed < 4 && PT.speedTurn !== PT.turn) { PT.speed++; PT.speedTurn = PT.turn; ptLog(`Your speed goes up to ${PT.speed}${PT.speed === 4 ? " (max speed!)" : ""}.`); } }
+  ptOppsCheck();
+}
+function ptPoisonOpp(n, who){
+  ptOppsFix();
+  const list = who === "each" ? ptLiveOpps() : [typeof who === "number" ? PT.opps[who] : ptOppT()].filter(o => o && !o.out);
+  for (const o of list) { o.poison += n; ptLog(`${o.name} gets ${n} poison counter${n > 1 ? "s" : ""} (${o.poison} total).`); }
+  ptOppsCheck();
+}
+// An opponent is out at 0 life, 10 poison or 21 damage from one commander; you win when they're all out
+function ptOppsCheck(){
+  if (!PT || !PT.opps) return;
+  for (const o of PT.opps) {
+    if (o.out) continue;
+    const why = o.life <= 0 ? "is at 0 life" : o.poison >= 10 ? "has 10 poison counters" : Object.values(o.cmd || {}).some(v => v >= 21) ? "has taken 21 commander damage" : "";
+    if (!why) continue;
+    o.out = PT.turn || 1; ptLog(`${o.name} ${why} and is out of the game.`);
+    if (PT.opps.length > 1 && ptLiveOpps().length) toast(`${o.name} ${why}: out of the game.`);
+  }
+  if (!PT.won && PT.opps.every(o => o.out)) {
+    PT.won = PT.turn || 1;
+    const msg = PT.opps.length > 1 ? `Every opponent is out: you win on turn ${PT.won}!` : `Your opponent is out: you win on turn ${PT.won}!`;
+    toast(msg); ptLog(msg);
+  }
+  ptOppSync();
+}
+// Their turns happen between yours: when a board grows by itself, each opponent may add a creature
+function ptOppGrow(){
+  for (const o of ptLiveOpps()) {
+    if (!o.mode || o.mode === "hand" || o.board.length >= 7 || PT.turn < 2) continue;
+    let pool;
+    if (o.mode === "typical") pool = PT_OPP_TYPICAL.filter(([t]) => t <= PT.turn).map(x => x[1]);
+    else { const d = (typeof decks !== "undefined" ? decks : []).find(x => x.id === o.mode); pool = d ? d.cards.concat(d.commanders || []).filter(c => /\bCreature\b/.test((c.type || "").split(" // ")[0]) && (c.cmc || 0) <= PT.turn && (c.power || c.toughness)) : []; }
+    if (!pool.length || Math.random() > 0.7) continue;
+    // bigger things become likelier as the game goes on
+    const w = pool.map(c => 1 + (c.cmc != null ? c.cmc : (PT_OPP_TYPICAL.find(x => x[1] === c) || [0])[0]));
+    let r = Math.random() * w.reduce((t, v) => t + v, 0), k = 0; while (k < pool.length - 1 && (r -= w[k]) > 0) k++;
+    const pick = pool[k], cr = ptOppCre(Object.assign({}, pick, pick.id || pick.sid ? {img: pick.imgN || bigImg(pick)} : {}));
+    o.board.push(cr); ptLog(`${o.name} played ${cr.name} (${cr.power}/${cr.toughness}${cr.text ? ", " + cr.text.split("\n")[0].slice(0, 40) : ""}).`);
+  }
+}
+
+/* ----- combat: attack the opponent you choose, they block, damage in first-strike and regular steps ----- */
+const ptSick = c => c.since === PT.turn && !c.haste && !ptHasKw(c, "haste");
+const ptCantAttack = c => ptHasKw(c, "defender") || (/\bcan't attack\b/i.test(ptFaceText(c)) && !/can't attack or block alone/i.test(ptFaceText(c)));
+const ptAtkOpp = c => PT.atkOpp && PT.atkOpp[c.uid] != null && PT.opps[PT.atkOpp[c.uid]] && !PT.opps[PT.atkOpp[c.uid]].out ? PT.atkOpp[c.uid] : PT.opps.indexOf(ptOppT());
 function ptAttackDialog(){
   if (PT.phase !== "play") return toast("Keep your opening hand first.");
+  ptOppsFix();
+  if (!ptLiveOpps().length) return toast("Every opponent is already out.");
   ptDo(() => { ptEmit("combat"); ptLog("Beginning of combat."); });
-  const cs = PT.bf.filter(c => ptIsCreature(c) && !c.tapped && !c.faceDown || (c.faceDown && !c.tapped));
-  const sick = c => c.since === PT.turn && !c.haste && !ptHasKw(c, "haste");
-  const cant = c => ptHasKw(c, "defender") || /\bcan't attack\b/i.test(ptFaceText(c)) && !/can't attack or block alone/i.test(ptFaceText(c)) || (ptKwPrinted(c).some(k => k.key === "decayed") && false);
-  PT_VIEW = {kind: "attack", pick: new Set(cs.filter(c => !sick(c) && !cant(c)).map(c => c.uid))};
+  const cs = PT.bf.filter(c => (ptIsCreature(c) || c.faceDown) && !c.tapped);
+  const t = PT.opps.indexOf(ptOppT());
+  PT_VIEW = {kind: "attack", pick: new Set(cs.filter(c => !ptSick(c) && !ptCantAttack(c) && (ptCombatOf(c) > 0 || ptFaceText(c).match(/whenever [^.]*attacks/i))).map(c => c.uid)), to: Object.fromEntries(cs.map(c => [c.uid, t]))};
   ptRenderAttack();
 }
 function ptRenderAttack(){
   const v = PT_VIEW, cs = PT.bf.filter(c => (ptIsCreature(c) || c.faceDown) && !c.tapped);
-  const sick = c => c.since === PT.turn && !c.haste && !ptHasKw(c, "haste");
-  const pw = c => ptCombatOf(c);
-  const total = cs.filter(c => v.pick.has(c.uid)).reduce((t, c) => t + pw(c), 0);
-  ptModal("Attack", `<p class="cur-sub">Tick your attackers here or click them on the table. They tap (unless they have vigilance), attack triggers go on the stack, then their damage hits your opponent as if unblocked.</p>
-    <div class="atk-list">${(() => { const seen = new Set(), rows = [];
-      for (const c of cs) { if (seen.has(c.uid)) continue; const grp = c.token ? cs.filter(o => o.token && ptTokKey(o) === ptTokKey(c) && (sick(o) === sick(c))) : [c]; grp.forEach(o => seen.add(o.uid)); rows.push(grp); }
-      return rows; })().map(grp => { const c = grp[0], on = grp.every(o => v.pick.has(o.uid)), some = !on && grp.some(o => v.pick.has(o.uid)), dmg = grp.reduce((t, o) => t + pw(o), 0);
-      return `<button type="button" class="atk-row${on ? " on" : some ? " some" : ""}" data-atk="${grp.map(o => o.uid).join(",")}" data-uid-view="${c.uid}" aria-pressed="${on}">
+  const live = PT.opps.map((o, i) => [o, i]).filter(([o]) => !o.out), multi = live.length > 1;
+  const pw = c => ptCombatOf(c), sum = {};
+  cs.filter(c => v.pick.has(c.uid)).forEach(c => { const i = v.to[c.uid] ?? PT.oppT; sum[i] = (sum[i] || 0) + pw(c); });
+  const short = o => o.name.replace(/^Opponent /, "Opp ");
+  const rows = []; { const seen = new Set();
+    for (const c of cs) { if (seen.has(c.uid)) continue; const grp = c.token ? cs.filter(o => o.token && ptTokKey(o) === ptTokKey(c) && ptSick(o) === ptSick(c) && (v.to[o.uid] ?? PT.oppT) === (v.to[c.uid] ?? PT.oppT)) : [c]; grp.forEach(o => seen.add(o.uid)); rows.push(grp); } }
+  ptModal("Attack", `<p class="cur-sub">Tick your attackers here or click them on the table${multi ? `, and choose who each one attacks (click the name on the right to switch)` : ""}. They tap (unless they have vigilance) and attack triggers go on the stack. Then ${PT.opps.some(o => o.board.length) ? "your opponents choose blockers (you can change them) and " : ""}combat damage is dealt.</p>
+    ${multi ? `<div class="atk-to"><span class="cur-sub">Everyone attacks:</span>${live.map(([o, i]) => `<button type="button" class="linkish" data-atktoall="${i}">${esc(o.name)} (${o.life})</button>`).join("")}</div>` : ""}
+    <div class="atk-list">${rows.map(grp => { const c = grp[0], on = grp.every(o => v.pick.has(o.uid)), some = !on && grp.some(o => v.pick.has(o.uid)), dmg = grp.reduce((t, o) => t + pw(o), 0), ti = v.to[c.uid] ?? PT.oppT;
+      return `<div class="atk-wrap"><button type="button" class="atk-row${on ? " on" : some ? " some" : ""}" data-atk="${grp.map(o => o.uid).join(",")}" data-uid-view="${c.uid}" aria-pressed="${on}">
       <span class="atk-box">${on ? "⚔" : ""}</span>${c.faceDown || !c.img ? `<span class="pt-si-img noimg"></span>` : `<img class="pt-si-img" src="${esc(c.back ? c.img.replace("/front/", "/back/") : c.img)}" alt="" loading="lazy">`}
-      <span class="atk-name"><b>${esc(c.faceDown ? "Face-down creature" : ptFaceName(c))}${grp.length > 1 ? ` <em class="atk-n">×${grp.length}</em>` : ""}</b>${sick(c) ? `<small>summoning sick</small>` : ""}</span>
-      <span class="atk-pw">${esc(ptPT(c) || (c.faceDown ? "2/2" : ""))}<small>${dmg} dmg</small></span></button>`; }).join("") || `<div class="pt-stack-empty">No untapped creatures.</div>`}</div>
+      <span class="atk-name"><b>${esc(c.faceDown ? "Face-down creature" : ptFaceName(c))}${grp.length > 1 ? ` <em class="atk-n">×${grp.length}</em>` : ""}</b>${ptSick(c) ? `<small>summoning sick</small>` : ptCantAttack(c) ? `<small>can't attack</small>` : ""}</span>
+      <span class="atk-pw">${esc(ptPT(c) || (c.faceDown ? "2/2" : ""))}<small>${dmg} dmg</small></span></button>${multi ? `<button type="button" class="atk-tgt" data-atkto="${grp.map(o => o.uid).join(",")}" title="Who it attacks: click to switch">→ ${esc(short(PT.opps[ti]))}</button>` : ""}</div>`; }).join("") || `<div class="pt-stack-empty">No untapped creatures.</div>`}</div>
     ${cs.length > 1 ? `<div class="atk-quick"><button type="button" class="linkish" data-atkall="1">All that can attack</button><button type="button" class="linkish" data-atknone="1">None</button></div>` : ""}`,
-    `<span class="cur-sub atk-sum">${v.pick.size} attacking · <b>${total}</b> damage · opponent at ${PT.opp}</span><button class="btn ghost" type="button" data-d="close">Cancel</button><button class="btn primary" type="button" data-atkgo="1" ${v.pick.size ? "" : "disabled"}>Attack</button>`);
-  // show the picks on the table too
+    `<span class="cur-sub atk-sum">${v.pick.size} attacking · ${Object.keys(sum).length ? Object.entries(sum).map(([i, d]) => `<b>${d}</b> at ${esc(short(PT.opps[i]))} (${PT.opps[i].life})`).join(", ") : "no damage"}</span><button class="btn ghost" type="button" data-d="close">Cancel</button><button class="btn primary" type="button" data-atkgo="1" ${v.pick.size ? "" : "disabled"}>Attack</button>`);
   document.querySelectorAll("#ptBf .ptc[data-uid]").forEach(el => el.classList.toggle("attacking", v.pick.has(+el.dataset.uid)));
 }
 function ptAttack(){
   const v = PT_VIEW, att = PT.bf.filter(c => v.pick.has(c.uid));
   ptCloseModal();
   ptDo(() => {
-    let total = 0; att.forEach((c, i) => {
-      if (!ptHasKw(c, "vigilance")) c.tapped = true;
-      ptEmit("attack", c, {first: i === 0});
-    });
-    ptLog(`Attacked with ${att.map(c => c.faceDown ? "a face-down creature" : c.name).join(", ")}.`);
+    PT.atkOpp = {}; att.forEach(c => { PT.atkOpp[c.uid] = v.to[c.uid] ?? PT.oppT; });
+    att.forEach((c, i) => { if (!ptHasKw(c, "vigilance")) c.tapped = true; ptEmit("attack", c, {first: i === 0}); });
+    const by = {}; att.forEach(c => { const n = PT.opps[PT.atkOpp[c.uid]].name; (by[n] = by[n] || []).push(c.faceDown ? "a face-down creature" : c.name); });
+    ptLog(`Attacked ${Object.entries(by).map(([n, l]) => `${n} with ${l.join(", ")}`).join("; ")}.`);
     PT.combat = att.map(c => c.uid); PT.attackedTurn = PT.turn; att.forEach(c => { c.attackedTurn = PT.turn; });
     if (att.length === 1) ptEmit("attackalone", att[0]);
   });
   // damage waits until the attack triggers are dealt with (Krenko's counter makes him hit harder)
-  if (ptMode() !== "off" && PT.trig.length) { PT.trig.push({id: ++ptTrigId + "-dmg", srcUid: null, srcName: "Combat damage", img: "", kind: "combatdmg", text: "Deal combat damage with your attackers, as if nothing blocked. Resolve attack triggers first.", actions: [{t: "combat", label: "Deal damage"}]}); ptRender(); }
-  else ptDo(ptCombatDamage);
+  if (ptMode() !== "off" && PT.trig.length) { PT.trig.push({id: ++ptTrigId + "-dmg", srcUid: null, srcName: "Combat damage", img: "", kind: "combatdmg", text: "Blockers, then combat damage. Resolve attack triggers first.", actions: [{t: "combat", label: "Blocks and damage"}]}); ptRender(); }
+  else ptBlocksOrDamage();
 }
-// One attacker's damage to the opponent: power (with counters and boosts), double strike, Torbran, damage doublers
+// One attacker's damage to a player: power (with counters and boosts), double strike, Torbran, damage doublers
 function ptCombatOf(c){
   const base = Math.max(0, parseInt(ptPT(c) || (c.faceDown ? "2" : "0")) || 0), m = ptMods();
   if (!base) return 0;
   const hits = ptHasKw(c, "double strike") ? 2 : 1;
   return hits * (base + ((c.colors || []).includes("R") ? m.torbran : 0)) * m.dmgX;
 }
-function ptCombatDamage(){
-  const att = (PT.combat || []).map(u => PT.bf.find(c => c.uid === u)).filter(Boolean); PT.combat = null;
-  let total = 0, link = 0, poison = 0;
-  att.forEach((c, i) => {
-    const dmg = ptCombatOf(c);
-    if (ptHasKw(c, "infect")) { poison += dmg; if (dmg && ptHasKw(c, "lifelink")) link += dmg; if (dmg > 0) ptEmit("combatdmg", c, {amount: dmg, first: i === 0}); return; }
-    const tox = ptKws(c).get("toxic"); if (tox && dmg > 0) poison += parseInt(tox.val) || 1;
-    total += dmg; if (dmg && ptHasKw(c, "lifelink")) link += dmg;
-    if (c.commander) { PT.cmdDmg = PT.cmdDmg || {}; PT.cmdDmg[c.uid] = (PT.cmdDmg[c.uid] || 0) + dmg; if (PT.cmdDmg[c.uid] >= 21) toast(`${c.name} has dealt ${PT.cmdDmg[c.uid]} commander damage: that's lethal.`); }
-    if (dmg > 0) ptEmit("combatdmg", c, {amount: dmg, first: i === 0});
+const PT_COLOR_WORD = {white: "W", blue: "U", black: "B", red: "R", green: "G"};
+// Can this opponent's creature block that attacker of yours?
+function ptCanBlock(b, a){
+  if (!b || b.tapped || /\bcan't block\b/i.test(b.text || "")) return false;
+  const at = a.faceDown ? "" : ptFaceText(a);
+  if (/\bcan't be blocked\b(?!\s+(?:by|except))/i.test(at) && !/\bcan't be blocked\b[^.]*\bas long as\b/i.test(at)) return false;
+  if (ptHasKw(a, "shadow") || ptHasKw(a, "horsemanship")) return false;
+  if (ptHasKw(a, "flying") && !ptOkw(b, "flying") && !ptOkw(b, "reach")) return false;
+  if (ptHasKw(a, "skulk") && (+b.power || 0) > ptPow(a)) return false;
+  let m;
+  if ((m = at.match(/can't be blocked by creatures with power (\d+) or less/i)) && (+b.power || 0) <= +m[1]) return false;
+  if ((m = at.match(/can't be blocked by creatures with power (\d+) or greater/i)) && (+b.power || 0) >= +m[1]) return false;
+  if ((m = at.match(/protection from ([a-z, ]+?)(?:\.|\n|$)/i))) { const cols = m[1].toLowerCase().split(/,? and |, | or /).map(w => PT_COLOR_WORD[w.trim()]).filter(Boolean); if ((b.colors || []).some(x => cols.includes(x)) || /everything|creatures/.test(m[1])) return false; }
+  if (ptHasKw(a, "fear") && !/\bArtifact\b/.test(b.type || "") && !(b.colors || []).includes("B")) return false;
+  if (ptHasKw(a, "intimidate") && !/\bArtifact\b/.test(b.type || "") && !(b.colors || []).some(x => (a.colors || []).includes(x))) return false;
+  return true;
+}
+// How the opponents block: good blocks (kill it and live), safe blocks (live), fair trades, and chump blocks only to stay alive
+function ptAutoBlocks(atks){
+  const res = {};
+  const pw = a => ptPow(a), tg = a => ((ptStats(a) || [0, 1])[1]) - (a.dmg || 0);
+  const fsA = a => ptHasKw(a, "first strike") || ptHasKw(a, "double strike"), fsB = b => ptOkw(b, "first strike") || ptOkw(b, "double strike");
+  const kills = (b, a) => (+b.power || 0) > 0 && ((+b.power || 0) >= tg(a) || ptOkw(b, "deathtouch")) && !ptHasKw(a, "indestructible");
+  const dies = (b, a) => pw(a) > 0 && (pw(a) >= (+b.toughness || 0) - (b.dmg || 0) || ptHasKw(a, "deathtouch")) && !ptOkw(b, "indestructible");
+  const killsReal = (b, a) => kills(b, a) && !(fsA(a) && !fsB(b) && dies(b, a));
+  const diesReal = (b, a) => dies(b, a) && !(fsB(b) && !fsA(a) && kills(b, a));
+  const val = b => (+b.power || 0) + (+b.toughness || 0);
+  PT.opps.forEach((o, oi) => {
+    if (o.out) return;
+    const mine = atks.filter(x => x.opp === oi).map(x => x.c); if (!mine.length) return;
+    const free = o.board.filter(b => !b.tapped), used = new Set();
+    const order = mine.slice().sort((x, y) => ptCombatOf(y) - ptCombatOf(x));
+    const cands = a => free.filter(b => !used.has(b.uid) && ptCanBlock(b, a)).sort((x, y) => val(x) - val(y));
+    const pass = kind => { for (const a of order) {
+      if (res[a.uid] || ptHasKw(a, "menace")) continue;
+      const pick = cands(a).filter(b => kind === "good" ? killsReal(b, a) && !diesReal(b, a) : kind === "safe" ? !diesReal(b, a) && (ptHasKw(a, "trample") ? (+b.toughness || 0) >= pw(a) : true) : killsReal(b, a) && val(b) <= pw(a) + tg(a));
+      if (pick.length) { res[a.uid] = [pick[0].uid]; used.add(pick[0].uid); }
+    } };
+    // would what's left kill them? Then chump block the biggest hits
+    const lethal = () => {
+      let dmg = 0, poison = 0; const cmd = Object.assign({}, o.cmd);
+      for (const a of mine) {
+        let d = ptCombatOf(a); const bl = res[a.uid];
+        if (bl) { if (!ptHasKw(a, "trample")) continue; d = Math.max(0, d - bl.reduce((t, u) => { const b = o.board.find(x => x.uid === u); return t + (ptHasKw(a, "deathtouch") ? 1 : Math.max(0, (+b.toughness || 0) - (b.dmg || 0))); }, 0)); }
+        if (ptHasKw(a, "infect")) poison += d; else dmg += d;
+        const tox = ptKws(a).get("toxic"); if (tox && d > 0) poison += parseInt(tox.val) || 1;
+        if (a.commander && !ptHasKw(a, "infect")) cmd[a.uid] = (cmd[a.uid] || 0) + d;
+      }
+      return o.life - dmg <= 0 || o.poison + poison >= 10 || Object.values(cmd).some(v => v >= 21);
+    };
+    pass("good");
+    for (const a of order) {
+      if (!lethal()) break;
+      if (res[a.uid]) continue;
+      const need = ptHasKw(a, "menace") ? 2 : 1, cs = cands(a).sort((x, y) => (ptHasKw(a, "trample") ? (+y.toughness || 0) - (+x.toughness || 0) : 0) || val(x) - val(y));
+      if (cs.length < need) continue;
+      res[a.uid] = cs.slice(0, need).map(b => b.uid); res[a.uid].forEach(u => used.add(u));
+    }
+    pass("safe"); pass("trade");
   });
-  ptHitOpp(total, "combat");
-  if (poison) { PT.oppPoison = (PT.oppPoison || 0) + poison; ptLog(`Opponent gets ${poison} poison counter${poison > 1 ? "s" : ""} (${PT.oppPoison} total).`); }
+  return res;
+}
+function ptBlocksOrDamage(){
+  const atks = (PT.combat || []).map(u => PT.bf.find(c => c.uid === u)).filter(Boolean);
+  if (!atks.length) { PT.combat = null; return; }
+  const can = atks.some(a => (PT.opps[ptAtkOpp(a)] || {board: []}).board.some(b => ptCanBlock(b, a)));
+  if (!can) return ptDo(() => ptCombatDamage({}));
+  PT_VIEW = {kind: "blocks", blocks: ptAutoBlocks(atks.map(c => ({c, opp: ptAtkOpp(c)})))};
+  ptRenderBlocks();
+}
+// What would happen in one fight, for the blocks list
+function ptFightText(a, bs){
+  const o = PT.opps[ptAtkOpp(a)];
+  if (!bs.length) return `Unblocked: <b>${ptCombatOf(a)}</b> damage to ${esc(o.name)}.`;
+  if (ptHasKw(a, "menace") && bs.length < 2) return `Menace: one creature can't block it alone, so it's <b>unblocked</b>.`;
+  const pw = ptPow(a), dt = ptHasKw(a, "deathtouch"), tg = ((ptStats(a) || [0, 1])[1]) - (a.dmg || 0);
+  let left = pw; const dead = [];
+  for (const b of bs) { const need = dt ? 1 : Math.max(0, (+b.toughness || 0) - (b.dmg || 0)); if (left >= need && need >= 0 && !ptOkw(b, "indestructible") && left > 0) dead.push(b.name); left -= need; }
+  const back = bs.reduce((t, b) => t + (+b.power || 0), 0), backDt = bs.some(b => ptOkw(b, "deathtouch"));
+  const fsWin = (ptHasKw(a, "first strike") || ptHasKw(a, "double strike")) && dead.length === bs.length && !bs.some(b => ptOkw(b, "first strike") || ptOkw(b, "double strike"));
+  const aDies = !fsWin && back > 0 && (back >= tg || backDt) && !ptHasKw(a, "indestructible");
+  const tr = ptHasKw(a, "trample") && left > 0 ? ` ${left} tramples over.` : "";
+  return `${dead.length ? `${esc(dead.join(" and "))} ${dead.length > 1 ? "die" : "dies"}.` : "The blocker survives."} ${aDies ? `<b>${esc(ptFaceName(a))} dies.</b>` : `${esc(ptFaceName(a))} survives.`}${tr}`;
+}
+function ptRenderBlocks(){
+  const v = PT_VIEW, atks = (PT.combat || []).map(u => PT.bf.find(c => c.uid === u)).filter(Boolean);
+  ptModal("Blocks", `<p class="cur-sub">Your opponents blocked the way a careful player would. Click their creatures to change who blocks what, then deal the damage.</p>
+    <div class="blk-list">${atks.map(a => { const o = PT.opps[ptAtkOpp(a)], mine = v.blocks[a.uid] || [], can = o.board.filter(b => ptCanBlock(b, a));
+      return `<div class="blk-row"><div class="blk-atk">${a.faceDown || !a.img ? `<span class="pt-si-img noimg"></span>` : `<img class="pt-si-img" src="${esc(a.back ? a.img.replace("/front/", "/back/") : a.img)}" alt="" loading="lazy">`}<b>${esc(a.faceDown ? "Face-down creature" : ptFaceName(a))}</b> <span class="cur-sub">${esc(ptPT(a) || "")} → ${esc(o.name)}</span></div>
+        <div class="blk-opts">${can.length ? can.map(b => `<button type="button" class="blk-b" data-blk="${a.uid}:${b.uid}" aria-pressed="${mine.includes(b.uid)}">${esc(b.name)} <b>${esc(b.power)}/${esc(b.toughness)}</b>${b.text ? ` <small>${esc(b.text.split("\n")[0].slice(0, 30))}</small>` : ""}</button>`).join("") : `<span class="cur-sub">Nothing ${esc(o.name)} has can block it.</span>`}</div>
+        <small class="blk-out">${ptFightText(a, mine.map(u => o.board.find(b => b.uid === u)).filter(Boolean))}</small></div>`; }).join("")}</div>`,
+    `<button class="btn ghost" type="button" data-blknone="1">No blocks</button><button class="btn primary" type="button" data-blkgo="1">Deal combat damage</button>`);
+}
+// Combat damage (rule 510): a first-strike step when anything has first or double strike, then the regular step
+function ptCombatDamage(blocks){
+  blocks = blocks || {};
+  const att = (PT.combat || []).map(u => PT.bf.find(c => c.uid === u)).filter(Boolean); PT.combat = null;
+  const oppOf = a => PT.opps[ptAtkOpp(a)];
+  const blockedBy = a => { const bl = (blocks[a.uid] || []).map(u => oppOf(a).board.find(b => b.uid === u)).filter(Boolean); return ptHasKw(a, "menace") && bl.length < 2 ? [] : bl; };
+  const isBlocked = new Set(att.filter(a => blockedBy(a).length).map(a => a.uid));
+  const fsA = a => ptHasKw(a, "first strike") || ptHasKw(a, "double strike"), fsB = b => ptOkw(b, "first strike") || ptOkw(b, "double strike");
+  const dsA = a => ptHasKw(a, "double strike"), dsB = b => ptOkw(b, "double strike");
+  const anyFirst = att.some(fsA) || att.some(a => blockedBy(a).some(fsB));
+  const m = ptMods(), toPlayer = [], dead = new Set();
+  let link = 0;
+  for (const step of anyFirst ? [1, 2] : [2]) {
+    const hitsA = a => step === 1 ? fsA(a) : (!fsA(a) || dsA(a)), hitsB = b => step === 1 ? fsB(b) : (!fsB(b) || dsB(b));
+    for (const a of att) {
+      if (!PT.bf.includes(a)) continue;
+      const bs = blockedBy(a).filter(b => !dead.has(b.uid)), o = oppOf(a);
+      if (hitsA(a)) {
+        let p = Math.max(0, ptPow(a) || (a.faceDown ? 2 : 0));
+        if (isBlocked.has(a.uid)) {
+          for (let k = 0; k < bs.length && p > 0; k++) {
+            const b = bs[k], need = ptHasKw(a, "deathtouch") ? 1 : Math.max(0, (+b.toughness || 0) - (b.dmg || 0));
+            const give = k === bs.length - 1 && !ptHasKw(a, "trample") ? p : Math.min(p, need);
+            if (give > 0) { b.dmg = (b.dmg || 0) + give; if (ptHasKw(a, "deathtouch")) b.dt = true; if (ptHasKw(a, "lifelink")) link += give; p -= give; }
+          }
+          if (p > 0 && ptHasKw(a, "trample")) toPlayer.push({a, o, n: (p + ((a.colors || []).includes("R") ? m.torbran : 0)) * m.dmgX});
+        } else if (p > 0) toPlayer.push({a, o, n: (p + ((a.colors || []).includes("R") ? m.torbran : 0)) * m.dmgX});
+      }
+      for (const b of bs) if (hitsB(b) && (+b.power || 0) > 0) { a.dmg = (a.dmg || 0) + (+b.power || 0); if (ptOkw(b, "deathtouch")) a.dt = true; }
+    }
+    // after each step: their creatures with lethal damage die, and so do yours (state-based actions)
+    for (const o of PT.opps) for (const b of o.board.slice()) if ((b.dmg || 0) > 0 && ((b.dmg || 0) >= (+b.toughness || 0) || b.dt) && !ptOkw(b, "indestructible")) { o.board.splice(o.board.indexOf(b), 1); dead.add(b.uid); ptLog(`${o.name}'s ${b.name} dies.`); }
+    for (let i = 0; i < 20 && ptSBA(); i++);
+  }
+  // damage to players, in attack order
+  const byOpp = new Map();
+  toPlayer.forEach(({a, o, n}, i) => {
+    if (o.out) return;
+    const r = byOpp.get(o) || {dmg: 0, poison: 0}; byOpp.set(o, r);
+    if (ptHasKw(a, "infect")) r.poison += n; else r.dmg += n;
+    const tox = ptKws(a).get("toxic"); if (tox && n > 0) r.poison += parseInt(tox.val) || 1;
+    if (ptHasKw(a, "lifelink")) link += n;
+    if (a.commander && !ptHasKw(a, "infect")) { o.cmd[a.uid] = (o.cmd[a.uid] || 0) + n; if (o.cmd[a.uid] >= 21) toast(`${a.name} has dealt ${o.cmd[a.uid]} commander damage to ${o.name}: that's lethal.`); }
+    if (n > 0) ptEmit("combatdmg", a, {amount: n, first: i === 0, opp: PT.opps.indexOf(o)});
+  });
+  for (const [o, r] of byOpp) { if (r.dmg) ptHitOpp(r.dmg, "combat", PT.opps.indexOf(o)); if (r.poison) ptPoisonOpp(r.poison, PT.opps.indexOf(o)); }
+  if (!toPlayer.length && att.length) ptLog("No combat damage reached a player.");
   if (link) ptGain(link, "lifelink");
   for (const u of PT.endCombat || []) if (ptFind(u) && ptFind(u).zone === "bf") ptSacrifice(u);
   PT.endCombat = [];
+  ptOppsCheck();
 }
-function ptEndTurn(){ if (PT.phase !== "play") return; if (PT.endDone === PT.turn) return toast("Already at the end step. Press Next turn."); PT.endDone = PT.turn; ptLog(`End of turn ${PT.turn}.`); ptEmit("endstep"); ptEndStepRules(); ptRunDelayed(); }
+// The opponents strip under the top bar
+function ptOppsHtml(){
+  ptOppsFix();
+  const t = PT.opps.indexOf(ptOppT());
+  return PT.opps.map((o, i) => `<div class="pt-opp${i === t && !o.out ? " aimed" : ""}${o.out ? " out" : ""}" data-opp="${i}">
+    <div class="po-head">
+      <button type="button" class="po-name" data-oppt="${i}" title="${o.out ? "Out of the game" : i === t ? "You're aiming at this opponent: target opponent and any target effects hit them" : "Click to aim at this opponent"}">${i === t && !o.out ? "🎯 " : ""}${esc(o.name)}</button>
+      <span class="po-life"><button type="button" data-olife="${i}" data-d="-1" aria-label="${esc(o.name)} life down">−</button><b title="Life">${o.life}</b><button type="button" data-olife="${i}" data-d="1" aria-label="${esc(o.name)} life up">+</button></span>
+      ${o.poison ? `<span class="po-tag" title="Poison counters (10 and they're out)">☠ ${o.poison}</span>` : ""}
+      ${Object.entries(o.cmd || {}).filter(([, v]) => v > 0).map(([u, v]) => `<span class="po-tag" title="Commander damage from ${esc(((ptFind(+u) || {}).card || {}).name || "your commander")} (21 and they're out)">★ ${v}</span>`).join("")}
+      ${o.out ? `<span class="po-tag out">Out</span>` : ""}
+      <button type="button" class="po-more" data-oppmenu="${i}" title="Name, board, poison" aria-label="${esc(o.name)} options">⋯</button>
+    </div>
+    <div class="po-board">${o.board.map(b => `<span class="po-cre${b.dmg ? " hurt" : ""}" title="${esc(b.name + (b.text ? ": " + b.text : ""))}">${esc(b.name)} <b>${esc(b.power)}/${esc(b.toughness)}</b>${b.text ? `<small>${esc(b.text.split("\n")[0].slice(0, 24))}</small>` : ""}<button type="button" data-oppkill="${i}:${b.uid}" title="Remove it (destroyed, exiled…)" aria-label="Remove ${esc(b.name)}">×</button></span>`).join("")}
+      ${o.out ? "" : `<button type="button" class="po-add" data-oppadd="${i}" title="Give this opponent a creature that can block">+ Creature</button>`}${!o.board.length && o.mode && o.mode !== "hand" && !o.out ? `<small class="po-mode">${o.mode === "typical" ? "grows each turn" : "plays from a deck"}</small>` : ""}</div>
+  </div>`).join("");
+}
+function ptOppMenu(i, x, y){
+  const o = PT.opps[i], ds = (typeof decks !== "undefined" ? decks : []).filter(d => d.cards.some(c => /\bCreature\b/.test(c.type || "")));
+  ptMenuFor = {opp: i};
+  ptMenu(x, y, `<div class="ptm-title">${esc(o.name)}</div>
+    <button type="button" data-om="rename">Rename</button>
+    <button type="button" data-om="poison">Give a poison counter</button>
+    ${o.out ? `<button type="button" data-om="back">Bring back into the game</button>` : `<button type="button" data-om="outnow">Out of the game (concede)</button>`}
+    <div class="ptm-title">Their creatures</div>
+    <button type="button" data-om="mode" data-mode="hand" aria-pressed="${!o.mode || o.mode === "hand"}">${!o.mode || o.mode === "hand" ? "✓ " : ""}Only what I add</button>
+    <button type="button" data-om="mode" data-mode="typical" aria-pressed="${o.mode === "typical"}">${o.mode === "typical" ? "✓ " : ""}Grow like a typical deck</button>
+    ${ds.map(d => `<button type="button" data-om="mode" data-mode="${esc(d.id)}" aria-pressed="${o.mode === d.id}">${o.mode === d.id ? "✓ " : ""}Play creatures from ${esc(d.name)}</button>`).join("")}
+    ${o.board.length ? `<button type="button" data-om="wipe">Remove all their creatures</button>` : ""}`);
+}
+function ptOppAdd(i){
+  const o = PT.opps[i];
+  PT_VIEW = {kind: "oppadd", i};
+  ptModal(`A creature for ${esc(o.name)}`, `<p class="cur-sub">Their creatures can block your attackers. Add as many as you like.</p>
+    <h4>Quick</h4><div class="po-quick">${PT_OPP_QUICK.map((q, k) => `<button type="button" class="btn" data-oppq="${k}">${esc(q.name)} ${q.power}/${q.toughness}${q.text ? ` <small>${esc(q.text)}</small>` : ""}</button>`).join("")}</div>
+    <h4>Your own</h4><form class="po-custom" id="ptOppCustom">
+      <label class="inline-field">Name <input id="pocN" value="Creature" maxlength="40"></label>
+      <label class="inline-field">Power <input type="number" id="pocP" value="2" min="0" max="99"></label>
+      <label class="inline-field">Toughness <input type="number" id="pocT" value="2" min="0" max="99"></label>
+      <div class="po-kws">${PT_OPP_KWS.map(k => `<label class="chk"><input type="checkbox" value="${k}"> ${k}</label>`).join("")}</div>
+      <button class="btn primary" type="submit">Add it</button></form>
+    <h4>A real card</h4><form class="ptd-search" id="ptOppFind"><input type="search" id="pofQ" placeholder="Creature name, e.g. Baleful Strix" aria-label="Creature name"><button class="btn" type="submit">Find</button></form>
+    <div class="ptd-toks" id="pofRes"></div>`, `<button class="btn primary" type="button" data-d="close">Done</button>`);
+}
+let ptOppFound = [];
+async function ptOppSearch(q){
+  const box = $("pofRes"); box.innerHTML = `<div class="cur-sub">Searching…</div>`;
+  try {
+    const j = await sf(`/cards/search?unique=cards&order=edhrec&q=${encodeURIComponent(`t:creature (${q})`)}`);
+    ptOppFound = (j.data || []).slice(0, 24).map(slimCard);
+    box.innerHTML = ptOppFound.length ? ptOppFound.map((t, k) => `<button type="button" class="ptd-tok" data-oppf="${k}" title="${esc(t.name)}">${ptFace(ptMakeCard(t))}<small>${esc(t.name)} ${esc(t.power || "")}/${esc(t.toughness || "")}</small></button>`).join("") : `<div class="cur-sub">No creatures found.</div>`;
+  } catch (e) { box.innerHTML = `<div class="cur-sub">Couldn't reach Scryfall.</div>`; }
+}
+function ptOppGive(i, def){ ptDo(() => { const o = PT.opps[i], cr = ptOppCre(def); o.board.push(cr); ptLog(`${o.name} has ${cr.name} (${cr.power}/${cr.toughness}).`); }); toast(`${PT.opps[i].name}: ${def.name} added.`); }
+// clicks in the opponents strip, its menu and the blocks list
+function ptOppClick(e){
+  let el;
+  if ((el = e.target.closest("[data-oppt]"))) { const i = +el.dataset.oppt; if (PT.opps[i].out) return true; PT.oppT = i; ptOppSync(); ptRender(); if (PT_VIEW && PT_VIEW.kind === "attack") ptRenderAttack(); return true; }
+  if ((el = e.target.closest("[data-olife]"))) { const i = +el.dataset.olife, d = +el.dataset.d * (e.shiftKey ? 5 : 1); ptDo(() => { const o = PT.opps[i]; o.life = Math.max(0, o.life + d); if (d < 0 && !o.out) { PT.oppLostTurn = PT.turn; } ptLog(`${o.name}'s life ${d > 0 ? "+" : "−"}${Math.abs(d)} → ${o.life}.`); ptOppsCheck(); }); return true; }
+  if ((el = e.target.closest("[data-oppadd]"))) { ptOppAdd(+el.dataset.oppadd); return true; }
+  if ((el = e.target.closest("[data-oppkill]"))) { const [i, u] = el.dataset.oppkill.split(":").map(Number); ptDo(() => { const o = PT.opps[i], k = o.board.findIndex(b => b.uid === u); if (k >= 0) { ptLog(`${o.name}'s ${o.board[k].name} is gone.`); o.board.splice(k, 1); } }); return true; }
+  if ((el = e.target.closest("[data-oppmenu]"))) { const r = el.getBoundingClientRect(); ptOppMenu(+el.dataset.oppmenu, Math.min(r.left, innerWidth - 250), r.bottom + 4); return true; }
+  if ((el = e.target.closest("[data-om]")) && ptMenuFor && ptMenuFor.opp != null) {
+    const i = ptMenuFor.opp, o = PT.opps[i], k = el.dataset.om; ptCloseMenu();
+    if (k === "rename") { const n = prompt("Name for this opponent", o.name); if (n && n.trim()) ptDo(() => { o.name = n.trim().slice(0, 30); }); }
+    else if (k === "poison") ptDo(() => ptPoisonOpp(1, i));
+    else if (k === "outnow") ptDo(() => { o.out = PT.turn || 1; ptLog(`${o.name} is out of the game.`); ptOppsCheck(); });
+    else if (k === "back") ptDo(() => { o.out = 0; if (o.life <= 0) o.life = 1; if (PT.won && ptLiveOpps().length) PT.won = 0; ptLog(`${o.name} is back in the game.`); ptOppSync(); });
+    else if (k === "mode") { o.mode = el.dataset.mode; prefs.ptOppMode = o.mode === "typical" || o.mode === "hand" ? o.mode : prefs.ptOppMode; savePrefs(); ptRender(); toast(o.mode === "hand" ? `${o.name} only has the creatures you add.` : `${o.name}'s board now grows each turn.`); }
+    else if (k === "wipe") ptDo(() => { o.board = []; ptLog(`${o.name}'s creatures are gone.`); });
+    return true;
+  }
+  if ((el = e.target.closest("[data-oppq]")) && PT_VIEW && PT_VIEW.kind === "oppadd") { ptOppGive(PT_VIEW.i, PT_OPP_QUICK[+el.dataset.oppq]); return true; }
+  if ((el = e.target.closest("[data-oppf]")) && PT_VIEW && PT_VIEW.kind === "oppadd") { const t = ptOppFound[+el.dataset.oppf]; ptOppGive(PT_VIEW.i, Object.assign({}, t, {img: bigImg(t)})); return true; }
+  if ((el = e.target.closest("[data-blk]")) && PT_VIEW && PT_VIEW.kind === "blocks") {
+    const [a, b] = el.dataset.blk.split(":").map(Number), bl = PT_VIEW.blocks;
+    const had = (bl[a] || []).includes(b);
+    for (const k of Object.keys(bl)) bl[k] = bl[k].filter(u => u !== b);
+    if (!had) bl[a] = (bl[a] || []).concat(b);
+    ptRenderBlocks(); return true;
+  }
+  if (e.target.closest("[data-blknone]") && PT_VIEW && PT_VIEW.kind === "blocks") { PT_VIEW.blocks = {}; ptRenderBlocks(); return true; }
+  if (e.target.closest("[data-blkgo]") && PT_VIEW && PT_VIEW.kind === "blocks") { const bl = PT_VIEW.blocks; PT_VIEW.done = true; ptCloseModal(); ptDo(() => ptCombatDamage(bl)); return true; }
+  if ((el = e.target.closest("[data-atkto]")) && PT_VIEW && PT_VIEW.kind === "attack") {
+    const us = el.dataset.atkto.split(",").map(Number), live = PT.opps.map((o, i) => i).filter(i => !PT.opps[i].out);
+    const cur = PT_VIEW.to[us[0]] ?? PT.oppT, nx = live[(live.indexOf(cur) + 1) % live.length];
+    us.forEach(u => { PT_VIEW.to[u] = nx; }); ptRenderAttack(); return true;
+  }
+  if ((el = e.target.closest("[data-atktoall]")) && PT_VIEW && PT_VIEW.kind === "attack") { const i = +el.dataset.atktoall; Object.keys(PT_VIEW.to).forEach(u => { PT_VIEW.to[u] = i; }); ptRenderAttack(); return true; }
+  return false;
+}
+function ptOppSubmit(e){
+  if (e.target.id === "ptOppCustom" && PT_VIEW && PT_VIEW.kind === "oppadd") {
+    const kws = [...e.target.querySelectorAll(".po-kws input:checked")].map(x => x.value);
+    ptOppGive(PT_VIEW.i, {name: ($("pocN").value || "Creature").trim().slice(0, 40), power: Math.max(0, parseInt($("pocP").value) || 0), toughness: Math.max(0, parseInt($("pocT").value) || 0), text: kws.join(", ")});
+    return true;
+  }
+  if (e.target.id === "ptOppFind") { const q = $("pofQ").value.trim(); if (q) ptOppSearch(q); return true; }
+  return false;
+}
+// the number of opponents (⋯ → Settings): more are added, extra ones at the end are removed
+function ptSetOppN(n){
+  prefs.ptOppN = n; savePrefs(); if (!PT) return;
+  ptDo(() => {
+    ptOppsFix();
+    while (PT.opps.length < n) PT.opps.push(ptOppMake(PT.opps.length, n, PT.isCmd));
+    if (PT.opps.length > n) PT.opps.length = n;
+    PT.opps.forEach((o, i) => { if (/^Opponent( \d+)?$/.test(o.name)) o.name = n > 1 ? `Opponent ${i + 1}` : "Opponent"; });
+    if (PT.oppT >= n) PT.oppT = 0; ptOppSync();
+  });
+}
+function ptEndTurn(){ if (PT.phase !== "play") return; if (PT.endDone === PT.turn) return toast("Already at the end step. Press Next turn."); PT.endDone = PT.turn; ptEmptyPool(); ptLog(`End of turn ${PT.turn}.`); ptEmit("endstep"); ptEndStepRules(); ptRunDelayed(); }
 
 /* ================= rules engine =================
    Built from the Comprehensive Rules (effective September 25, 2026). Every keyword ability (702) and keyword action
@@ -9429,6 +10053,7 @@ const ptTou = c => { const s = ptStats(c); return s ? s[1] : 0; };
 function ptCount(expr, ctx){
   if (!PT) return 0;
   let e = String(expr || "").toLowerCase().trim().replace(/[.,;]$/, "").replace(/^(?:the )?/, "");
+  if (/^(?:life lost this way|damage dealt this way)$/.test(e)) return PT.lastLost || 0;   // a drain: what the opponents lost just before
   const src = ctx && ctx.src ? (ctx.src.card || ctx.src) : null, it = ctx && ctx.it ? (ctx.it.card || ctx.it) : null, p = ctx && ctx.p;
   let m;
   if (/^(?:x|that much|that many)$/.test(e)) return p && p.amount != null ? p.amount : 1;
@@ -9507,9 +10132,9 @@ function trEvalIf(cond, ctx){
   if ((m = c.match(/^you have (no|one or more|\w+ or more|\w+ or fewer) cards? in (?:your )?hand/))) { const n = PT.hand.length; return m[1] === "no" ? n === 0 : /fewer/.test(m[1]) ? n <= cnt(m[1].split(" ")[0]) : n >= cnt(m[1].split(" ")[0]); }
   if ((m = c.match(/^(?:there are )?(\w+) or more cards (?:are )?in your graveyard/))) return PT.grave.length >= cnt(m[1]);
   if ((m = c.match(/^there are (\w+) or more card types among cards in your graveyard|^(\w+) or more card types among cards in your graveyard/))) return ptCardTypes(PT.grave) >= cnt(m[1] || m[2]);
-  if (/^you have more life than (?:an|each) opponent|^an opponent has less life than you/.test(c)) return PT.life > PT.opp;
-  if (/^an opponent has more life than you|^you have less life than an opponent/.test(c)) return PT.opp > PT.life;
-  if (/^defending player has the most life or is tied for most life|^(?:an opponent|that player) has the most life/.test(c)) return PT.opp >= PT.life;
+  if (/^you have more life than (?:an|each) opponent|^an opponent has less life than you/.test(c)) { const l = ptLiveOpps().map(o => o.life); return l.length ? PT.life > (/each opponent/.test(c) ? Math.max(...l) : Math.min(...l)) : false; }
+  if (/^an opponent has more life than you|^you have less life than an opponent/.test(c)) return ptLiveOpps().some(o => o.life > PT.life);
+  if (/^defending player has the most life or is tied for most life|^(?:an opponent|that player) has the most life/.test(c)) return ptLiveOpps().some(o => o.life >= PT.life);
   if (/^you control your commander|^you control a commander/.test(c)) return PT.bf.some(x => x.commander);
   if ((m = c.match(/^you control (a|an|another|one or more|two or more|three or more|four or more|five or more|six or more|seven or more|eight or more|\d+ or more|no|exactly \w+) (.+?)(?: other than cardname)?$/))) {
     const other = m[1] === "another" || /\bother\b/.test(m[2]), ph = m[2].replace(/\bother\b/g, " ").replace(/\s+with (?!power|mana value).*$/, "").trim();
@@ -10069,7 +10694,7 @@ function ptResolve2(a, p, ctx){
       ptAddSpellPrompt(last, {copy: true, why: nm});
       break;
     }
-    case "mana": PT.manaLog = a.what; ptLog(`${nm}: add ${ptManaTxt(a.what)}.`); break;
+    case "mana": PT.manaLog = a.what; if (ptAutoMana()) ptAddMana(a.what, nm); ptLog(`${nm}: add ${ptManaTxt(a.what)}.`); break;
     case "extraTurn": PT.extraTurns = (PT.extraTurns || 0) + (a.n || 1); ptLog(`${nm}: you'll take an extra turn after this one.`); break;
     case "monarch": if (!PT.monarch) { PT.monarch = true; ptLog("You became the monarch: draw a card at the beginning of your end step."); } break;
     case "flagPT": PT[a.k] = true; ptLog(`${nm}: ${a.label}.`); break;
@@ -10135,8 +10760,8 @@ function ptResolve2(a, p, ctx){
       if (other) ptSacrifice(other.uid); else if (sc) ptSacrifice(sc.uid);
       ptLog(`${nm}: sacrificed ${other ? other.name : "itself"}.`); break;
     }
-    case "drainSum": { ptDealOpp(n, nm, sc, false); ptGain(n, nm); break; }
-    case "eachLose": { PT.life -= n; ptEmit("loselife", null, {amount: n}); ptDealOpp(n, nm, sc, false); ptLog(`${nm}: each player loses ${n}.`); break; }
+    case "drainSum": { const lost = ptDealOpp(n, nm, sc, false, "each"); ptGain(lost, nm); break; }
+    case "eachLose": { PT.life -= n; ptEmit("loselife", null, {amount: n}); ptDealOpp(n, nm, sc, false, "each"); ptLog(`${nm}: each player loses ${n}.`); break; }
     case "doubleCtr": {
       const list = /each/.test(a.on) ? PT.bf.filter(ptIsCreature) : ptTargets({who: /target/.test(a.on) ? "pick" : /cardname/.test(a.on) ? "self" : "it"}, p, ctx) || [];
       list.forEach(c => { const k = (c.counters || {})[a.kind] || 0; if (k) ptAddCounters(c.uid, a.kind, k); });
@@ -10228,7 +10853,7 @@ function ptResolve2(a, p, ctx){
       if (a.sacAtZero && had === 1) { ptLog(`${nm}: the last time counter was removed, it's sacrificed.`); ptSacrifice(sc.uid); }
       break;
     }
-    case "poison": PT.oppPoison = (PT.oppPoison || 0) + n; ptLog(`Opponent gets ${n} poison counter${n > 1 ? "s" : ""} (${PT.oppPoison} total).`); break;
+    case "poison": ptPoisonOpp(n, p.evUid != null && PT.atkOpp && PT.atkOpp[p.evUid] != null ? PT.atkOpp[p.evUid] : undefined); break;
     case "castCard": { const f = ptFind(a.uid); if (f && (f.zone === "hand" || f.zone === "exile" || f.zone === "grave")) { ptMove(a.uid, ptIsPermanentType(f.card) ? "bf" : "grave", {cast: true, how: a.how}); if (a.haste && ptIsCreature(f.card)) f.card.haste = true; } break; }
     case "paradigm": { const f = PT.exile.find(c => c.name === a.name) || PT.grave.find(c => c.name === a.name) || PT.lib.find(c => c.name === a.name); ptAddSpellPrompt(f ? ptSnap(f) : {name: a.name, text: a.text, type: "Sorcery", img: a.img, uid: -1}, {copy: true, why: "Paradigm"}); break; }
     default: return false;
@@ -10272,9 +10897,7 @@ function ptSBA(){
       if (last && (c.counters.lore || 0) >= last) { ptLog(`${c.name}: the last chapter is done, so it's sacrificed.`); ptSacrifice(c.uid); changed = true; continue; }
     }
   }
-  if ((PT.oppPoison || 0) >= 10 && !PT.won) { PT.won = PT.turn; toast(`Your opponent has 10 poison counters: you win on turn ${PT.turn}!`); ptLog(`Opponent has ${PT.oppPoison} poison counters. You win on turn ${PT.turn}.`); }
-  const cmd = Object.values(PT.cmdDmg || {}).some(v => v >= 21);
-  if (cmd && !PT.won) { PT.won = PT.turn; ptLog(`21 commander damage: you win on turn ${PT.turn}.`); }
+  if (PT.opps) ptOppsCheck();
   if ((PT.life <= 0 || PT.poison >= 10) && PT.lostTurn !== PT.turn) { PT.lostTurn = PT.turn; toast(PT.life <= 0 ? "You're at 0 life: in a real game you'd lose here." : "You have 10 poison counters: in a real game you'd lose here."); ptLog(PT.life <= 0 ? "You're at 0 life (you'd lose here)." : "You have 10 poison counters (you'd lose here)."); }
   if (!PT.speed && PT.bf.some(c => !c.faceDown && ptKwPrinted(c).some(k => k.key === "start your engines!"))) { PT.speed = 1; ptLog("Start your engines! Your speed is 1."); }
   if (!PT.story && PT.bf.some(c => !c.faceDown && ptKwPrinted(c).some(k => k.key === "storied")) && PT.bf.filter(c => /\b(Artifact|Saga|Legendary)\b/.test(ptFaceType(c))).length >= 3) { PT.story = true; ptLog("You have an enduring story."); }
@@ -10426,7 +11049,7 @@ function ptActivate(uid, i){
     if (ab.cost && /\{X\}/.test(ab.cost.mana || "")) { ab._x = ptGuessX({cost: ab.cost.mana}); ptLog(`${nm}: X = ${ab._x} (from your lands).`); }
     if (paid.length && ab.kind !== "mana") ptLog(`${nm}: paid ${paid.join(", ")}.`);
     const k = ab.kind;
-    if (k === "mana") { const w = ab.actions[0] && ab.actions[0].what || "mana"; ptLog(`${nm}: ${paid.length ? paid.join(", ") + " → " : ""}add ${ptManaTxt(w)}.`); return; }
+    if (k === "mana") { const w = ab.actions[0] && ab.actions[0].what || "mana"; if (ptAutoMana()) ptAddMana(w, nm); ptLog(`${nm}: ${paid.length ? paid.join(", ") + " → " : ""}add ${ptManaTxt(w)}.`); return; }
     if (k === "equip" || k === "reconfigure" || k === "fortify") {
       if (!ptAuto()) { pickAfter = {a: {t: "attachTo", label: `${k === "fortify" ? "Fortify" : "Equip"} ${nm}`}, p: {srcUid: c.uid, srcName: nm, img: c.img}}; return; }
       const host = (k === "fortify" ? PT.bf.filter(x => ptIsLand(x) && x.uid !== c.uid) : PT.bf.filter(x => ptIsCreature(x) && x.uid !== c.uid && x.uid !== c.att && x.att == null && (!ab.cost || !/legendary/.test(String(ab.cost).toLowerCase()) || /\bLegendary\b/.test(x.type))))
@@ -10658,6 +11281,7 @@ function ptCastWay2(uid, way){
 /* ----- turn steps the engine looks after ----- */
 function ptCleanup(){
   for (const c of PT.bf) { delete c.eot; c.dmg = 0; c.dt = false; }
+  for (const o of PT.opps || []) for (const b of o.board) { b.dmg = 0; b.dt = false; }
   PT.endCombat = [];
 }
 function ptUpkeepRules(){
@@ -10921,7 +11545,9 @@ const GUIDE = [
     {h: "Run 3,000 games", b: "In <b>Test & fastest win</b>, Deckseer plays your deck 3,000 times against an opponent, using your cards' real rules: colours, triggers, evoke and copies (like Ashling's), sacrifice outlets, combat with blockers and keywords, commander damage, tutors, Treasures and more. You get your win rate, the turn you usually win, mulligans, mana problems and suggestions.", go: {page: "builder", dtab: "test", el: "simRun", needDeck: true}},
     {h: "Choose your opponent", b: "Pick a <b>bracket</b> (1–5) and a style (Aggressive, Balanced, Defensive). Or <b>Your table</b>, which tunes the opponent to your own logged games with this deck (5 or more). Or <b>one of your decks</b>: enter your friends' decks and test against them.", go: {page: "builder", dtab: "test", el: "deckSim", needDeck: true}},
     {h: "Fastest possible win", b: "Finds the quickest way the deck can win if you drew perfectly, by combo or by damage, turn by turn, showing which lands to tap. <b>What would make it faster</b> shows what's holding the deck back, and <b>How the finder reads each card</b> lists how every card was understood.", go: {page: "builder", dtab: "test", el: "fwRun", needDeck: true}},
-    {h: "Playtest", b: "<b>▶ Playtest</b> deals you a hand on a virtual table with a rules engine: draw, play lands, cast spells, attack, and see triggers resolve. Good for practising lines before a game.", go: {page: "builder", el: "deckPlay", needDeck: true}}
+    {h: "Playtest", b: "<b>▶ Playtest</b> deals you a hand on a virtual table with a rules engine: draw, play lands, cast spells, attack, and see triggers resolve. Good for practising lines before a game.", go: {page: "builder", el: "deckPlay", needDeck: true}},
+    {h: "Playtest: paying mana", b: "Click a card in your hand and Deckseer pays for it: mana in your pool first, then the lands, rocks and mana creatures that keep the most options open, plus commander tax. Cards you can afford right now <b>glow gold</b>. Rituals and Treasures go into your <b>mana pool</b> at the top. If you can't pay, it tells you what's missing and lets you cast it anyway. Dragging a card onto the table places it without paying.", go: {page: "builder", el: "deckPlay", needDeck: true}},
+    {h: "Playtest: opponents and blocks", b: "The strip under the top bar shows your opponents (3 in Commander). Click one to aim at them; give them blockers with <b>+ Creature</b>, or use their <b>⋯</b> menu to let their board grow each turn. When you <b>Attack</b>, choose who each creature attacks; they block like a careful player and you can change the blocks. First strike, trample, deathtouch, flying, menace, lifelink and commander damage all count, and you win when every opponent is out.", go: {page: "builder", el: "deckPlay", needDeck: true}}
   ]},
   {t: "Card search", steps: [
     {h: "Search all of Magic", b: "Search every card with Scryfall's search. Type a name, or search like Scryfall does (for example <b>t:elemental c:rg</b>). Send any result to your collection, a deck or your wishlist.", go: {page: "search", el: "searchView"}}
