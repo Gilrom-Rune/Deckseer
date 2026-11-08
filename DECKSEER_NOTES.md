@@ -318,3 +318,11 @@ Lessons from running it on Colab (all fixed in the script): Scryfall's bulk-data
 - **The chosen type** (Herald's Horn, Urza's Incubator, Morophon): `ptChosenOf(card)` uses `card.chosenType`, else the deck's type (`d.fwType` or `fwDeckType`). Cloud Key's card type defaults to the deck's most common one. Right-click → "Chosen type: … (change)" sets it.
 - **The spell's own text**: "This spell costs {N} less to cast for each … / if …", "costs {X} less, where X is…" (Ghalta), and affinity.
 - The finder's reducer reader now also takes the singular "spell … costs" wording.
+- **Ways to cast** (2026.11.08.12). `ptCastCost(c, zone, way)` follows rules 118.9 and 601.2f:
+  - Alternative costs replace the mana cost: evoke (including Ashling's), dash, blitz, flashback, escape, madness, overload, bestow, prototype, disguise and so on. Only the mana part of the way's cost (`ptManaPart`) is paid.
+  - Additional costs are added to it (`PT_WAY_ADD`: kicker, multikicker, buyback, entwine, squad, offspring, replicate, jump-start…).
+  - Split cards and adventures cost the side you cast. Cascade and casting from exile use the normal cost.
+  - Reductions and commander tax apply to all of these, except the ways that aren't casting a spell (`PT_WAY_NOSPELL`: unearth, plot, foretell, suspend).
+  - Emerge also subtracts the mana value of the creature `ptEmergeSac` picks, and sacrifices it as part of paying.
+- The card menu shows "Evoke {4} → {2}" when reductions change it. Hand cards also glow when only an alternative way (`PT_WAY_GLOW`) is affordable.
+- The 3,000-game simulator now reduces evoke costs too (`evokePay` goes through `reduced`). The finder already did.

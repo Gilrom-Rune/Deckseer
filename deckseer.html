@@ -4958,7 +4958,7 @@ function simulateDeck(d, opts){
         for (const c of hand) {
           if (c.land) continue;
           if (c.wipe && (!versus || t < 5 || perms.filter(p => p.creature).reduce((s, p) => s + p.power, 0) >= 6)) continue;
-          const full = reduced(c, c.pay), fullAfter = afford(full, 0, c), ev = evokePay(c), cp = ev && c.creature && copier(c);
+          const full = reduced(c, c.pay), fullAfter = afford(full, 0, c), ev0 = evokePay(c), ev = ev0 ? reduced(c, ev0) : null, cp = ev && c.creature && copier(c);
           const evAfter = ev ? afford(ev, 0, c) : null, cost = p => p.gen + p.cols.length;
           if (fullAfter) {
             if (cp && evAfter && fwPay(evAfter, keepPayFor(keepNeed + 1), 0) && cost(ev) < cost(full) + 3) opts2.push({c, how: "evoke", after: evAfter, cost: cost(ev), keep: 1, pri: 5});
@@ -5477,7 +5477,7 @@ function fwRules(f, c){
   finally { PT = keep; }
   const t = (c.text || "").toLowerCase().replace(/\([^)]*\)/g, "");
   // "Goblin spells you cast cost {1} less to cast", "Spells you cast cost {1} less"
-  for (const m of t.matchAll(/(?:^|\n|\. )([a-z ,-]*?)spells? you cast costs? \{(\d+)\} less to cast(?! for each)/g)) if (!/opponent/.test(m[1])) (f.reduce = f.reduce || []).push({n: +m[2], ph: m[1].replace(/\b(each|other)\b/g, "").trim()});
+  for (const m of t.matchAll(/(?:^|\n|\. )([a-z ,-]*?)spells? you cast costs? \{(\d+)\} less to cast/g)) if (!/opponent/.test(m[1])) (f.reduce = f.reduce || []).push({n: +m[2], ph: m[1].replace(/\b(each|other)\b/g, "").trim()});
   // evoke for other cards: Ashling, the Limitless ("Elemental permanent spells you cast from your hand gain evoke {4}")
   const ge = t.match(/([a-z ,-]+?) (?:permanent )?spells you cast(?: from your hand)? (?:gain|have) evoke ((?:\{[^}]+\})+)/);
   if (ge) f.grantEvoke = {ph: ge[1].replace(/\b(permanent|nonland)\b/g, "").trim(), pay: fwCost({cost: ge[2], cmc: 0}), txt: ge[2]};
@@ -7276,7 +7276,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.08.11";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.08.12";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
@@ -7537,7 +7537,7 @@ function ptPlace(card){
   return [1, lanes[0]];
 }
 function ptClean(card){ card.tapped = false; card.counters = {}; card.faceDown = false; card.back = false; delete card.x; delete card.y;
-  for (const k of ["evoked", "blitz", "dash", "unearthed", "disturbed", "kicked", "haste", "kw", "att", "eot", "dmg", "dt", "regen", "used", "pwTurn", "pwSet", "saddled", "renowned", "monstrous", "suspected", "anim", "cloak", "impending", "bestowed", "exerted", "proto", "paid", "overloaded", "entwined", "castFace", "attackedTurn", "harnessed", "earth", "fromHand", "wasCast"]) delete card[k];
+  for (const k of ["evoked", "blitz", "dash", "unearthed", "disturbed", "kicked", "haste", "kw", "att", "eot", "dmg", "dt", "regen", "used", "pwTurn", "pwSet", "saddled", "renowned", "monstrous", "suspected", "anim", "cloak", "impending", "bestowed", "exerted", "proto", "paid", "overloaded", "entwined", "castFace", "attackedTurn", "harnessed", "earth", "fromHand", "wasCast", "emerged"]) delete card[k];
   if (card.orig) { Object.assign(card, card.orig); delete card.orig; } }
 // Move a card between zones. opts: {x, y} squares on the battlefield, {bottom} for the library, {faceDown}
 function ptMove(uid, to, opts = {}){
@@ -7717,7 +7717,7 @@ function ptCastWay(uid, way){
   } else if (way === "dash") { toBf({dash: true, haste: true}); PT.delayed = (PT.delayed || []).concat({uid, act: "hand", why: "Dash"}); ptLog(`${name} was dashed: it has haste and returns to your hand at the end step.`); }
   else if (way === "blitz") { toBf({blitz: true, haste: true}); PT.delayed = (PT.delayed || []).concat({uid, act: "sac", why: "Blitz"}); ptLog(`${name} was blitzed: haste, sacrificed at the end step, draw a card when it dies.`); }
   else if (way === "kicker") { c.kicked = true; perm ? ptMove(uid, "bf", {cast: true, how: "kicked"}) : ptMove(uid, "grave", {cast: true, how: "kicked"}); ptLog(`${name} was kicked.`); }
-  else if (way === "emerge" || way === "madness") { perm ? ptMove(uid, "bf", {cast: true}) : ptMove(uid, "grave", {cast: true, how: way}); ptLog(`${name} was cast with ${way}${way === "emerge" ? " (sacrifice the creature yourself: right-click it → Sacrifice)" : ""}.`); }
+  else if (way === "emerge" || way === "madness") { perm ? ptMove(uid, "bf", {cast: true}) : ptMove(uid, "grave", {cast: true, how: way}); ptLog(`${name} was cast with ${way}${way === "emerge" && !c.emerged ? " (sacrifice the creature yourself: right-click it → Sacrifice)" : ""}.`); }
   else if (way === "flashback") ptMove(uid, "exile", {cast: true, how: "flashback"});
   else if (way === "cascade") {
     ptPlay(uid);
@@ -8073,13 +8073,31 @@ const ptPoolTxt = () => (PT.pool || []).map(u => u.length >= 5 ? "{any}" : u.len
 function ptAddMana(what, from){ const us = ptManaUnits(what, {from}); PT.pool = (PT.pool || []).concat(us); return us.length; }
 function ptEmptyPool(){ if ((PT.pool || []).length) ptLog(`${PT.pool.length} unspent mana emptied from your pool.`); PT.pool = []; }
 // What a card costs to cast this way: its mana cost, or the cost of the way (evoke, flashback…), plus commander tax
+// How each way of casting is paid (rules 118.9 and 601.2f): an alternative cost replaces the mana cost, an additional
+// cost is added to it, and cost reductions apply to either. Some "ways" aren't casting a spell at all (unearth, plot,
+// foretelling, suspending), so reductions and commander tax don't apply to them.
+const PT_WAY_ADD = new Set(["kicker", "multikicker", "offspring", "squad", "buyback", "entwine", "escalate", "replicate", "splice", "conspire", "jumpstart", "retrace", "teamwork"]);
+const PT_WAY_NOSPELL = new Set(["unearth", "plot", "foretell", "suspend"]);
+const PT_WAY_FACE = new Set(["face0", "face1", "adventure", "aftermath"]);
+const ptManaPart = s => (String(s || "").match(/^\s*((?:\{[^}]+\})+)/) || [])[1] || "";
 function ptCastCost(c, zone, way){
-  let cost = way && way.cost != null ? way.cost : c.castFace === 1 && (c.cost || "").includes(" // ") ? c.cost.split(" // ")[1] : (c.cost || "").split(" // ")[0];
-  if (way && way.k === "cascade") cost = (c.cost || "").split(" // ")[0];
+  const faces = (c.cost || "").split(" // ");
+  let cost;
+  if (!way || way.k === "cascade" || way.k === "fromexile") cost = c.castFace === 1 && faces[1] ? faces[1] : faces[0];
+  else if (PT_WAY_FACE.has(way.k)) cost = way.k === "face0" ? faces[0] : faces[1] || faces[0];
+  else if (PT_WAY_ADD.has(way.k)) cost = faces[0] + ptManaPart(way.cost);
+  else cost = ptManaPart(way.cost) || (way.k === "madness" || way.k === "evoke" || way.k === "dash" || way.k === "blitz" || way.k === "emerge" ? "" : faces[0]);
+  if (way && PT_WAY_NOSPELL.has(way.k)) return cost;
   if (zone === "cmd" && PT.tax[c.uid]) cost += `{${PT.tax[c.uid] * 2}}`;
-  if (!/\{/.test(cost) || way && way.k === "cascade") return cost;
-  return ptReduceCost(cost, ptCostCuts(c).cuts);
+  if (!/\{/.test(cost)) return cost;
+  const cuts = ptCostCuts(c).cuts.slice();
+  if (way && way.k === "emerge") { const s = ptEmergeSac(c); if (s) cuts.push({gen: s.cmc || 0, pips: []}); }
+  return ptReduceCost(cost, cuts);
 }
+// Emerge: sacrifice a creature and pay the emerge cost minus its mana value. It picks the one that saves the most.
+function ptEmergeSac(c){ return PT.bf.filter(x => ptIsCreature(x) && x.uid !== c.uid && !x.commander).sort((a, b) => (b.cmc || 0) - (a.cmc || 0) || ptValue(a) - ptValue(b))[0] || null; }
+// Ways to cast from your hand that can make a card affordable when its normal cost isn't
+const PT_WAY_GLOW = new Set(["evoke", "dash", "blitz", "emerge", "prototype", "disguise", "warp", "mtmte", "impending", "face0", "face1", "adventure"]);
 // What a "choose a type" card named: what you set, else the deck's most common creature type (or card type, for Cloud Key)
 function ptChosenOf(c){
   if (c.chosenType) return c.chosenType;
@@ -8165,7 +8183,8 @@ function ptReduceCost(cost, cuts){
 function ptAffordable(c, zone){
   if (ptIsLand(c)) return zone === "hand" && ptLandOk();
   const cost = ptCastCost(c, zone); if (!/\{/.test(cost)) return true;
-  return !ptPlan(cost, c).missing;
+  if (!ptPlan(cost, c).missing) return true;
+  return ptCastWays(c, zone).some(w => PT_WAY_GLOW.has(w.k) && (() => { const k = ptCastCost(c, zone, w); return !/\{/.test(k) || !ptPlan(k, c).missing; })());
 }
 function ptLandsThisTurn(){ return PT.landTurn === PT.turn ? PT.landN || 0 : 0; }
 function ptLandDrops(){ let n = 1; for (const s of PT.bf) { if (s.faceDown) continue; const t = ptFaceText(s).toLowerCase(); const m = t.match(/you may play (an|one|two|three) additional lands?/); if (m) n += {an: 1, one: 1, two: 2, three: 3}[m[1]]; } return n; }
@@ -8185,8 +8204,10 @@ function ptCastPaid(uid, wayKey, x){
   if (/\{X\}/i.test(cost) && x == null) return ptAskX(c, cost, n => ptCastPaid(uid, wayKey, n));
   const plan = ptPlan(cost, c, {x: x || 0});
   if (plan.missing) return ptAskAnyway(`Not enough mana for ${esc(ptFaceName(c))} (${esc(ptManaTxt(cost.replace(/\{X\}/gi, `{${x || 0}}`)))}): you're missing ${esc(ptManaTxt(plan.missing))}.`, "Cast it anyway (without paying)", () => ptDo(cast));
-  const cutBy = way && way.k === "cascade" ? [] : ptCostCuts(c).why;
-  ptDo(() => { ptApplyPlan(plan, ptFaceName(c) + (x ? ` (X = ${x})` : "") + (cutBy.length ? ` (cost reduced by ${[...new Set(cutBy)].join(", ")})` : "")); if (x != null) c.xPaid = x; cast(); });
+  const cutBy = way && PT_WAY_NOSPELL.has(way.k) ? [] : ptCostCuts(c).why.slice();
+  const emSac = way && way.k === "emerge" ? ptEmergeSac(c) : null;
+  if (emSac) cutBy.push(`sacrificing ${emSac.name}`);
+  ptDo(() => { if (emSac) { c.emerged = true; ptSacrifice(emSac.uid); } ptApplyPlan(plan, ptFaceName(c) + (x ? ` (X = ${x})` : "") + (cutBy.length ? ` (cost reduced by ${[...new Set(cutBy)].join(", ")})` : "")); if (x != null) c.xPaid = x; cast(); });
 }
 function ptNoteLand(){ if (PT.landTurn !== PT.turn) { PT.landTurn = PT.turn; PT.landN = 0; } PT.landN++; }
 function ptAskAnyway(msg, yes, fn){
@@ -8369,7 +8390,7 @@ function ptWaysHtml(c, zone){
   if (zone === "exile") extra.length = 0;
   if (!own.length && !extra.length) return "";
   return `<div class="ptm-sep">Cast another way</div>
-    ${own.map(w => `<button type="button" data-m="way" data-way="${w.k}" class="ptm-way"><span><b>${PT_WAYS[w.k]}</b>${w.cost ? ` <span class="mono">${esc(w.cost)}</span>` : ""}${w.why ? ` <small>from ${esc(w.why)}</small>` : ""}</span><small>${esc(desc[w.k] || PT_WAY_DESC[w.k] || "")}</small></button>`).join("")}
+    ${own.map(w => { const real = PT.phase === "play" && !PT_WAY_FACE.has(w.k) && /\{/.test(w.cost || "") ? ptCastCost(c, zone, w) : null, shown = PT_WAY_ADD.has(w.k) ? "+" + (w.cost || "") : w.cost; return `<button type="button" data-m="way" data-way="${w.k}" class="ptm-way"><span><b>${PT_WAYS[w.k] || w.k}</b>${w.cost ? ` <span class="mono">${esc(shown)}</span>` : ""}${real && real !== ptManaPart(w.cost) ? ` <span class="mono" title="What you'd pay now, with cost reductions${PT_WAY_ADD.has(w.k) ? " (mana cost plus this)" : ""}">→ ${esc(ptManaTxt(real))}</span>` : ""}${w.why ? ` <small>from ${esc(w.why)}</small>` : ""}</span><small>${esc(desc[w.k] || PT_WAY_DESC[w.k] || "")}</small></button>`; }).join("")}
     ${extra.length ? `<div class="ptm-ways">${extra.map(k => `<button type="button" data-m="way" data-way="${k}" title="${esc(desc[k] || "")}">${PT_WAYS[k]}</button>`).join("")}</div>` : ""}`;
 }
 function ptLibMenu(x, y){

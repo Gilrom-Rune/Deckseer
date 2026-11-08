@@ -332,6 +332,31 @@ module.exports = async function () {
   check('reductions apply after commander tax ({2}{R} + {2} tax − 3)', red.tax === '{1}{R}', red);
   check('reduced spells glow when you can now afford them, and the log says what reduced the cost', red.glow && /cost reduced by/.test(red.paid) && /Animar/.test(red.paid), red);
 
+  // ---- cost reductions on other ways to cast ----
+  await fresh(4);
+  const alt = await page.evaluate(() => {
+    const an = put('Animar'); an.counters = {p1p1: 2}; put('Ashling, the Limitless');
+    const reef = hand('Risen Reef');
+    const mk = o => Object.assign({uid: 0, colors: ['G'], counters: {}}, o);
+    const w = (c, z, k) => ptCastCost(c, z, ptCastWays(c, z).find(x => x.k === k));
+    const kick = mk({name: 'Kicky', type: 'Creature — Elemental', cost: '{1}{G}', text: 'Kicker {2}'});
+    const em = mk({name: 'Emergy', type: 'Creature — Eldrazi', cost: '{7}{G}', text: 'Emerge {5}{G}{G}'});
+    const fi = mk({name: 'Fire // Ice', type: 'Instant // Instant', cost: '{1}{R} // {1}{U}', text: 'Fire\nFire deals 2 damage divided as you choose among one or two targets.\n\nIce\nTap target permanent.\nDraw a card.'});
+    const ue = mk({name: 'Unearthy', type: 'Creature — Elemental', cost: '{3}{R}', text: 'Unearth {2}{R}'});
+    ['Forest', 'Forest'].forEach(put);
+    const out = {evoke: w(reef, 'hand', 'evoke'), kick: w(kick, 'hand', 'kicker'), emerge: w(em, 'hand', 'emerge'), fire: w(fi, 'hand', 'face0'), ice: w(fi, 'hand', 'face1'), unearth: w(ue, 'grave', 'unearth'), glow: ptAffordable(reef, 'hand')};
+    ptCardMenu(reef.uid, 10, 10); out.menu = document.getElementById('ptMenu').textContent.replace(/\s+/g, ' '); ptCloseMenu();
+    ptCastPaid(reef.uid, 'evoke'); out.paid = PT.log.find(l => /Paid for Risen Reef/.test(l)) || '';
+    return out;
+  });
+  check('Ashling\'s evoke {4} gets cost reductions (Animar with 2 counters → {2})', alt.evoke === '{2}' && /Paid for Risen Reef \(cost reduced by Animar/.test(alt.paid), alt);
+  check('the card menu shows the reduced cost of each way to cast', /Evoke \{4\} → \{2\}/.test(alt.menu), alt.menu.slice(0, 120));
+  check('a card glows when only an alternative cost is affordable', alt.glow, alt);
+  check('kicker is added to the mana cost, then reduced ({1}{G} + {2} − 2)', alt.kick === '{1}{G}', alt);
+  check('emerge takes off the sacrificed creature\'s mana value too', alt.emerge === '{G}{G}', alt);
+  check('split cards cost the side you cast', alt.fire === '{1}{R}' && alt.ice === '{1}{U}', alt);
+  check('unearth is an ability, not a spell: no reduction', alt.unearth === '{2}{R}', alt);
+
   check('no page errors', page.errors.length === 0, page.errors);
   await browser.close();
 };
