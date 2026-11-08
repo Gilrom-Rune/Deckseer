@@ -3030,6 +3030,14 @@ const CONDS = [["NM","Near Mint"],["LP","Lightly Played"],["MP","Moderately Play
 const FORMATS = [["standard","Standard"],["pioneer","Pioneer"],["modern","Modern"],["legacy","Legacy"],["vintage","Vintage"],["commander","Commander"],["pauper","Pauper"]];
 const condOpts = sel => CONDS.map(([c, n]) => `<option value="${c}" ${c === sel ? "selected" : ""}>${n}</option>`).join("");
 const isValuable = v => prefs.alertAt > 0 && v >= prefs.alertAt;
+// The scanner's left side (camera, current card) stays in view while the session list scrolls. When it's taller than
+// the screen (all printings showing), it scrolls with the page until its bottom is in view, then stays: the Add button
+// is never pushed out of reach.
+(() => {
+  const el = document.querySelector("main > .left, .left"); if (!el || typeof ResizeObserver === "undefined") return;
+  const fit = () => { const h = el.offsetHeight; el.style.top = Math.min(12, innerHeight - h - 12) + "px"; };
+  new ResizeObserver(fit).observe(el); addEventListener("resize", fit); fit();
+})();
 const PRINTS_FIRST = 12;
 function printsShown(i){
   const all = current.showAllPrints || current.prints.length <= PRINTS_FIRST + 2;
@@ -7180,7 +7188,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.08.6";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.08.7";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do

@@ -24,6 +24,16 @@ module.exports = async function () {
     check(`${label}: nothing on the scanner page scrolls by itself`, r.before.scrollers.length === 0 && r.after.scrollers.length === 0, r);
     check(`${label}: 12 printings show at first, plus the selected one, with "Show all 30 printings"`, r.before.shown.length === 13 && r.before.shown.includes(20) && /Show all 30 printings/.test(r.before.btn), r.before);
     check(`${label}: "Show all" shows every printing in the page`, r.after.shown === 30 && !r.after.btn, r.after);
+    // with every printing showing, the Add button comes into view where it sits on the page (not only at the very bottom)
+    const add = await page.evaluate(async () => {
+      const items = []; for (let i = 0; i < 80; i++) { const k = 'x' + i, e = {name: 'More ' + i, set: 'CMM', setName: 'X', number: String(i), qty: 1, cond: 'NM', list: 'Collection', usd: '1.00', rarity: 'rare', lang: 'en', finishes: ['nonfoil'], img: '', imgN: ''}; coll.set(k, e); items.push({key: k, qty: 1, name: e.name, t: 1}); }
+      session.items = session.items.concat(items); renderAll();
+      await new Promise(r => setTimeout(r, 150)); scrollTo(0, 0);
+      const pos = document.getElementById('addBtn').getBoundingClientRect().top + scrollY, H = innerHeight;
+      for (let y = 0; y <= document.documentElement.scrollHeight; y += 50) { scrollTo(0, y); await new Promise(r => requestAnimationFrame(r)); const r = document.getElementById('addBtn').getBoundingClientRect(); if (r.top >= 0 && r.bottom <= H) return {first: y, pos: Math.round(pos), H}; }
+      return {first: null};
+    });
+    check(`${label}: with all printings showing, the Add button is reached by scrolling to it (at ${add.first}px, it sits at ${add.pos}px)`, add.first != null && add.first <= Math.max(0, add.pos - add.H) + 300, add);
     check(`${label}: no page errors`, errs.length === 0, errs);
     await ctx.close();
   }
