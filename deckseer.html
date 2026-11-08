@@ -5401,7 +5401,19 @@ function fwRules(f, c){
   return f;
 }
 // Search for the fastest win with one plan (one combo, or damage). Beam search over turns, a few plays deep per turn.
-function fwSearch(plan, pool, cmds, o){
+// Run the search all at once (tests, small jobs)…
+function fwSearch(plan, pool, cmds, o){ const g = fwSearchGen(plan, pool, cmds, o); let r; do { r = g.next(); } while (!r.done); return r.value; }
+// …or in short slices, letting the page respond in between (phones freeze otherwise). o.stop() ends it early: the best win so far is kept.
+async function fwSearchAsync(plan, pool, cmds, o){
+  const g = fwSearchGen(plan, pool, cmds, o);
+  for (;;) {
+    o._yieldAt = Date.now() + 20;
+    const r = g.next();
+    if (r.done) return r.value;
+    await new Promise(res => setTimeout(res, 0));
+  }
+}
+function* fwSearchGen(plan, pool, cmds, o){
   const MAXT = o.maxT || 10, BEAM = o.beam || 50, WIDE = o.wide || 8, deadline = Date.now() + (o.ms || 1e9);
   const lands = pool.filter(c => c.land);
   const spells = pool.filter(c => !c.land);
@@ -6017,13 +6029,15 @@ function fwSearch(plan, pool, cmds, o){
       }
       // plays this turn (depth-first, a few deep)
       const seen = new Set();
-      const dfs = (n, depth) => {
+      const dfs = function* (n, depth) {
+        if (o._yieldAt && Date.now() > o._yieldAt) yield;   // a break for the page
+        if (o.stopped && o.stopped()) { o._cut = true; return; }
         if (best && best.won.t <= t) return;
         if (n.won) { if (!best || n.won.t < best.won.t || n.order.length < best.order.length) best = n; return; }
         if (n.casc.length) {
           const hits = cascadeHits(n);
-          if (!hits.length) { const m2 = clone(n); const q = m2.casc.shift(); m2.log.push({t, kind: "note", name: q.gy ? `${q.from}: nothing left to cast from the graveyard` : `${q.how} from ${q.from}: nothing cheap enough left`}); return dfs(m2, depth); }
-          for (const x of hits) dfs(play(n, x.c, x.after, x.op), depth);
+          if (!hits.length) { const m2 = clone(n); const q = m2.casc.shift(); m2.log.push({t, kind: "note", name: q.gy ? `${q.from}: nothing left to cast from the graveyard` : `${q.how} from ${q.from}: nothing cheap enough left`}); return yield* dfs(m2, depth); }
+          for (const x of hits) yield* dfs(play(n, x.c, x.after, x.op), depth);
           return;
         }
         const key = [n.perms.length, n.grave, n.life, n.treas, n.clues, n.mana.slice().sort().join(""), n.srcs.length, potential(n), n.slots - n.used, n.board.length, boardDmg(n, true), n.opp, n.done.length, n.cmdOut.length, Object.keys(n.cnt).length, n.perms.filter(p => p.tapped).length].join(",");
@@ -6056,9 +6070,10 @@ function fwSearch(plan, pool, cmds, o){
         if (!next.has(k2) || score(next.get(k2)) < score(e)) next.set(k2, e);
         if (depth >= (o.deep ? 40 : 12)) { o._depthCut = true; return; }
         if (depth > 3 && Date.now() > deadline) { o._cut = true; return; }
-        for (const x of choices(n)) dfs(doChoice(n, x), depth + 1);
+        for (const x of choices(n)) yield* dfs(doChoice(n, x), depth + 1);
       };
-      for (const st of starts) dfs(st, 0);
+      for (const st of starts) yield* dfs(st, 0);
+      if (o.stopped && o.stopped()) break;
     }
     if (next.size > BEAM) o._beamCut = true;
     beam = [...next.values()].sort((a, b) => score(b) - score(a)).slice(0, BEAM);
@@ -6102,7 +6117,7 @@ async function fwPlans(d, opts = {}){
     if (plans.length > (opts.maxPlans || 16)) plans.length = opts.maxPlans || 16;
   } else comboNote = "Combo database not downloaded yet (see Combos below), so only damage wins were checked.";
   const fo = prefs.fwOpts || {};
-  const o = {life: isCmd ? 40 : 20, isCmd, drawFirst: isCmd, maxT: 10, beam: 120, wide: 11, ms: 6000, oppRemoval: fo.opp === "removal", oppCounter: fo.opp === "counter"};
+  const o = {life: isCmd ? 40 : 20, isCmd, drawFirst: isCmd, maxT: 10, beam: 120, wide: 11, ms: isPhone() ? 2500 : 6000, oppRemoval: fo.opp === "removal", oppCounter: fo.opp === "counter"};
   return {isCmd, pool, cmds, plans, comboNote, o};
 }
 async function fastestWin(d, onProgress, opts = {}){
@@ -6110,7 +6125,8 @@ async function fastestWin(d, onProgress, opts = {}){
   const results = [];
   for (let i = 0; i < plans.length; i++) {
     const pl = plans[i];
-    const best = fwSearch(pl, pool, cmds, o);
+    if (opts.stopped && opts.stopped()) break;
+    const best = await fwSearchAsync(pl, pool, cmds, Object.assign({}, o, {stopped: opts.stopped}));
     if (best) results.push({plan: pl, best, turn: best.won.t, how: best.won.how});
     if (onProgress) onProgress(i + 1, plans.length + 4);
     await sleep(0);
@@ -6128,7 +6144,9 @@ async function fastestWin(d, onProgress, opts = {}){
       for (let i = 0; i < plans.length; i++) {
         const left2 = until - Date.now(); if (left2 <= 0) { cutThisTurn = true; break; }
         const oo = Object.assign({}, o, {deep: true, beam: opts.beam || 500, wide: opts.wide || 26, maxT: target, ms: Math.max(700, Math.min(opts.planMs || 8000, left2 / (plans.length - i)))});
-        const b = fwSearch(plans[i], pool, cmds, oo);
+        if (opts.stopped && opts.stopped()) { cutThisTurn = true; break; }
+        oo.stopped = opts.stopped;
+        const b = await fwSearchAsync(plans[i], pool, cmds, oo);
         if (oo._cut) cutThisTurn = true;
         for (const k of ["_depthCut", "_wideCut", "_beamCut"]) if (oo[k]) deep[k] = true;
         if (onProgress) onProgress(i + 1, plans.length, `Looking for a turn-${target} win… ${i + 1}/${plans.length}`);
@@ -6151,7 +6169,8 @@ async function fastestWin(d, onProgress, opts = {}){
     const tries = [["bonusMana", "one more mana each turn"], ["anyColor", "mana of every colour (your colours didn't line up)"], ["allHaste", "haste for every creature (summoning sickness held it back)"], ["bonusCard", "one more card in your opening hand"]];
     let i = 0;
     for (const [k, txt] of tries) {
-      const b = fwSearch(win.plan, pool, cmds, Object.assign({}, o, {[k]: true, maxT: win.turn - 1, ms: 1500, beam: 60}));
+      if (opts.stopped && opts.stopped()) break;
+      const b = await fwSearchAsync(win.plan, pool, cmds, Object.assign({}, o, {[k]: true, maxT: win.turn - 1, ms: isPhone() ? 600 : 1500, beam: 60, stopped: opts.stopped}));
       why.push({k, txt, turn: b ? b.won.t : null});
       if (onProgress) onProgress(plans.length + (++i), plans.length + 4);
       await sleep(0);
@@ -6168,7 +6187,7 @@ async function fwRealistic(d, games, onProgress){
   for (let g = 0; g < games; g++) {
     const lib = names.slice(); for (let i = lib.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [lib[i], lib[j]] = [lib[j], lib[i]]; }
     let best = null, bestS = null;
-    for (const pl of plans4) { const b = fwSearch(pl, pool, cmds, Object.assign({}, o, {lib, beam: 25, wide: 7, ms: 500, maxT: best ? best - 1 : 10})); if (b) { best = b.won.t; bestS = b; } if (best && best <= 2) break; }
+    for (const pl of plans4) { const b = await fwSearchAsync(pl, pool, cmds, Object.assign({}, o, {lib, beam: 25, wide: 7, ms: 500, maxT: best ? best - 1 : 10})); if (b) { best = b.won.t; bestS = b; } if (best && best <= 2) break; }
     turns.push(best);
     if (bestS) for (const x of new Set(bestS.order.map(y => y.name).filter(Boolean))) use[x] = (use[x] || 0) + 1;
     if (onProgress) onProgress(g + 1, games);
@@ -6318,6 +6337,7 @@ function renderFast(){
   let html = `<div class="sim-head"><h3>Fastest possible win</h3><span class="cur-sub">The best case: you get to choose every card you draw. It finds the quickest win and shows the hand and draws that get you there.</span></div>
     <div class="sim-controls"><button class="btn primary" type="button" id="fwRun" ${st && st.busy ? "disabled" : ""}>${st && st.busy ? `Searching… ${st.done || 0}/${st.total || "?"}` : st && st.res ? "Search again" : "Find the fastest win"}</button>
     <label class="inline-field">Opponent <select id="fwOpp">${[["none", "Never interacts"], ["removal", "Removes your best attacker once"], ["counter", "Counters your first 3+ mana spell"]].map(([v, l]) => `<option value="${v}" ${((prefs.fwOpts || {}).opp || "none") === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+    ${st && st.busy ? `<button class="btn" type="button" id="fwStop" title="Stop and keep the best win found so far">■ Stop</button>` : ""}
     ${st && st.res && !st.busy ? `<button class="btn" type="button" id="fwDeep" title="Look again for a faster win, much more thoroughly: up to a minute.">🔎 Search harder</button>` : ""}
     <button class="btn" type="button" id="fwReal" ${st && (st.busy || st.realBusy) ? "disabled" : ""}>${st && st.realBusy ? `Playing games… ${st.realDone || 0}/${st.realTotal || "?"}` : "How fast in real games?"}</button>
     ${st && st.stale && st.res ? `<span class="cur-sub">The deck changed since this search.</span>` : ""}</div>`;
@@ -6331,13 +6351,14 @@ function renderFast(){
   }
   if (st && st.res) {
     const R = st.res, top = R.results[0];
-    if (!top) html += `<p class="cur-sub">No win found within ${R.o.maxT} turns, even with perfect draws. ${R.comboNote}</p>`;
+    if (!top && R.stopped) html += `<p class="cur-sub">Stopped before a win was found. Press <b>Find the fastest win</b> to search again.</p>`;
+    else if (!top) html += `<p class="cur-sub">No win found within ${R.o.maxT} turns, even with perfect draws. ${R.comboNote}</p>`;
     else {
       const ex = fwExplain(top.best, R.o), how = top.plan.kind === "combo" ? `Combo: ${top.plan.label}` : top.how === "commander damage" ? "Commander damage" : top.how === "poison" ? "Poison counters" : "Damage";
       const D = R.deep;
       if (D) {
         const last = D.checked[D.checked.length - 1];
-        html += `<p class="fw-deep ${D.found.length ? "yes" : ""}">${D.found.length ? `🔎 Searching harder found a faster win: <b>turn ${top.turn}</b>. ` : ""}${last ? (last.exhaustive ? `Checked every possible line for a turn-${last.turn} win (every card, ability, land drop and order): none exists. <b>Turn ${top.turn} is the fastest possible.</b>` : last.complete ? `Searched hard for a turn-${last.turn} win (every card, ability and land drop, ${D._beamCut ? "keeping the ${D.beam || 500} most promising positions each turn" : "many lines"}${D._depthCut ? ", up to 40 plays a turn" : ""}): none found. Turn ${top.turn} is the fastest found, though not every possible line could be checked.` : `Checked for a turn-${last.turn} win but ran out of time (${Math.round(D.budget / 1000)} s) before finishing: one might still exist.`) : top.turn <= 1 ? "Turn 1 can't be beaten." : `Ran out of time (${Math.round(D.budget / 1000)} s) before finishing.`}</p>`;
+        html += `<p class="fw-deep ${D.found.length ? "yes" : ""}">${D.found.length ? `🔎 Searching harder found a faster win: <b>turn ${top.turn}</b>. ` : ""}${last ? (last.exhaustive ? `Checked every possible line for a turn-${last.turn} win (every card, ability, land drop and order): none exists. <b>Turn ${top.turn} is the fastest possible.</b>` : last.complete ? `Searched hard for a turn-${last.turn} win (every card, ability and land drop, ${D._beamCut ? "keeping the ${D.beam || 500} most promising positions each turn" : "many lines"}${D._depthCut ? ", up to 40 plays a turn" : ""}): none found. Turn ${top.turn} is the fastest found, though not every possible line could be checked.` : (R.stopped ? `Stopped while checking for a turn-${last.turn} win: one might still exist.` : `Checked for a turn-${last.turn} win but ran out of time (${Math.round(D.budget / 1000)} s) before finishing: one might still exist.`)) : top.turn <= 1 ? "Turn 1 can't be beaten." : `Ran out of time (${Math.round(D.budget / 1000)} s) before finishing.`}</p>`;
       }
       html += `<div class="sim-big"><div><b>Turn ${top.turn}</b><span>fastest possible win</span></div><div class="fw-how"><b>${esc(how)}</b><span>${top.plan.kind === "combo" ? esc((top.plan.produces || []).slice(0, 3).join(" · ")) : `opponent starts at ${R.o.life} life`}</span></div></div>
         <h4 class="fw-h">Best opening hand</h4><div class="fw-row">${ex.hand.map(n => cardImg(n)).join("")}</div>
@@ -6369,6 +6390,7 @@ $("deckFast").addEventListener("click", async e => {
     catch (err) { console.warn(err); toast("Couldn't finish the games."); }
     fwState.realBusy = false; renderFast(); return;
   }
+  if (e.target.closest("#fwStop")) { if (fwState) { fwState.stop = true; const b = $("fwStop"); if (b) { b.disabled = true; b.textContent = "Stopping…"; } } return; }
   const deepRun = !!e.target.closest("#fwDeep");
   if (!e.target.closest("#fwRun") && !deepRun) return;
   const d = prefs.deckView && deckById(prefs.deckView); if (!d) return;
@@ -6378,8 +6400,10 @@ $("deckFast").addEventListener("click", async e => {
   try {
     // the normal search always checks for a faster win too (about 12 s); "Search harder" goes much further (up to a minute)
     const res = await fastestWin(d, (i, n, txt) => { fwState.done = i; fwState.total = n; const b = $("fwRun"); if (b) b.textContent = txt || `Searching… ${i}/${n}`; },
-      deepRun ? {deep: true, budget: 60000, beam: 1500, wide: 40, planMs: 20000} : {deep: true, budget: 12000});
+      Object.assign(deepRun ? {deep: true, budget: isPhone() ? 30000 : 60000, beam: 1500, wide: 40, planMs: 20000} : {deep: true, budget: isPhone() ? 6000 : 12000}, {stopped: () => !!(fwState && fwState.stop)}));
+    if (fwState && fwState.stop) res.stopped = true;
     fwState = {deckId: d.id, res, busy: false, sig: simSig(d), real: fwState && fwState.real};
+    if (res.stopped) toast(res.results.length ? "Stopped. Showing the fastest win found so far." : "Stopped before a win was found.");
   } catch (err) { console.warn(err); fwState = {deckId: d.id, busy: false}; toast("Couldn't finish the search."); }
   renderFast();
 });
@@ -6654,7 +6678,7 @@ async function dcTestSwaps(d, swaps, onProgress){
   const so = Object.assign({bracket: 3, speed: "strong", style: "balanced"}, prefs.simOpts || {}, {games: 3000, noGold: true});
   const play = async (dd, libs2) => {
     const {pool, cmds, plans, o} = await fwPlans(dd); const plans4 = plans.slice(0, 3); const turns = [];
-    for (const lib of libs2) { let best = null; for (const pl of plans4) { const b = fwSearch(pl, pool, cmds, Object.assign({}, o, {lib, beam: 20, wide: 7, ms: 350, maxT: best ? best - 1 : 10})); if (b) best = b.won.t; } turns.push(best == null ? 12 : best); await sleep(0); }
+    for (const lib of libs2) { let best = null; for (const pl of plans4) { const b = await fwSearchAsync(pl, pool, cmds, Object.assign({}, o, {lib, beam: 20, wide: 7, ms: 350, maxT: best ? best - 1 : 10})); if (b) best = b.won.t; } turns.push(best == null ? 12 : best); await sleep(0); }
     const S = seeded(12345, () => simulateDeck(dd, so));
     return {turn: turns.reduce((t, x) => t + x, 0) / turns.length, win: S.wins / S.games};
   };
@@ -7147,7 +7171,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.08.4";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.08.5";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do

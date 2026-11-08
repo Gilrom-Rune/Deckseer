@@ -159,6 +159,12 @@ Plays your deck against a model opponent: a bracket or speed (`BRACKETS`, `SPEED
 
 The fastest-win finder also keeps a delayed-sacrifice copy when the leftover mana pays its cost (`keepCost`).
 
+### The page stays responsive while searching
+
+`fwSearchGen` is a generator: `dfs` yields when `o._yieldAt` has passed. `fwSearch` runs it all at once (tests, small jobs). `fwSearchAsync` runs it in slices of about 20 ms with a `setTimeout` break between them. `fastestWin`, `fwRealistic` and the Upgrades swap tests (`dcTestSwaps`) use the async version, so the page answers taps while they run. On a 4× slowed phone the longest pause is about 70 ms (it was 0.5 s or more per plan, and much longer on big decks).
+
+**■ Stop** (`fwState.stop`, passed as `opts.stopped`) ends the search within a slice and keeps the best win found so far (`res.stopped`). Phones (`isPhone()`) get shorter limits: 2.5 s per plan, a 6 s deep check, and 30 s for Search harder. Test: `tests/responsive.test.js`.
+
 ### Deep check: looking for the fastest win, not just a win
 
 The quick search (`fwSearch` defaults) uses rules of thumb:
