@@ -169,6 +169,9 @@ The user's turn table showed impossible plays. Found and fixed:
 - **Kindred Summons:** today's Oracle wording ("…of the chosen type") is read as well as the old one.
 - **Turn table order:** an activated ability's line comes before the triggers its costs set off.
 
+- **Flamekin Harbinger** ("search … then shuffle and put that card on top"): `tutorTop` keeps the searched type (`ph`). Each trigger shuffles first, so a second trigger (Yarok, Twinflame, an Ashling copy) replaces the first card: **only one card is ever on top**, and the turn table says so. In realistic games (`o.lib`), `n.topCard` is the best fitting card still in the library: it becomes the next draw, or goes to hand when Risen Reef looks at it (via `n.back`). In best-case mode there's still no extra card.
+- **Risen Reef in realistic games** reads the real next card (`o.lib[n.slots]`): a land goes onto the battlefield tapped, anything else to hand. Best-case mode still picks the best top card, by design.
+
 Tests: `tests/interactions.test.js` with real Oracle text in `tests/fixtures/ashling-cards.js`. Add cards from the user's deck there as new interactions come up. Known simplifications left: Cavalier of Thorns' land comes out as a basic of a needed colour ("Wastes" if none), and the other four revealed cards aren't put in the graveyard.
 
 ## Deck check

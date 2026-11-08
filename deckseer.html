@@ -5329,7 +5329,7 @@ function fwRules(f, c){
       if ((m = e.match(/deals damage to any target equal to the number of ([a-z ]+?) you control/))) out.push({t: "opp", countPh: m[1]});
       else if ((m = e.match(/deals (\d+) damage to (?:any target|each opponent|target opponent|target player|any other target)/))) out.push({t: "opp", n: +m[1]});
       if ((m = e.match(/put (?:a|up to one) land cards? from among them onto the battlefield( tapped)?/))) out.push({t: "searchAuto", phrase: "land", to: "bf", tapped: !!m[1], n: 1});
-      if (/search your library for an? [a-z ]+? card[^.]*\b(?:put|and put) (?:that card|it) on top/.test(e)) out.push({t: "tutorTop"});
+      if ((m = e.match(/search your library for an? ([a-z ]+?) card[^.]*\b(?:put|and put) (?:that card|it) on top/))) out.push({t: "tutorTop", ph: m[1]});
       if ((m = e.match(/put a \+1\/\+1 counter on (?:target|each) ([a-z ]+?) you control/))) out.push({t: "counter", kind: "p1p1", on: "pick", n: 1});
       if (/\bcast target (?:instant or sorcery|instant|sorcery) card from (?:a|your) graveyard without paying its mana cost/.test(e)) out.push({t: "castGy"});
       if (/\bchoose (?:one|two|three)\b/.test(e) && (m = e.match(/create an? (\d+)\/(\d+) ([a-z ]+?) creature token/))) { const nm = m[3].split(" ").filter(w => !/^(white|blue|black|red|green|colorless)$/.test(w)).map(w => w[0].toUpperCase() + w.slice(1)).join(" "); out.push({t: "token", n: 1, def: {name: nm, type: "Token Creature — " + nm, power: m[1], toughness: m[2], colors: [], text: ""}}); }
@@ -5344,7 +5344,7 @@ function fwRules(f, c){
       f.trigs.push({conds: ab.conds, acts: keep.filter(a => !extra.some(x => x.t === a.t)).concat(extra), may: ab.may, text: ab.text});
     }
     // "search your library for a card … put that card on top" (Flamekin Harbinger): it goes on top, not into your hand
-    for (const tr of f.trigs) if (/\bon top\b/.test(tr.text.toLowerCase()) && tr.acts.some(a => a.t === "search")) tr.acts = tr.acts.map(a => a.t === "search" ? {t: "tutorTop"} : a);
+    for (const tr of f.trigs) if (/\bon top\b/.test(tr.text.toLowerCase()) && tr.acts.some(a => a.t === "search")) { const ph = (tr.text.toLowerCase().match(/search your library for an? ([a-z ]+?) card/) || [])[1] || ""; tr.acts = tr.acts.map(a => a.t === "search" ? {t: "tutorTop", ph} : a); }
     // "where X is the number of colors among permanents you control" (Vivid)
     for (const tr of f.trigs) if (/where x is the number of colou?rs among permanents you control/i.test(tr.text)) tr.acts = tr.acts.map(a => Object.assign({}, a, {colorsX: true}));
     // the card's own "when this enters, draw / search" is already counted by the main reader
@@ -5409,7 +5409,7 @@ function fwSearch(plan, pool, cmds, o){
   // srcs: mana sources ready each turn (one array of mana each); next: ones that are ready from next turn; mana: what's left this turn.
   // Each mana remembers where it came from: "G#12" from land/rock 12, "G@12" from creature 12 (so it can't attack if spent),
   // "WUBRG~T" is a Treasure (it stays until used), "WUBRG!elemental" can only pay for Elemental spells.
-  const mk = () => ({gy: [], back: [], names: {}, treas: 0, clues: 0, monarch: false, castN: 0, casc: [], later: [], acq: Array.from({length: o.bonusCard ? 8 : 7}, () => ({t: 0, by: "open"})), hasteFx: [], anth: [], equips: [], perms: [], pid: 0, grave: 0, life: o.life, legCols: "", arts: 0, idle: [], doneT: {}, t: 0, srcs: [], next: [], mana: [], slots: o.bonusCard ? 8 : 7, used: 0, cnt: {}, board: [], opp: o.life, poison: 0, cmdDmg: 0, done: [], cmdOut: [], tax: {}, log: [], order: [], won: null, budget: 0, removed: false, countered: false});
+  const mk = () => ({gy: [], back: [], topCard: null, names: {}, treas: 0, clues: 0, monarch: false, castN: 0, casc: [], later: [], acq: Array.from({length: o.bonusCard ? 8 : 7}, () => ({t: 0, by: "open"})), hasteFx: [], anth: [], equips: [], perms: [], pid: 0, grave: 0, life: o.life, legCols: "", arts: 0, idle: [], doneT: {}, t: 0, srcs: [], next: [], mana: [], slots: o.bonusCard ? 8 : 7, used: 0, cnt: {}, board: [], opp: o.life, poison: 0, cmdDmg: 0, done: [], cmdOut: [], tax: {}, log: [], order: [], won: null, budget: 0, removed: false, countered: false});
   const clone = s => Object.assign({}, s, {gy: s.gy.slice(), back: s.back.slice(), casc: s.casc.slice(), later: s.later.slice(), acq: s.acq.slice(), hasteFx: s.hasteFx.slice(), anth: s.anth.slice(), equips: s.equips.map(e => Object.assign({}, e)), perms: s.perms.slice(), idle: s.idle.slice(), doneT: Object.assign({}, s.doneT), srcs: s.srcs.slice(), next: s.next.slice(), mana: s.mana.slice(), cnt: Object.assign({}, s.cnt), board: s.board.map(b => Object.assign({}, b)), done: s.done.slice(), cmdOut: s.cmdOut.slice(), tax: Object.assign({}, s.tax), log: s.log.slice(), order: s.order.slice()});
   const seenN = o.lib ? (() => { const m = new Map(); return (nm, k) => { let a = m.get(nm); if (!a) { a = []; let x = 0; for (const n0 of o.lib) { if (n0 === nm) x++; a.push(x); } m.set(nm, a); } return k <= 0 ? 0 : a[Math.min(k, a.length) - 1]; }; })() : null;
   const left = (s, c, fromLib) => c.cmd ? !s.cmdOut.includes(c.name) : !fromLib && s.back.includes(c.name) ? true : (s.cnt[c.name] || 0) < (seenN && !fromLib ? Math.min(c.qty, seenN(c.name, s.slots)) : c.qty);
@@ -5619,14 +5619,42 @@ function fwSearch(plan, pool, cmds, o){
       }
       case "topif": {   // Risen Reef: the top card — a land goes onto the battlefield tapped, anything else goes to your hand
         const toHand = why => { n.slots++; n.acq.push({t: n.t, by: src.name, log: n._logAt != null ? n._logAt : n.log.length}); return why; };
+        if (n.topCard) { const nm = n.topCard; n.topCard = null; n.topSet = false; n.back.push(nm); return `${nm} (the card you put on top) goes to your hand`; }
         if (n.topSet) { n.topSet = false; return toHand("the card you put on top isn't a land: it goes to your hand"); }
+        if (o.lib) {   // a real library: the actual next card
+          const nm = o.lib[n.slots]; if (!nm) return "";
+          const card = pool.find(c => c.name === nm);
+          if (card && card.land && /land/.test(a.phrase || "") && /bf/.test(a.yes || "")) {
+            n.slots++; n.used++; n.cnt[nm] = (n.cnt[nm] || 0) + 1; n.order.push({name: nm, t: n.t});
+            const lid = arrive(n, card, {src: card.yield}), ls = srcOf(card.units, lid); n.next.push(ls);
+            fire(n, {ev: "etb", card: Object.assign({}, card, {id: lid}), id: lid});
+            return `top card is ${nm}: onto the battlefield tapped`;
+          }
+          return toHand(`top card is ${nm}: it goes to your hand`);
+        }
         // best case: a land while you still want more mana (fewer than 7 lands), otherwise a spell for your hand
         const landsOut = n.perms.filter(p => /\bland\b/i.test(p.type || "")).length;
         if (/land/.test(a.phrase || "") && /bf/.test(a.yes || "") && landsOut < 7) { fwEff(n, {t: "searchAuto", phrase: "land", to: "bf", tapped: /tapped/i.test(a.yes), n: 1}, src, e); return "top card is a land: onto the battlefield tapped"; }
         return toHand("top card isn't a land: it goes to your hand");
       }
       case "search": if (/top/.test((a.to || "") + " " + (a.label || ""))) return fwEff(n, {t: "tutorTop"}, src, e); n.slots++; n.acq.push({t: n.t, by: src.name, log: n._logAt != null ? n._logAt : n.log.length}); return "tutor a card";
-      case "tutorTop": n.topSet = true; return "puts the card you want on top of your library (no extra card: it becomes your next draw)";
+      case "tutorTop": {
+        // "search … then shuffle and put that card on top": the shuffle sends any card put on top earlier back into the library
+        const again = n.topSet || n.topCard;
+        n.topSet = true;
+        if (o.lib) {   // a real library: the best fitting card still in it becomes the next card you get
+          let pick = null, bv = -1;
+          for (const c of pool) {
+            if (c.land || (n.cnt[c.name] || 0) + n.back.filter(x => x === c.name).length >= c.qty || (a.ph && !fwFits(a.ph, c))) continue;
+            const v = (pieces && pieces.has(c.name) ? 1000 : 0) + (c.power || 0) * 2 + (c.trigs ? 6 : 0) + (c.draw || 0) * 4 + (c.cascade ? 8 : 0);
+            if (v > bv) { bv = v; pick = c.name; }
+          }
+          const old = n.topCard; n.topCard = pick;
+          if (!pick) return "finds nothing to put on top";
+          return old ? (old !== pick ? `shuffles ${old} back into the library and puts ${pick} on top (only one card stays on top)` : `shuffles, then puts ${pick} on top again (only one card stays on top)`) : `puts ${pick} on top of your library: your next card`;
+        }
+        return again ? "shuffles the card put on top earlier back in, and puts the one you want on top (still only one card on top)" : "puts the card you want on top of your library (no extra card: it becomes your next draw)";
+      }
       case "dig": if (a.auto) { n.slots++; n.acq.push({t: n.t, by: src.name, log: n._logAt != null ? n._logAt : n.log.length}); return "take a card off the top"; } return "";
       case "discard": { const k = tossCards(n, a.hand ? 99 : amt); return k ? `discard ${k}` : ""; }
       case "sacYou": { const got = n.perms.filter(p => p.id !== src.id && fwFits(a.phrase || "permanent", p)).sort((x, y) => value(x) - value(y)).slice(0, amt); got.forEach(p => sacrifice(n, p, `${src.name}'s trigger`)); return got.length ? `sacrifice ${got.map(p => p.name).join(", ")}` : ""; }
@@ -5708,7 +5736,7 @@ function fwSearch(plan, pool, cmds, o){
     else payReqs(n, c, op.reqs || c.reqs || [], pre);
     if (op.free) { /* off the top of the library */ }
     else if (c.cmd) { n.cmdOut.push(c.name); n.tax[c.name] = (n.tax[c.name] || 0) + 1; }
-    else if (n.back.includes(c.name) && (n.cnt[c.name] || 0) >= c.qty) { n.back.splice(n.back.indexOf(c.name), 1); n.order.push({name: c.name, t: n.t}); }   // the copy you got back from the graveyard
+    else if (n.back.includes(c.name)) { n.back.splice(n.back.indexOf(c.name), 1); n.cnt[c.name] = (n.cnt[c.name] || 0) + 1; n.order.push({name: c.name, t: n.t}); }   // a card you got back from the graveyard, or put on top and drew
     else { n.used++; n.cnt[c.name] = (n.cnt[c.name] || 0) + 1; n.order.push({name: c.name, t: n.t}); }
     const notes = [], tap = spentOf(s, s.mana, after);
     if (op.convoke && op.convoke.length) { const names = []; for (const id of op.convoke) { const b = n.board.find(x => x.id === id); if (b) { b.tapped = true; names.push(b.name); } } if (names.length) pre.push(`convoke: tap ${names.join(", ")}`); }
@@ -5944,7 +5972,8 @@ function fwSearch(plan, pool, cmds, o){
       s.castN = 0;
       fire(s, {ev: "upkeep"});
       for (const p of s.perms) if (p.upkeepCard) { s.slots++; s.acq.push({t, by: p.name, log: s.log.length}); s.log.push({t, kind: "trigger", name: p.name, note: "the top card is the type you chose: it goes to your hand", why: "upkeep"}); }
-      s.topSet = false; if (!(t === 1 && !o.drawFirst)) { s.slots++; s.acq.push({t, by: "draw"}); fire(s, {ev: "draw", nth: 1}); }
+      const top = s.topCard; s.topSet = false; s.topCard = null;
+      if (!(t === 1 && !o.drawFirst)) { if (top) s.back.push(top); else { s.slots++; s.acq.push({t, by: "draw"}); } fire(s, {ev: "draw", nth: 1}); }
       // land drops for the turn (more with Exploration-style cards): ones that make a colour you still need first
       const drops = 1 + s.perms.reduce((x, p) => x + (p.extraLand || 0), 0);
       const starts = [];
@@ -7058,7 +7087,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.08.2";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.08.3";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do

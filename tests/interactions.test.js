@@ -46,6 +46,30 @@ module.exports = async function () {
   const loop = await run(lands.concat([CARDS.greenwarden, CARDS.solRing, CARDS.birds]), [ASHLING]);
   check('evoked Greenwarden: Ashling\'s copy returns the original from the graveyard', !!loop && loop.log.some(l => /returns Greenwarden of Murasa from your graveyard/.test(l.note)), loop && loop.log.filter(l => /Greenwarden/.test(l.name + l.note)).map(l => l.t + ' ' + l.kind + ' ' + l.note));
   check('Greenwarden returns a card that really went to the graveyard', ret.every(l => { const nm = l.note.match(/returns (.+) from your graveyard/)[1]; return gw2.log.some(m => m.name === nm && m.kind === 'cast'); }), ret);
+  // Flamekin Harbinger: "search … then shuffle and put that card on top" — a second trigger shuffles the first card away
+  const harb = await page.evaluate(([C, A]) => {
+    FW_TYPE = 'elemental'; FW_CI = 'WUBRG';
+    const pool = [Object.assign({}, C.avengerLand, {qty: 30}), C.island, C.mountain, C.twinflame, C.harbinger, C.titan, C.avenger, C.wanderer, C.reef, C.solRing].map(c => fwCard(c)), cmds = [fwCard(A, true)];
+    const lib = ['Forest', 'Mountain', 'Island', 'Twinflame Travelers', 'Forest', 'Flamekin Harbinger', 'Risen Reef', 'Sol Ring', 'Forest', 'Forest', 'Island', 'Mountain'].concat(Array(20).fill('Forest')).concat(['Titan of Industry', 'Avenger of Zendikar', 'Maelstrom Wanderer']);
+    const notes = mode => { const b = fwSearch({kind: 'damage', label: 'Damage'}, pool, cmds, Object.assign({life: 40, isCmd: true, maxT: 10, beam: 80, wide: 10, ms: 8000}, mode === 'real' ? {lib} : {})); return b ? b.log.map(l => (l.name || '') + ' :: ' + (l.note || '')) : []; };
+    return {real: notes('real'), best: notes('best')};
+  }, [CARDS, ASHLING]);
+  const realH = harb.real.filter(x => /^Flamekin Harbinger :: .*on top/.test(x));
+  check('realistic games: Harbinger puts one real card on top; any further trigger says it shuffled and only one card stays on top', realH.length >= 1 && /puts .+ on top of your library: your next card/.test(realH[0]) && realH.slice(1).every(x => /shuffles/.test(x) && /only one card stays on top/.test(x) || /your next card/.test(x)), realH);
+  // straight from the effect: two triggers in a row in a real game leave one card on top
+  const twice = await page.evaluate(([C, A]) => {
+    FW_TYPE = 'elemental'; FW_CI = 'WUBRG';
+    const pool = [Object.assign({}, C.avengerLand, {qty: 30}), C.island, C.mountain, C.twinflame, C.harbinger, C.titan, C.avenger, C.wanderer, C.reef, C.solRing].map(c => fwCard(c)), cmds = [fwCard(A, true)];
+    const lib = ['Forest', 'Mountain', 'Island', 'Twinflame Travelers', 'Forest', 'Flamekin Harbinger', 'Forest', 'Sol Ring', 'Forest', 'Forest', 'Island', 'Mountain'].concat(Array(20).fill('Forest')).concat(['Titan of Industry', 'Avenger of Zendikar', 'Maelstrom Wanderer', 'Risen Reef']);
+    const b = fwSearch({kind: 'damage', label: 'Damage'}, pool, cmds, {life: 40, isCmd: true, maxT: 10, beam: 80, wide: 10, ms: 8000, lib});
+    return b ? b.log.filter(l => l.name === 'Flamekin Harbinger' && /on top/.test(l.note || '')).map(l => 'T' + l.t + ' ' + l.note) : [];
+  }, [CARDS, ASHLING]);
+  check('with Twinflame out, Harbinger\'s second trigger shuffles and still leaves only one card on top', twice.length >= 2 && /shuffles/.test(twice[1]) && /only one card stays on top/.test(twice[1]), twice);
+  const bestH = harb.best.filter(x => /^Flamekin Harbinger :: /.test(x));
+  check('fastest win: a second Harbinger trigger never stacks a second chosen card on top', bestH.slice(1).every(x => !/^Flamekin Harbinger :: puts the card you want on top/.test(x) || false) || bestH.length < 2, bestH);
+  const reef = harb.real.filter(x => /^Risen Reef :: .*(top|hand)/.test(x));
+  check('realistic games: Risen Reef looks at the real top card (never "the best one")', reef.every(x => /top card is [A-Z]|the card you put on top|goes to your hand$/.test(x) && !/top card isn't a land/.test(x)), reef);
+
   // the buttons themselves, the way the app runs them, on the fuller deck (Risen Reef, Yarok, Twinflame, two Omnaths…)
   const buttons = await page.evaluate(async d => {
     const out = {};
