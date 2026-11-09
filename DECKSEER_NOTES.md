@@ -346,3 +346,11 @@ Checked with every card whose enter ability creates tokens (848). Cast in Auto m
 - "When X enters and whenever …" gives both conditions. "this … or a/an … enters" counts as self or other.
 - "this Spacecraft/Planet/Siege" reads as the card's own name.
 - `ptAddPrompt` splits "Create a Treasure. Then you may …": the part with no choice resolves on its own, and only the choice waits.
+
+## The Notary Hobbits (2026.11.08.14)
+- **Plural wording**:
+  - "create two tokens that are copies of them" is a copy (`of: "self"`), not a plain token, and "except the tokens aren't legendary" strips Legendary (`nonLegend`).
+  - "if they're not a token" is checked (`trEvalIf`).
+- **Mana per thing you control**: `ptManaUnits` reads "{C} for each Halfling you control", so it's one unit per matching permanent, changelings included.
+- `fwDeckType` skips changelings, so a deck with many changelings gets its real type (Halfling, not Shapeshifter). This affects Roaming Throne, Herald's Horn and other "chosen type" cards.
+- **Still misread by the finder and the 3,000-game test** (not the Playtest): the Hobbits' copies and per-Halfling mana, the untap abilities of Umbral Mantle and Sword of the Paruns, Helix Pinnacle's win, and Roaming Throne's doubling. Their numbers undersell decks built on these.

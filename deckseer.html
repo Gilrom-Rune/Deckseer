@@ -5414,7 +5414,8 @@ function fwIdentity(d){
 let FW_TYPE = "";   // the creature type a "choose a creature type" card would name: the deck's most common one
 function fwDeckType(cards){
   const n = {};
-  for (const c of cards) { const ty = String(c.type || ""); if (!/\bCreature\b/.test(ty)) continue; const sub = (ty.split("—")[1] || "").trim(); for (const s of sub.split(/\s+/).filter(Boolean)) n[s] = (n[s] || 0) + (c.qty || 1); }
+  // changelings are every type, so they don't tip the count (and their printed "Shapeshifter" isn't the deck's type)
+  for (const c of cards) { const ty = String(c.type || ""); if (!/\bCreature\b/.test(ty) || /\bchangeling\b|is every creature type/i.test(c.text || "")) continue; const sub = (ty.split("—")[1] || "").trim(); for (const s of sub.split(/\s+/).filter(Boolean)) n[s] = (n[s] || 0) + (c.qty || 1); }
   return (Object.entries(n).sort((a, b) => b[1] - a[1])[0] || [""])[0].toLowerCase();
 }
 const FW_WIN = /win the game|wins the game|lose the game|loses the game|infinite damage|infinite (?:life ?loss|lifeloss)|infinite combat damage|infinite mill|infinite (?:power|toughness)|infinite (?:drain|lifelink)/i;
@@ -7276,7 +7277,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.08.13";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.09.1";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
@@ -7910,6 +7911,8 @@ function ptCI(){
 }
 // "{g} or {w}", "{c}{c}", "one mana of any color", "three mana of any one color", "{r}{r}{r}" → units
 function ptManaUnits(what, extra = {}){
+  { const fe = String(what || "").toLowerCase().match(/^(.+?) for each ([a-z ,'-]+?)(?: you control| on the battlefield)?$/);
+    if (fe && PT) { const base = ptManaUnits(fe[1], extra), k = PT.bf.filter(c => !c.faceDown && trFits(fe[2], c)).length; return [].concat(...Array(k).fill(0).map(() => base.map(u => u.map(o => Object.assign({}, o))))); } }
   const w = String(what || "").toLowerCase(), words = {one: 1, two: 2, three: 3, four: 4, five: 5, x: 1};
   const any = /commander's color identity/.test(w) ? ptCI() : PT_WUBRG;
   const mk = list => list.map(c => Object.assign({c}, extra));
@@ -9065,7 +9068,7 @@ function trActions(eff, selfName){
     if (/\brole$/.test((m[5] || "").trim())) continue;   // Role tokens: read below
     { const w = trWithClause(e.slice(m.index + m[0].length)); m = Object.assign([...m], {index: m.index}); m[0] += w.raw; m[8] = w.clause || undefined; }
     const n = m[1] === "a number of" ? 1 : trNum(m[1]), words = (m[5] || "").replace(/,| and /g, " ").trim().split(/\s+/).filter(Boolean);
-    if (/\bcopy\b/.test(m[0]) || /\bthat's a copy\b/.test(e.slice(m.index, m.index + 60))) continue;
+    if (/\bcopy\b/.test(m[0]) || /\bthat(?:'s| are) (?:a )?cop(?:y|ies)\b/.test(e.slice(m.index, m.index + 60))) continue;
     const colors = words.filter(w => TR_COLOR_WORD[w]).map(w => TR_COLOR_WORD[w]);
     const TYPES = ["artifact", "enchantment", "land"];
     const typeW = words.filter(w => TYPES.includes(w)).concat((m[6] || "").trim() ? [(m[6] || "").trim()] : []);
@@ -9105,9 +9108,11 @@ function trActions(eff, selfName){
   if ((m = e.match(/\bcreate (?:a|an) ([a-z ]+?) role token attached to (it|cardname|that creature|target creature you control|another target creature you control|up to one target creature you control|target creature|up to one other target creature|target creature an opponent controls)\b/))) {
     a.push({t: "role", role: m[1].trim(), on: m[2], i: m.index, span: m[0], label: `Create a ${cap(m[1].trim())} Role on ${/opponent/.test(m[2]) ? "an opponent's creature" : /^(it|cardname|that creature)$/.test(m[2]) ? "it" : "your best creature"}`});
   }
-  if ((m = e.match(/\bcreate (a|one|two|three|four|five|six|seven|x|\d+) tokens? that(?:'s| are) (?:a )?cop(?:y|ies) of (cardname|it|that creature|that card|target [^.]*)/))) {
+  if ((m = e.match(/\bcreate (a|one|two|three|four|five|six|seven|x|\d+) tokens? that(?:'s| are) (?:a )?cop(?:y|ies) of (cardname|it|them|that creature|that card|target [^.]*)/))) {
+    if (m[2] === "them") m = Object.assign([...m], {index: m.index}), m[2] = "cardname";
     const haste = /\b(?:the|that|those) tokens? (?:gains?|ha(?:s|ve)) haste\b|\bcopy of [^.]*? with haste\b|\bexcept it has haste\b/.test(e);
-    a.push({t: "copy", n: trNum(m[1]), of: m[2] === "cardname" ? "self" : m[2].startsWith("target") ? "target" : "it", haste, i: m.index, label: `Make a token copy${haste ? " with haste" : ""}`});
+    const nonLegend = /\bexcept (?:the tokens? (?:aren't|isn't|are not|is not)|they're not|it's not|it isn't) legendary\b/.test(e);
+    a.push({t: "copy", n: trNum(m[1]), of: m[2] === "cardname" ? "self" : m[2].startsWith("target") ? "target" : "it", haste, nonLegend, i: m.index, label: `Make ${trNum(m[1]) > 1 ? trNum(m[1]) + " token copies" : "a token copy"}${nonLegend ? " (not legendary)" : ""}${haste ? " with haste" : ""}`});
   }
   // "At the beginning of your next end step, sacrifice it (unless you pay…)" / "Exile it at the beginning of the next end step"
   if ((m = e.match(/\bat the beginning of (?:the |your )?next end step, (sacrifice|exile) (?:it|them|that token|those tokens|the token)( unless [^.]*)?/)) || (m = e.match(/\b(sacrifice|exile) (?:it|them|that token|those tokens|the token) at the beginning of (?:the |your )?next end step( unless [^.]*)?/)))
@@ -9508,7 +9513,7 @@ function ptResolve(p){
       if (a.of === "it" && of && p.kind === "etb" && of.card.uid === p.srcUid && /\b(?:exile|return|search|reveal|choose)\b[^.]*\.\s*create [^.]*cop(?:y|ies) of it\b/.test(p.eff || p.text || "")) { ptLog(`${p.srcName}: the token copy is of the card it found — make it by hand (right-click → Token copy).`); of = null; done.push(a.label); continue; }
       // a sacrificed or dead card is copied from where it is now (Ashling, Feldon…)
       const nCopy = a.squad ? ((of && of.card.paid && of.card.paid.squad) || 1) : a.n;
-      if (of) { made = ptCopy(of.card.uid, nCopy * ptTokenMult(of.card)) || []; made.forEach(u => { const t = PT.bf.find(c => c.uid === u); if (!t) return; if (a.haste) t.haste = true; if (a.set) { t.power = String(a.set[0]); t.toughness = String(a.set[1]); } delete t.paid; }); ctx.made = made; }
+      if (of) { made = ptCopy(of.card.uid, nCopy * ptTokenMult(of.card)) || []; made.forEach(u => { const t = PT.bf.find(c => c.uid === u); if (!t) return; if (a.haste) t.haste = true; if (a.nonLegend) t.type = String(t.type || "").replace(/\bLegendary /g, ""); if (a.set) { t.power = String(a.set[0]); t.toughness = String(a.set[1]); } delete t.paid; }); ctx.made = made; }
       else if (a.of === "target" && ptAuto()) { const pick = PT.bf.filter(c => ptIsCreature(c) && !c.token && (!src || c.uid !== src.card.uid)).sort((x, y) => (y.cmc || 0) - (x.cmc || 0))[0]; if (pick) { made = ptCopy(pick.uid, a.n * ptTokenMult(pick)) || []; ctx.made = made; } }
       else if (a.of === "target") ptTarget({kind: "copy", n: a.n, label: "Click the permanent to copy"});
       done.push(a.label);
@@ -10378,7 +10383,7 @@ function trEvalIf(cond, ctx){
   if (/^(?:it|this spell|cardname) was(?:n't| not) kicked/.test(c)) return !(src && src.kicked);
   if (/^(?:its|the|this spell's|cardname's) (offspring|gift|bargain|squad|spectacle|surge|prowl|freerunning) cost was paid|^(?:it|this spell) was bargained|^the gift was promised/.test(c)) return !!(src && (src.paid || {})[(c.match(/offspring|gift|bargain|squad|spectacle|surge|prowl|freerunning/) || [])[0]]);
   if (/^(?:it|cardname) (?:was cast|entered) from your hand/.test(c)) return !!(src && src.fromHand);
-  if (/^(?:it|cardname|this creature|this permanent) (?:isn't|is not|wasn't|was not) a token/.test(c)) return !(src && src.token);
+  if (/^(?:it|cardname|this creature|this permanent|they) (?:isn't|is not|wasn't|was not|aren't|are not) (?:a )?tokens?/.test(c) || /^(?:they're|it's) not (?:a )?tokens?/.test(c)) return !(src && src.token);
   if (/^(?:it|cardname|this creature|this permanent) (?:is|was) a token/.test(c)) return !!(src && src.token);
   if (/^you cast it|^it was cast|^cardname was cast/.test(c)) return !!(src && src.wasCast);
   if (/^you didn't cast it|^it wasn't cast/.test(c)) return !(src && src.wasCast);

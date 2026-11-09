@@ -396,6 +396,21 @@ module.exports = async function () {
   check('"Create a Treasure. Then you may discard…": the Treasure comes at once, the choice waits', toks.treasure === 1 && toks.waiting, toks);
   check('named Equipment tokens (Cragflame) are made', /Legendary Artifact — Equipment/.test(toks.cragflame), toks);
 
+  // ---- The Notary Hobbits: plural wording, copies that aren't legendary, mana for each Halfling ----
+  await fresh(5);
+  const hob = await page.evaluate(() => {
+    prefs.ptAutoPick = false; prefs.ptAutoMana = false;
+    const mk = (o) => { const c = ptMakeCard(Object.assign({colors: ['G'], counters: {}}, o)); [c.x, c.y] = ptPlace(c); c.since = 1; PT.bf.push(c); return c; };
+    mk({name: 'Woodland Changeling', type: 'Creature — Shapeshifter', text: 'Changeling (This card is every creature type.)', power: '2', toughness: '2'});
+    const h = ptMakeCard({name: 'The Notary Hobbits', type: 'Legendary Creature — Halfling Advisor', cost: '{3}{G}{G}', text: "When The Notary Hobbits enter, if they're not a token, create two tokens that are copies of them, except the tokens aren't legendary.\n{T}: Add {C} for each Halfling you control.", colors: ['G'], power: '1', toughness: '1'});
+    PT.hand.push(h); ptCastPaid(h.uid);
+    const hobs = PT.bf.filter(c => c.name === 'The Notary Hobbits'); hobs.forEach(c => { c.since = 1; });
+    const legends = hobs.filter(c => /Legendary/.test(c.type)).length;
+    return {n: hobs.length, legends, mana: ptManaSource(hobs[1]).units.length, waiting: PT.trig.length};
+  });
+  check('The Notary Hobbits make two copies of themselves that aren\'t legendary', hob.n === 3 && hob.legends === 1 && hob.waiting === 0, hob);
+  check('"{T}: Add {C} for each Halfling you control" counts Halflings and changelings (3 Hobbits + 1 changeling = 4)', hob.mana === 4, hob);
+
   check('no page errors', page.errors.length === 0, page.errors);
   await browser.close();
 };
