@@ -347,7 +347,7 @@ Checked with every card whose enter ability creates tokens (848). Cast in Auto m
 - "this Spacecraft/Planet/Siege" reads as the card's own name.
 - `ptAddPrompt` splits "Create a Treasure. Then you may …": the part with no choice resolves on its own, and only the choice waits.
 
-## The Notary Hobbits (2026.11.08.14)
+## The Notary Hobbits (2026.11.09.1)
 - **Plural wording**:
   - "create two tokens that are copies of them" is a copy (`of: "self"`), not a plain token, and "except the tokens aren't legendary" strips Legendary (`nonLegend`).
   - "if they're not a token" is checked (`trEvalIf`).
