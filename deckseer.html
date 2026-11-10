@@ -1338,6 +1338,7 @@ label.btn{display:inline-flex;align-items:center;justify-content:center}
         <select id="fList" aria-label="List"></select>
         <select id="fRarity" aria-label="Rarity"><option value="">All rarities</option><option value="mythic">Mythic</option><option value="rare">Rare</option><option value="uncommon">Uncommon</option><option value="common">Common</option></select>
         <select id="fColor" aria-label="Color"><option value="">All colors</option><option value="W">White</option><option value="U">Blue</option><option value="B">Black</option><option value="R">Red</option><option value="G">Green</option><option value="M">Multicolor</option><option value="C">Colorless</option></select>
+        <select id="fType" aria-label="Card type"><option value="">All card types</option><option value="land">Lands</option><option value="basic">Basic lands</option><option value="nonbasic">Nonbasic lands</option><option value="nonland">Everything but lands</option><option value="creature">Creatures</option><option value="instant">Instants</option><option value="sorcery">Sorceries</option><option value="artifact">Artifacts</option><option value="enchantment">Enchantments</option><option value="planeswalker">Planeswalkers</option><option value="battle">Battles</option></select>
         <select id="sort" aria-label="Sort">
           <option value="recent">Recently added</option>
           <option value="name">Name</option>
@@ -1543,7 +1544,7 @@ const store = {
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } }
 };
 const prefs = Object.assign({auto:true, add:true, foil:false, set:"", sort:"recent", cam:"", cur:"usd", cond:"NM", sound:true, alertAt:5, ign1:false,
-  list:"Collection", lists:["Collection"], view:"session", fList:"", fRarity:"", fColor:""}, store.get("bsw-prefs", {}));
+  list:"Collection", lists:["Collection"], view:"session", fList:"", fRarity:"", fColor:"", fType:""}, store.get("bsw-prefs", {}));
 const savePrefs = () => store.set("bsw-prefs", prefs);
 const coll = new Map();
 const saveColl = () => { if (!store.set("bsw-coll", [...coll])) toast("Couldn't save to this browser. Export your collection to keep it."); };
@@ -3629,10 +3630,21 @@ $("newSess").onclick = () => {
 /* ----- collection view ----- */
 const selected = new Set();
 let flashId = null, confirmClear = false;
+// card type filter: a double-faced card counts as a land if either face is one (Mosswood Dreadknight's back isn't, Emeria's Call's is)
+const BASIC_NAMES = /^(?:Snow-Covered )?(?:Plains|Island|Swamp|Mountain|Forest|Wastes)$/;
+const typeOk = (c, f) => {
+  if (!f) return true;
+  const t = c.type || "", land = /\bLand\b/.test(t) || (!t && BASIC_NAMES.test(c.name)), basic = /\bBasic\b/.test(t) || (!t && BASIC_NAMES.test(c.name));
+  if (f === "land") return land;
+  if (f === "basic") return land && basic;
+  if (f === "nonbasic") return land && !basic;
+  if (f === "nonland") return !land;
+  return new RegExp("\\b" + f + "\\b", "i").test(t);
+};
 const colorKey = e => !e.colors ? "" : e.colors.length === 0 ? "C" : e.colors.length > 1 ? "M" : e.colors[0];
 function filteredRows(){
   const q = $("q").value.trim().toLowerCase();
-  return [...coll].filter(([, c]) => (!prefs.fList || c.list === prefs.fList) && (!prefs.fRarity || c.rarity === prefs.fRarity) && (!prefs.fColor || colorKey(c) === prefs.fColor)
+  return [...coll].filter(([, c]) => (!prefs.fList || c.list === prefs.fList) && (!prefs.fRarity || c.rarity === prefs.fRarity) && (!prefs.fColor || colorKey(c) === prefs.fColor) && typeOk(c, prefs.fType)
     && (!q || c.name.toLowerCase().includes(q) || c.set.toLowerCase() === q || (c.setName || "").toLowerCase().includes(q) || (c.type || "").toLowerCase().includes(q)));
 }
 function sparkline(){
@@ -3814,6 +3826,7 @@ $("newList").addEventListener("keydown", e => {
 $("fList").onchange = e => { prefs.fList = e.target.value; savePrefs(); renderColl(); renderExpScope(); };
 $("fRarity").value = prefs.fRarity; $("fRarity").onchange = e => { prefs.fRarity = e.target.value; savePrefs(); renderColl(); renderExpScope(); };
 $("fColor").value = prefs.fColor; $("fColor").onchange = e => { prefs.fColor = e.target.value; savePrefs(); renderColl(); renderExpScope(); };
+$("fType").value = prefs.fType || ""; $("fType").onchange = e => { prefs.fType = e.target.value; savePrefs(); renderColl(); renderExpScope(); };
 $("q").oninput = () => { renderColl(); renderExpScope(); };
 $("sort").value = prefs.sort; $("sort").onchange = e => { prefs.sort = e.target.value; savePrefs(); renderColl(); };
 function setView(v){
@@ -7572,7 +7585,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.10.3";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.10.4";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do

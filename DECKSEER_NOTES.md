@@ -399,3 +399,9 @@ The count of abilities the Playtest understands but the finder dropped went from
 
 ## Add all, even owned (2026.11.10.3)
 - The "add all" choice is labelled "Add all N cards, even ones I already own". When every card is owned, the button reads "✓ In your collection · add all?" so it is still reachable.
+
+## Collection type filter (2026.11.10.4)
+- A new card type filter in the collection (`#fType`, `prefs.fType`, `typeOk`). Options: lands, basic, nonbasic, everything but lands, creatures, instants, sorceries, artifacts, enchantments, planeswalkers and battles.
+- A double-faced card is a land if either face is one.
+- Old entries with no type: basic land names still count as lands.
+- Exports follow the filter, like the other filters. Tests: `tests/colltype.test.js`.
