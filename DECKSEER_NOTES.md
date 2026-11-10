@@ -388,3 +388,11 @@ The count of abilities the Playtest understands but the finder dropped went from
 - **"If you control (another / N or more) X, …"**: checked against your permanents (`tr.ctl`).
 - **Biggest groups still dropped**: other "if" conditions (kicked, attacked this turn, a creature died this turn…), costs that remove counters or tap creatures, and choices.
 - Payment: a source that makes more mana than the generic part needs (Sol Ring for {1}{R}) is tapped last.
+
+## Rename decks, add a deck to the collection (2026.11.10.2)
+- **Rename**: a "✎ Rename" button next to the deck name focuses the name box, which now sizes to its text. Enter saves, Escape cancels, and a toast offers Undo.
+- **＋ Add to collection** on every deck:
+  - `deckCollGap(d)` compares the deck with the collection by name, across every list and printing. The badge shows how many copies are missing.
+  - The panel offers "Add the N missing" or "Add all anyway" (`deckToColl(d, all)`), using the deck's own printings, the current list (not "Decks") and the default condition. Undo is available.
+  - `offerDeckColl` offers it after importing a deck list, and when you stop scanning into a deck with "Also add scanned cards to my collection" off.
+- Tests: `tests/deckcoll.test.js`.
