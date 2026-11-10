@@ -4103,14 +4103,14 @@ function renderDeck(){
     <span class="curve" title="Mana curve (spells)">${curve.map((n, i) => `<span class="bar" style="--h:${(n / peak * 100).toFixed(0)}%" title="${i === 7 ? "7+" : i}: ${n}"><i></i><small>${i === 7 ? "7+" : i}</small></span>`).join("")}</span>
     ${nIssues ? `<span class="warnc">⚠ ${nIssues} issue${nIssues === 1 ? "" : "s"}</span>` : (total ? `<span class="okc">✓ No rule problems</span>` : "")}
     <span class="sp"></span>
-    ${(g => `<button class="btn ghost" type="button" id="deckColl" title="${g.nMissing ? `${g.nMissing} of its cards aren't in your collection` : "Every card is in your collection"}">${g.nMissing ? `＋ Add to collection<span class="coll-n">${g.nMissing}</span>` : "✓ In your collection"}</button>`)(deckCollGap(d))}
+    ${(g => `<button class="btn ghost" type="button" id="deckColl" title="${g.nMissing ? `${g.nMissing} of its cards aren't in your collection` : "Every card is in your collection. Click to add all of them anyway"}">${g.nMissing ? `＋ Add to collection<span class="coll-n">${g.nMissing}</span>` : "✓ In your collection · add all?"}</button>`)(deckCollGap(d))}
     ${deckConfirmDel ? `<button class="btn danger-btn" type="button" id="deckDelYes">Delete “${esc(d.name)}”</button><button class="btn ghost" type="button" id="deckDelNo">Keep it</button>` : `<button class="btn ghost" type="button" id="deckDel">Delete deck</button>`}
   </div>`;
   if (deckCollOpen) {
     const g = deckCollGap(d), list = prefs.list && prefs.list !== "Decks" ? prefs.list : "Collection";
     html += `<div class="deck-coll" id="deckCollBox"><p>${g.nMissing ? `<b>${g.nMissing}</b> of this deck's ${g.nAll} cards aren't in your collection: ${esc(g.missing.slice(0, 12).map(m => (m.qty > 1 ? m.qty + "× " : "") + m.name).join(", "))}${g.missing.length > 12 ? "…" : ""}` : `Every card in this deck is already in your collection.`}</p>
       <p class="cur-sub">They go into <b>${esc(list)}</b>, condition ${esc(prefs.cond || "NM")}. Cards are matched by name, so copies you already own aren't added twice.</p>
-      <div class="row">${g.nMissing ? `<button class="btn primary" type="button" id="deckCollMissing">Add the ${g.nMissing} missing</button>` : ""}<button class="btn" type="button" id="deckCollAll">Add all ${g.nAll} cards anyway</button><button class="btn ghost" type="button" id="deckCollNo">Cancel</button></div></div>`;
+      <div class="row">${g.nMissing ? `<button class="btn primary" type="button" id="deckCollMissing">Add the ${g.nMissing} missing</button>` : ""}<button class="btn" type="button" id="deckCollAll" title="For a deck with its own copies of every card">Add all ${g.nAll} cards, even ones I already own</button><button class="btn ghost" type="button" id="deckCollNo">Cancel</button></div></div>`;
   }
   if (d.format !== "commander" && scanning) html += `<div class="board-pick">Scanning into <label class="chk"><input type="radio" name="deckBoard" value="main" ${prefs.deckBoard !== "side" ? "checked" : ""}> Main deck</label><label class="chk"><input type="radio" name="deckBoard" value="side" ${prefs.deckBoard === "side" ? "checked" : ""}> Sideboard</label></div>`;
   if (d.format === "commander" && !d.commanders.length) {
@@ -7572,7 +7572,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.10.2";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.10.3";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
@@ -12250,7 +12250,7 @@ const GUIDE = [
   {t: "Building decks", steps: [
     {h: "Make a deck", b: "On <b>Deck builder</b> click <b>New deck</b>, name it and pick the format, or <b>Import a deck list</b> pasted from Moxfield, Archidekt or anywhere. For Commander, add your commander first.", go: {page: "builder", el: "deckNewBtn"}},
     {h: "Add cards", b: "<b>Scan cards into this deck</b> uses the webcam, and can add them to your collection too. Or use <b>+ Add a card</b> and <b>Replace</b> in the Cards tab, or send cards here from Card search.", go: {page: "builder", dtab: "cards", el: "deckScan", needDeck: true}},
-    {h: "Rename a deck, or put it in your collection", b: "Click the deck's name (or <b>✎ Rename</b>) to change it at any time. <b>＋ Add to collection</b> shows how many of the deck's cards aren't in your collection and adds them, for imported decks or ones scanned without <b>Also add scanned cards to my collection</b>. Cards you already own aren't added twice, unless you choose <b>Add all anyway</b>.", go: {page: "builder", dtab: "cards", el: "deckColl", needDeck: true}},
+    {h: "Rename a deck, or put it in your collection", b: "Click the deck's name (or <b>✎ Rename</b>) to change it at any time. <b>＋ Add to collection</b> shows how many of the deck's cards aren't in your collection and adds them, for imported decks or ones scanned without <b>Also add scanned cards to my collection</b>. Cards you already own aren't added twice, unless you choose <b>Add all, even ones I already own</b> (for a deck with its own copies).", go: {page: "builder", dtab: "cards", el: "deckColl", needDeck: true}},
     {h: "Deck check", b: "Four checks: <b>Mana base</b> (your odds of having the right colours), <b>Bracket</b> (Commander power level and Game Changers), <b>Price</b>, and <b>Upgrades</b>, which suggests cuts and better cards and can test each swap over thousands of games.", go: {page: "builder", dtab: "check", el: "deckCheck", needDeck: true}},
     {h: "Combos and export", b: "<b>Combos</b> lists every combo in the deck and the ones you're one or two cards away from. <b>Export</b> sends the deck to Moxfield, Archidekt and others.", go: {page: "builder", dtab: "combos", el: "deckCombos", needDeck: true}}
   ]},

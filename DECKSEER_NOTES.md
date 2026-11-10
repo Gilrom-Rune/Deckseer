@@ -396,3 +396,6 @@ The count of abilities the Playtest understands but the finder dropped went from
   - The panel offers "Add the N missing" or "Add all anyway" (`deckToColl(d, all)`), using the deck's own printings, the current list (not "Decks") and the default condition. Undo is available.
   - `offerDeckColl` offers it after importing a deck list, and when you stop scanning into a deck with "Also add scanned cards to my collection" off.
 - Tests: `tests/deckcoll.test.js`.
+
+## Add all, even owned (2026.11.10.3)
+- The "add all" choice is labelled "Add all N cards, even ones I already own". When every card is owned, the button reads "✓ In your collection · add all?" so it is still reachable.
