@@ -208,6 +208,13 @@ tr.flash td{animation:fl 1.6s ease-out}
 .repl-list button:hover,.repl-list button[aria-selected="true"]{background:color-mix(in srgb,var(--accent) 12%,transparent)}
 .repl-lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
 .repl-msg{min-height:1.2em;font-size:.85rem;color:var(--warn)}
+.repl-msg.ok{color:var(--ok,#2e7d32)}
+.repl-opts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.repl-opts input[type=number]{width:4.5em;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:7px}
+.repl-opts select{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:7px}
+.repl-tabs{display:flex;gap:4px}
+.repl-tabs button[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+#replPaste{min-height:160px;font:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px;resize:vertical}
 .view-dlg{border:0;padding:0;background:transparent;color:var(--ink);max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);overflow:visible}
 .view-dlg::backdrop{background:rgba(5,8,12,.75)}
 .vw{position:relative;display:flex;gap:20px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;max-height:calc(100vh - 24px);box-sizing:border-box}
@@ -1427,7 +1434,7 @@ label.btn{display:inline-flex;align-items:center;justify-content:center}
         </div>
         <label class="inline-field" id="tileSizeWrap">Card size <input type="range" id="tileSize" min="140" max="340" step="10" aria-label="Card picture size"></label>
         <label class="inline-field">Group by <select id="deckGroup"><option value="type">Card type</option><option value="mv">Mana value</option><option value="color">Color</option><option value="none">Nothing (A to Z)</option></select></label>
-        <button class="btn" type="button" id="deckAddCard">+ Add a card</button>
+        <button class="btn" type="button" id="deckAddCard">+ Add cards</button>
         <input type="search" id="deckFind" placeholder="Find a card in this deck" aria-label="Find a card in this deck">
         <span class="cur-sub">Click a card to change its printing or foil.</span>
       </div>
@@ -3925,7 +3932,8 @@ function offerDeckColl(d, msg){
 /* ----- replace a card in a deck (or add one) by typing its name ----- */
 let repl = null;
 function openReplace(o){
-  repl = Object.assign({q: "", busy: false, msg: "", sel: 0}, o);
+  repl = Object.assign({q: "", busy: false, msg: "", ok: false, sel: 0, qty: 1, mode: "one", paste: ""}, o);
+  if (repl.add) { const d = deckById(repl.deckId); repl.board = repl.board || (d && needsCommander(d) ? "commander" : d && d.format !== "commander" && prefs.deckBoard === "side" ? "side" : "main"); }
   renderReplace();
   const dlg = $("replDlg"); if (!dlg.open) dlg.showModal();
   setTimeout(() => { const i = $("replInput"); if (i) i.focus(); }, 30);
@@ -3944,12 +3952,19 @@ function renderReplace(){
   const cur = replCard(), O = replOptions();
   repl.opts = O.names; if (repl.sel >= O.names.length) repl.sel = 0;
   dlg.innerHTML = `<form method="dialog" class="repl" onsubmit="return false">
-    <div class="repl-head"><h3 id="replTitle">${cur ? `Replace <b>${esc(cur.name)}</b>` : `Add a card to ${esc(d.name)}`}</h3><button type="button" class="vw-x" data-rp="close" aria-label="Close">✕</button></div>
+    <div class="repl-head"><h3 id="replTitle">${cur ? `Replace <b>${esc(cur.name)}</b>` : `Add cards to ${esc(d.name)}`}</h3><button type="button" class="vw-x" data-rp="close" aria-label="Close">✕</button></div>
     ${cur && cur.qty > 1 ? `<p class="cur-sub">You have ${cur.qty} copies. One is replaced.</p>` : ""}
+    ${repl.add ? `<div class="repl-tabs"><button class="btn sm" type="button" data-rp="one" aria-pressed="${repl.mode !== "paste"}">Search by name</button><button class="btn sm" type="button" data-rp="pastemode" aria-pressed="${repl.mode === "paste"}">Paste a list</button></div>
+    <div class="repl-opts">${repl.mode !== "paste" ? `<label>How many <input type="number" id="replQty" min="1" max="99" value="${repl.qty}"></label>` : ""}
+      <label>Into <select id="replBoard"><option value="main" ${repl.board === "main" ? "selected" : ""}>Main deck</option>${d.format !== "commander" ? `<option value="side" ${repl.board === "side" ? "selected" : ""}>Sideboard</option>` : ""}${d.format === "commander" && d.commanders.length < 2 && repl.mode !== "paste" ? `<option value="commander" ${repl.board === "commander" ? "selected" : ""}>Commander</option>` : ""}</select></label></div>` : ""}
+    ${repl.add && repl.mode === "paste" ? `<textarea id="replPaste" placeholder="One card per line, like:&#10;1 Sol Ring&#10;4 Lightning Bolt&#10;10 Forest" aria-label="Cards to add" ${repl.busy ? "disabled" : ""}>${esc(repl.paste)}</textarea>
+    <button class="btn primary" type="button" data-rp="paste" ${repl.busy ? "disabled" : ""}>Add these cards</button>
+    <div class="repl-msg${repl.ok ? " ok" : ""}" role="status">${esc(repl.msg || "")}</div>
+  </form>` : `
     <input type="search" id="replInput" autocomplete="off" placeholder="Type a card name" value="${esc(repl.q)}" aria-label="New card name" ${repl.busy ? "disabled" : ""}>
     ${O.names.length ? `<div class="repl-lbl cur-sub">${O.ideas ? "Ideas from Deck check" : "Matches"}</div><ul class="repl-list" role="listbox">${O.names.map((n, i) => `<li><button type="button" role="option" aria-selected="${i === repl.sel}" data-rpick="${esc(n)}">${esc(n)}${O.owned.has(n) ? ' <span class="dc-src own">In your collection</span>' : ""}</button></li>`).join("")}</ul>` : repl.q.trim().length >= 2 && ready ? `<p class="cur-sub">No card names match.</p>` : !ready ? `<p class="cur-sub">The card list is still loading. You can type the full name and press Enter.</p>` : ""}
-    <div class="repl-msg" role="status">${repl.busy ? "Getting the card…" : esc(repl.msg || "")}</div>
-  </form>`;
+    <div class="repl-msg${repl.ok ? " ok" : ""}" role="status">${repl.busy ? "Getting the card…" : esc(repl.msg || "")}</div>
+  </form>`}`;
   const inp = $("replInput"); if (inp && document.activeElement !== inp && !repl.busy) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
 }
 async function replaceWith(name){
@@ -3979,14 +3994,62 @@ async function replaceWith(name){
     }
     toast(`Replaced ${cur.name} with ${p.name}`, "Undo", restore);
   } else {
-    const board = d.format !== "commander" && prefs.deckBoard === "side" ? "side" : "main";
-    const ex = d.cards.find(c => c.sid === p.id && c.board === board && !c.foil);
-    if (ex) ex.qty += 1; else d.cards.push(deckCardFrom(p, false, 1, board));
-    toast(`Added ${p.name}`, "Undo", restore);
+    const qty = Math.max(1, Math.min(99, Math.floor(+repl.qty || 1)));
+    let board = repl.board || "main", note = "";
+    if (board === "commander") {
+      const nc = deckCardFrom(p, false, 1, "commander");
+      if (!canCommand(nc) && !/Background/.test(nc.type)) { repl.msg = `${p.name} can't be a commander. Choose "Main deck" to add it to the deck.`; repl.ok = false; return renderReplace(); }
+      if (d.commanders.length >= 2) board = "main";
+      else { d.commanders.push(nc); note = " as your commander"; }
+    }
+    const n = board === "commander" ? qty - 1 : qty;
+    if (n > 0) { const b2 = board === "commander" ? "main" : board; const ex = d.cards.find(c => c.sid === p.id && c.board === b2 && !c.foil); if (ex) ex.qty += n; else d.cards.push(deckCardFrom(p, false, n, b2)); }
+    const what = `${qty > 1 ? qty + "× " : ""}${p.name}${note || (board === "side" ? " to the sideboard" : "")}`;
+    toast(`Added ${what}`, "Undo", restore);
+    // stay open for the next card
+    d.updated = Date.now(); saveDecks(); renderDeck(); renderCurrent();
+    repl.q = ""; repl.sel = 0; repl.qty = 1; repl.msg = `Added ${what}. Type the next card, or close this window.`; repl.ok = true;
+    if (board === "commander" || !needsCommander(d)) repl.board = repl.board === "commander" ? "main" : repl.board;
+    return renderReplace();
   }
   d.updated = Date.now(); saveDecks(); $("replDlg").close(); renderDeck(); renderCurrent();
 }
-$("replDlg").addEventListener("input", e => { if (e.target.id !== "replInput") return; repl.q = e.target.value; repl.sel = 0; repl.msg = ""; renderReplace(); });
+$("replDlg").addEventListener("input", e => {
+  if (e.target.id === "replQty") { repl.qty = e.target.value; return; }
+  if (e.target.id === "replPaste") { repl.paste = e.target.value; return; }
+  if (e.target.id !== "replInput") return; repl.q = e.target.value; repl.sel = 0; repl.msg = ""; repl.ok = false; renderReplace();
+});
+$("replDlg").addEventListener("change", e => { if (e.target.id === "replBoard") repl.board = e.target.value; });
+// "Paste a list": the same reader as Import a deck list, added to this deck
+async function replAddPasted(){
+  const d = deckById(repl.deckId); if (!d || repl.busy) return;
+  const {cards, skipped} = parseDeckList(repl.paste || "");
+  if (!cards.length) { repl.msg = "No cards found. Write one card per line, like “1 Sol Ring”."; repl.ok = false; return renderReplace(); }
+  repl.busy = true; repl.msg = "Looking up the cards…"; repl.ok = false; renderReplace();
+  try {
+    const {found, missing, key} = await lookupCards(cards, (a, b) => { repl.msg = `Looking up the cards… ${a}/${b}`; renderReplace(); });
+    const snapshot = JSON.stringify(d), restore = () => { Object.assign(d, JSON.parse(snapshot)); saveDecks(); renderDeck(); };
+    let got = 0;
+    for (const e of cards) {
+      const p = found.get(key(e)); if (!p) continue;
+      let board = repl.board === "side" && d.format !== "commander" ? "side" : "main";
+      if (e.board === "side" && d.format !== "commander") board = "side";
+      const foil = e.foil && (p.finishes.includes("foil") || p.finishes.includes("etched")) || !p.finishes.includes("nonfoil");
+      if (e.board === "commander" && d.format === "commander" && d.commanders.length < 2 && !d.commanders.some(c => c.name === p.name)) { d.commanders.push(deckCardFrom(p, foil, 1, "commander")); got++; if (e.qty > 1) { d.cards.push(deckCardFrom(p, foil, e.qty - 1, "main")); got += e.qty - 1; } continue; }
+      const ex = d.cards.find(c => c.sid === p.id && c.board === board && c.foil === foil);
+      if (ex) ex.qty += e.qty; else d.cards.push(deckCardFrom(p, foil, e.qty, board));
+      got += e.qty;
+    }
+    d.updated = Date.now(); saveDecks(); renderDeck(); renderCurrent();
+    const notes = [`Added ${got} card${got === 1 ? "" : "s"}.`];
+    if (missing.length) notes.push(`Couldn't find: ${missing.slice(0, 8).map(e => e.name).join(", ")}${missing.length > 8 ? "…" : ""}.`);
+    if (skipped.length) notes.push(`Skipped ${skipped.length} line${skipped.length > 1 ? "s" : ""} that weren't cards.`);
+    repl.msg = notes.join(" "); repl.ok = !missing.length; repl.paste = missing.map(e => `${e.qty} ${e.name}`).join("\n");
+    if (got) toast(`Added ${got} card${got === 1 ? "" : "s"} to ${d.name}`, "Undo", restore);
+  } catch (err) { console.warn(err); repl.msg = "Couldn't reach Scryfall to look the cards up. Check your internet connection and try again."; repl.ok = false; }
+  repl.busy = false; renderReplace();
+  const t = $("replPaste"); if (t) t.focus();
+}
 $("replDlg").addEventListener("keydown", e => {
   if (e.target.id !== "replInput") return;
   if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); const n = (repl.opts || []).length; if (n) { repl.sel = (repl.sel + (e.key === "ArrowDown" ? 1 : n - 1)) % n; renderReplace(); } }
@@ -3995,6 +4058,9 @@ $("replDlg").addEventListener("keydown", e => {
 $("replDlg").addEventListener("click", e => {
   if (e.target === $("replDlg")) return $("replDlg").close();
   if (e.target.closest('[data-rp="close"]')) return $("replDlg").close();
+  if (e.target.closest('[data-rp="one"]')) { repl.mode = "one"; repl.msg = ""; renderReplace(); const i = $("replInput"); if (i) i.focus(); return; }
+  if (e.target.closest('[data-rp="pastemode"]')) { repl.mode = "paste"; repl.msg = ""; if (repl.board === "commander") repl.board = "main"; renderReplace(); const t = $("replPaste"); if (t) t.focus(); return; }
+  if (e.target.closest('[data-rp="paste"]')) return replAddPasted();
   const b = e.target.closest("[data-rpick]"); if (b) replaceWith(b.dataset.rpick);
 });
 function deckCardFrom(p, foil, qty, board){
@@ -4108,6 +4174,7 @@ function renderDeck(){
     <span class="sp"></span>
     <button class="btn" type="button" id="deckPlay" title="Shuffle up and play this deck on a virtual table">▶ Playtest</button>
     ${scanning ? `<span class="scan-badge">● Scanning into this deck</span><button class="btn" type="button" id="deckScan">Go to scanner</button><button class="btn" type="button" id="deckStop">Stop</button>` : `<button class="btn primary" type="button" id="deckScan">Scan cards into this deck</button>`}
+    <button class="btn" type="button" id="deckAddHead" title="Add cards by typing their names or pasting a list">＋ Add cards</button>
   </div>
   <div class="deck-stats">
     <span class="${countOk ? "" : "warnc"}"><b>${total}</b>${d.format === "casual" ? " cards" : " / " + goal}${d.format !== "commander" && side ? ` · sideboard <b>${side}</b>/15` : ""}</span>
@@ -4127,7 +4194,7 @@ function renderDeck(){
   }
   if (d.format !== "commander" && scanning) html += `<div class="board-pick">Scanning into <label class="chk"><input type="radio" name="deckBoard" value="main" ${prefs.deckBoard !== "side" ? "checked" : ""}> Main deck</label><label class="chk"><input type="radio" name="deckBoard" value="side" ${prefs.deckBoard === "side" ? "checked" : ""}> Sideboard</label></div>`;
   if (d.format === "commander" && !d.commanders.length) {
-    html += `<div class="step-banner"><b>Step 1 of 2: your commander.</b> ${scanning ? "Hold your commander up to the camera." : "Click “Scan into this deck”, then hold your commander up to the camera."} Can't scan it? Type its name in the box under the camera and press Enter twice.</div>`;
+    html += `<div class="step-banner"><b>Step 1 of 2: your commander.</b> ${scanning ? "Hold your commander up to the camera." : "Click “Scan into this deck”, then hold your commander up to the camera."} No webcam? Click <b>＋ Add cards</b> and type its name.</div>`;
   } else if (d.format === "commander" && total < 100) {
     html += `<div class="step-banner soft"><b>Step 2 of 2: the other ${100 - d.commanders.length} cards.</b> ${scanning ? "Scan each card. Basic lands: scan one, then press R for each extra copy." : "Click “Scan into this deck” to keep going."}${d.commanders.length === 1 && pairsWithAnother(d.commanders[0]) ? ` <button class="linkish" type="button" id="deckSecond">${wantSecondCommander ? "Waiting for your second commander…" : "Add a second commander (partner or background)"}</button>` : ""}</div>`;
   }
@@ -4305,6 +4372,7 @@ function deckClick(e){
   if (e.target.closest("#deckPlay")) return openPlaytest(d);
   if (e.target.closest("#deckScan")) { setScanTarget(d.id); return showPage("scanner"); }
   if (e.target.closest("#deckStop")) { setScanTarget(null); if (!prefs.deckAlsoColl) offerDeckColl(d, "Stopped scanning."); return; }
+  if (e.target.closest("#deckAddHead")) return openReplace({deckId: d.id, add: true});
   if (e.target.closest("#deckRename")) { const i = $("deckName"); i.focus(); i.select(); return; }
   if (e.target.closest("#deckColl")) { deckCollOpen = !deckCollOpen; return renderDeck(); }
   if (e.target.closest("#deckCollNo")) { deckCollOpen = false; return renderDeck(); }
@@ -7585,7 +7653,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.10.4";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.10.5";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
@@ -12262,7 +12330,7 @@ const GUIDE = [
   ]},
   {t: "Building decks", steps: [
     {h: "Make a deck", b: "On <b>Deck builder</b> click <b>New deck</b>, name it and pick the format, or <b>Import a deck list</b> pasted from Moxfield, Archidekt or anywhere. For Commander, add your commander first.", go: {page: "builder", el: "deckNewBtn"}},
-    {h: "Add cards", b: "<b>Scan cards into this deck</b> uses the webcam, and can add them to your collection too. Or use <b>+ Add a card</b> and <b>Replace</b> in the Cards tab, or send cards here from Card search.", go: {page: "builder", dtab: "cards", el: "deckScan", needDeck: true}},
+    {h: "Add cards", b: "<b>Scan cards into this deck</b> uses the webcam, and can add them to your collection too. Or click <b>＋ Add cards</b> to type card names (with how many, and main deck, sideboard or commander) or paste a whole list. The window stays open so you can add one card after another. You can also use <b>Replace</b> in the Cards tab, or send cards here from Card search.", go: {page: "builder", dtab: "cards", el: "deckScan", needDeck: true}},
     {h: "Rename a deck, or put it in your collection", b: "Click the deck's name (or <b>✎ Rename</b>) to change it at any time. <b>＋ Add to collection</b> shows how many of the deck's cards aren't in your collection and adds them, for imported decks or ones scanned without <b>Also add scanned cards to my collection</b>. Cards you already own aren't added twice, unless you choose <b>Add all, even ones I already own</b> (for a deck with its own copies).", go: {page: "builder", dtab: "cards", el: "deckColl", needDeck: true}},
     {h: "Deck check", b: "Four checks: <b>Mana base</b> (your odds of having the right colours), <b>Bracket</b> (Commander power level and Game Changers), <b>Price</b>, and <b>Upgrades</b>, which suggests cuts and better cards and can test each swap over thousands of games.", go: {page: "builder", dtab: "check", el: "deckCheck", needDeck: true}},
     {h: "Combos and export", b: "<b>Combos</b> lists every combo in the deck and the ones you're one or two cards away from. <b>Export</b> sends the deck to Moxfield, Archidekt and others.", go: {page: "builder", dtab: "combos", el: "deckCombos", needDeck: true}}

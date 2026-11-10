@@ -405,3 +405,9 @@ The count of abilities the Playtest understands but the finder dropped went from
 - A double-faced card is a land if either face is one.
 - Old entries with no type: basic land names still count as lands.
 - Exports follow the filter, like the other filters. Tests: `tests/colltype.test.js`.
+
+## Add cards without scanning (2026.11.10.5)
+- A "＋ Add cards" button in the deck header (`#deckAddHead`) opens the add window (`openReplace({add: true})`). The Cards-tab button is renamed "+ Add cards".
+- **Search by name**: a "How many" box (`repl.qty`) and "Into" main / sideboard / commander (`repl.board`). It starts on Commander when the deck needs one. The window stays open after each card, with a green message.
+- **Paste a list** (`replAddPasted`) uses `parseDeckList` + `lookupCards` and adds to this deck. Cards it could not find are left in the box. Undo is available.
+- Tests: `tests/deckadd.test.js`.
