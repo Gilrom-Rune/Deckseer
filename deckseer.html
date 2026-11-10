@@ -395,6 +395,9 @@ a.btn{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
 .fw-bar span{width:100%;max-width:34px;background:var(--accent);border-radius:4px 4px 0 0;min-height:2px}
 .fw-bar b{font-weight:600}.fw-bar i{font-style:normal;color:var(--muted)}
 .fw-deep{margin:8px 0;padding:8px 12px;border-left:3px solid var(--line);background:var(--sunk);border-radius:6px}
+.fw-check{margin:8px 0;padding:8px 12px;border-left:3px solid var(--line);background:var(--sunk);border-radius:6px}
+.fw-check.ok{border-left-color:var(--ok)}.fw-check.bad{border-left-color:#c0392b}.fw-check.unsure{border-left-color:#d4a017}.fw-check.rejected{border-left-color:#888;font-size:.9em}
+.fw-steps{margin:4px 0 10px 1.2em;padding:0;font-size:.85rem;display:flex;flex-direction:column;gap:2px}.fw-steps li.bad{color:#c0392b}
 .fw-deep.yes{border-left-color:var(--ok)}
 .fw-why{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:.86rem;max-width:980px}
 .fw-why li::before{content:"✓ ";color:var(--ok);font-weight:700}.fw-why li.no{color:var(--muted)}.fw-why li.no::before{content:"– ";color:var(--muted)}
@@ -5324,6 +5327,13 @@ function fwCard(c, isCmd){
     }
     f.units = units; f.yield = units.length; f.make = [...new Set(units.join("").replace(/C/g, ""))].join("");
     f.tapped = /enters tapped/.test(t) && !/unless|you may pay|you may reveal/.test(t);
+    // "enters tapped unless you control a Forest" (Castle Garenbrig, check lands), "…two or fewer other lands" (fast lands), "…two or more other lands" (slow lands)
+    let tu;
+    if ((tu = t.match(/enters tapped unless you control (two|three|\d+) or (fewer|more) other lands/))) f.tapUnless = {lands: WORDNUM[tu[1]] || +tu[1], fewer: tu[2] === "fewer"};
+    else if ((tu = t.match(/enters tapped unless you control (?:a|an) ([a-z ,-]+?)(?:\.|$)/m))) f.tapUnless = {ph: tu[1].replace(/\s*,?\s*\bor (?:a|an)\b\s*/g, " or ").replace(/,\s*(?:a|an)\s+/g, " or ").trim()};
+    // "Activate only if you control five or more lands" (Temple of the False God): no mana until then
+    const oi = t.match(/activate only if you control (two|three|four|five|six|seven|\d+) or more ([a-z]+?)s?\b/);
+    if (oi) f.manaIf = {n: WORDNUM[oi[1]] || +oi[1], ph: oi[2]};
     return fwRules(f, c);   // lands' own triggers (Khalni Garden's Plant) and abilities
   }
   f.convoke = /(?:^|\n)convoke\b/.test(t);
@@ -5339,6 +5349,8 @@ function fwCard(c, isCmd){
     if (/imprint|exile a nonartifact, nonland card from your hand/.test(t)) f.extra = 1;          // Chrome Mox
     if (/discard a land card/.test(t) && /\benter/.test(t)) { f.extra = 1; f.discardLand = true; }   // Mox Diamond
     if (onlyFor && units.length) { f.onlyFor = onlyFor; units = units.map(u => u + "!" + onlyFor); }
+    const per = addM[1].match(/^(?:\{[wubrgc]\})+ for each ([a-z ,'-]+?) you control/);
+    if (per) f.manaPer = per[1].replace(/s$/, "");   // The Notary Hobbits: one {C} for each Halfling
     if (units.length) {
       const sacs = /sacrifice [^:]*: add/.test(t) && !/\{t\}: add/.test(t.replace(/\{t\}, sacrifice[^:]*: add/, ""));
       if (!perm || sacs) f.burst = units; else if (/\bcreature\b/i.test(type)) f.dork = units; else f.rock = units;
@@ -5393,9 +5405,13 @@ function fwCard(c, isCmd){
     (f.anthem = f.anthem || []).push({ph: g[1].replace(/\bother\b/, "").trim(), other: /\bother\b/.test(g[1]), n: +g[2]});
   }
   // one-turn team boosts and haste: Craterhoof, Overrun, "creatures you control gain haste until end of turn"
+  // X in the mana cost: the finder pays as much X as it can, and effects that use X use that number
+  f.xn = (String(c.cost || "").split(" // ")[0].match(/\{x\}/gi) || []).length;
+  if (f.xn && /\benters(?: the battlefield)? with x \+1\/\+1 counters/.test(t)) f.xEnters = true;   // Walking Ballista, Hangarback Walker
+  const xMin = (t.match(/\bif x is (\d+) or (?:more|greater), creatures you control get/) || [])[1];   // Finale of Devastation
   const pump = t.match(/creatures you control (?:gain [a-z ,]+ and )?get \+(\d+|x)\/\+(?:\d+|x)(?: and gain [a-z ,]+)? until end of turn(?:, where x is ([^.]+))?/);
-  if (pump) f.pump = {n: pump[1] === "x" ? 0 : +pump[1], x: pump[1] === "x" ? (pump[2] || "the number of creatures you control") : ""};
-  if (/creatures you control (?:get [^.]*? and )?gain [a-z ,]*\bhaste\b[^.]*until end of turn|creatures you control (?:get [^.]*? and )?gain haste/.test(t)) f.teamHaste = true;
+  if (pump) f.pump = {n: pump[1] === "x" ? 0 : +pump[1], x: pump[1] === "x" ? (pump[2] || (f.xn ? "X" : "the number of creatures you control")) : "", min: xMin ? +xMin : 0};
+  if (/creatures you control (?:get [^.]*? and )?gain [a-z ,]*\bhaste\b[^.]*until end of turn|creatures you control (?:get [^.]*? and )?gain haste/.test(t)) f.teamHaste = xMin ? {min: +xMin} : true;
   if (/target creature (?:you control )?(?:gets [^.]*? and )?gains [a-z ,]*\bhaste\b/.test(t)) f.oneHaste = true;
   // Equipment that gives haste (Lightning Greaves, Swiftfoot Boots): equipping a new creature costs its equip cost
   if (/\bEquipment\b/.test(type) && /equipped creature (?:gets [^.]*? and )?(?:has|gains) [^.]*\bhaste\b/.test(t)) { const eq = (c.text || "").match(/Equip(?:\s*—\s*|\s+)\{(\d+)\}/i); f.equipHaste = eq ? +eq[1] : 0; }
@@ -5403,7 +5419,7 @@ function fwCard(c, isCmd){
   const dash = (c.text || "").match(/(?:^|\n)(Dash|Blitz) ((?:\{[^}]+\})+)/);
   if (dash) f.dash = {pay: fwCost({cost: dash[2], cmc: 0}), how: dash[1].toLowerCase()};
   const burn = t.match(/deals? (\d+) damage to (?:any target|each opponent|target player|target opponent|each player|target player or planeswalker)/) || t.match(/\beach opponent loses (\d+) life/);
-  if (burn && !/^(?:[a-z' ]+ — )?(?:when|whenever|at)\b/.test(t.slice(Math.max(0, t.lastIndexOf("\n", burn.index) + 1)))) f.burn = +burn[1];
+  if (burn && !/^(?:[a-z' ]+ — )?(?:when|whenever|at)\b/.test(t.slice(Math.max(0, t.lastIndexOf("\n", burn.index) + 1))) && !/:/.test(t.slice(Math.max(0, t.lastIndexOf("\n", burn.index) + 1), burn.index))) f.burn = +burn[1];
   return fwRules(f, c);
 }
 function fwIdentity(d){
@@ -5422,15 +5438,32 @@ const FW_WIN = /win the game|wins the game|lose the game|loses the game|infinite
 const fwCostTxt = p => p.cols.map(x => `{${x}}`).join("").replace(/^/, p.gen ? `{${p.gen}}` : "");
 // What the shared card reader (the same one the playtester uses) finds on a card, in the finder's terms:
 // triggered abilities, activated abilities with their costs, cost reducers, extra land drops
-const FW_EVS = new Set(["etb", "cast", "landplay", "attack", "attackers", "combatdmg", "upkeep", "draw", "dies", "sac", "token", "discard"]);
+const FW_EVS = new Set(["etb", "cast", "landplay", "attack", "attackers", "combatdmg", "upkeep", "draw", "dies", "sac", "token", "discard", "combat", "attackalone", "endstep", "gainlife", "lore"]);
 function fwRules(f, c){
   const keep = typeof PT !== "undefined" ? PT : null;
   try {
     PT = null;   // read the card on its own, not as part of an open playtest
     const card = {name: c.name, text: c.text || "", type: c.type || "", back: false, counters: {}, kw: {}, power: c.power, toughness: c.toughness, colors: c.colors || []};
     // triggers: only the ones whose wording the reader fully understands, with no "if" it can't check
+    // "if it's / they're not a token" (The Notary Hobbits, Gruff Triplets): checked here, so the trigger is kept
+    const notTok = ab => ab.eff != null && /^if (?:it's|it is|they're|they are|cardname is|cardname's) not (?:a )?tokens?, /.test(ab.eff) && !trConditional("x, " + ab.eff.replace(/^if [^,]+, /, ""));
+    // "you may pay {2}. If you do, …" (Dawn of Hope, extort) and "you may sacrifice another creature. If you do, …": paid when it can be
+    const ifDo = ab => {
+      if (ab.eff == null) return null;
+      let m = ab.eff.match(/^you may pay ((?:\{[0-9wubrgc]\})+)\. if you do, ([^]+)$/);
+      if (m && !trConditional("x, " + m[2]) && !/\bif you do\b/.test(m[2])) return {pay: fwCost({cost: m[1].toUpperCase(), cmc: 0}), payTxt: m[1].toUpperCase()};
+      m = ab.eff.match(/^you may sacrifice (?:another|an?) ([a-z ]+?)\. if you do, ([^]+)$/);
+      if (m && !trConditional("x, " + m[2]) && !/\bif you do\b/.test(m[2]) && ab.actions[0] && ab.actions[0].t === "sacYou") return {sac: m[1].replace(/\b(?:or|and) (?:an?|another) /g, "or ")};
+      // "you may discard a card. If you do, draw a card" (and the other way round): the rest only if the first part happened
+      m = ab.eff.match(/^you may (?:discard|draw) (?:a|one|two|\d+) cards?\. if you do, ([^]+)$/);
+      if (m && !trConditional("x, " + m[1]) && !/\bif you do\b/.test(m[1]) && ab.actions.length > 1 && ["discard", "draw"].includes(ab.actions[0].t)) return {first: true};
+      // "if you control three or more artifacts / an Elf, …"
+      m = ab.eff.match(/^if you control (another|an?|one|two|three|four|five|six|seven|\d+)(?: or more)? ([a-z ]+?), ([^]+)$/);
+      if (m && !/\b(with|named|power|toughness|total|tapped|untapped|fewer|more|than)\b/.test(m[2]) && !trConditional("x, " + m[3])) return {ctl: {ph: m[2].replace(/s$/, ""), n: /^(an?|another)$/.test(m[1]) ? 1 : trNum(m[1]), other: m[1] === "another"}};
+      return null;
+    };
     f.trigs = trAbilities(card).filter(ab => !ab.check && !ab.choice && ab.conds.every(k => FW_EVS.has(k.ev)) && ab.actions.length
-      && !(ab.eff != null && (ab.intervening || trConditional(ab.text)))).map(ab => ({conds: ab.conds, acts: ab.actions, may: ab.may, text: ab.text}));
+      && (notTok(ab) || ifDo(ab) || !(ab.eff != null && (ab.intervening || trConditional(ab.text))))).map(ab => Object.assign({conds: ab.conds, acts: ab.actions, may: ab.may, text: ab.text, notToken: notTok(ab)}, ifDo(ab) || {}));
     const textActs = e0 => {
       const e = String(e0 || ""), out = [];
       let m;
@@ -5455,6 +5488,10 @@ function fwRules(f, c){
     for (const tr of f.trigs) if (/\bon top\b/.test(tr.text.toLowerCase()) && tr.acts.some(a => a.t === "search")) { const ph = (tr.text.toLowerCase().match(/search your library for an? ([a-z ]+?) card/) || [])[1] || ""; tr.acts = tr.acts.map(a => a.t === "search" ? {t: "tutorTop", ph} : a); }
     // "where X is the number of colors among permanents you control" (Vivid)
     for (const tr of f.trigs) if (/where x is the number of colou?rs among permanents you control/i.test(tr.text)) tr.acts = tr.acts.map(a => Object.assign({}, a, {colorsX: true}));
+    // a team pump the main reader already counts (Craterhoof Behemoth's "creatures you control … get +X/+X") isn't counted twice
+    if (f.pump || f.teamHaste) for (const tr of f.trigs) if (tr.conds.every(k => k.ev === "etb" && k.who === "self")) tr.acts = tr.acts.filter(a => !(a.t === "pump" && (a.who === "all" || /creatures you control/.test(tr.text.toLowerCase()))));
+    f.trigs = f.trigs.filter(tr => tr.acts.length);
+    if (/\bSaga\b/.test(card.type)) { const ch = trChapters(card); if (ch.length) f.chapters = Math.max(...ch.map(x => x.n)); }   // its chapters, one each turn
     // the card's own "when this enters, draw / search" is already counted by the main reader
     const counted = tr => tr.conds.every(k => (k.ev === "etb" || k.ev === "cast") && k.who === "self") && tr.acts.every(a => ["draw", "searchAuto"].includes(a.t));
     if (f.draw || f.ramp || f.drawLater) { const cp = f.trigs.filter(tr => counted(tr) && tr.conds.every(k => k.ev === "etb")); if (cp.length) f.copyTrigs = cp; f.trigs = f.trigs.filter(tr => !counted(tr)); }
@@ -5534,13 +5571,22 @@ function* fwSearchGen(plan, pool, cmds, o){
   const seenN = o.lib ? (() => { const m = new Map(); return (nm, k) => { let a = m.get(nm); if (!a) { a = []; let x = 0; for (const n0 of o.lib) { if (n0 === nm) x++; a.push(x); } m.set(nm, a); } return k <= 0 ? 0 : a[Math.min(k, a.length) - 1]; }; })() : null;
   const left = (s, c, fromLib) => c.cmd ? !s.cmdOut.includes(c.name) : !fromLib && s.back.includes(c.name) ? true : (s.cnt[c.name] || 0) < (seenN && !fromLib ? Math.min(c.qty, seenN(c.name, s.slots)) : c.qty);
   const live = (s, u) => u.startsWith("LEG") ? (s.legCols ? s.legCols + u.slice(3) : null) : u.startsWith("OPAL") ? (s.arts >= 3 ? "WUBRG" + u.slice(4) : null) : u;
-  const tapSrc = (s, src) => { const got = src.map(u => live(s, u)); if (got.some(x => x == null)) { s.idle.push(src); return; } s.mana.push(...got); };
+  const tapSrc = (s, src) => { if (src.per) { const k = s.perms.filter(p => fwFits(src.per, p)).length, u = live(s, src[0]); if (u == null) { s.idle.push(src); return; } for (let i = 0; i < k; i++) s.mana.push(u); return; } if (src.cond && s.perms.filter(p => fwFits(src.cond.ph, p)).length < src.cond.n) { s.idle.push(src); return; } const got = src.map(u => live(s, u)); if (got.some(x => x == null)) { s.idle.push(src); return; } s.mana.push(...got); };
+  // does a land with "enters tapped unless…" come in untapped right now?
+  const landTapped = (s, l) => l.tapped || (l.tapUnless ? (l.tapUnless.lands != null ? (() => { const k = s.perms.filter(p => p.land || /\bLand\b/.test(p.type || "")).length - 1; return l.tapUnless.fewer ? k > l.tapUnless.lands : k < l.tapUnless.lands; })() : !s.perms.some(p => fwFits(l.tapUnless.ph, p))) : false);
   const wake = s => { const w = s.idle; s.idle = []; for (const src of w) tapSrc(s, src); };
   const taxOf = (s, c) => c.cmd ? 2 * (s.tax[c.name] || 0) : 0;
   const payCost = c => c.pay.gen + c.pay.cols.length;
+  // a lore counter on a Saga: its chapter triggers, and after the last one it's sacrificed
+  const loreUp = (s, p) => {
+    if (!p) return; const k = (p.lore || 0) + 1; setPerm(s, p.id, {lore: k});
+    fire(s, {ev: "lore", n: k, id: p.id, card: p});
+    const now = s.perms.find(q => q.id === p.id);
+    if (now && k >= (p.chapters || 1)) sacrifice(s, now, "its last chapter");
+  };
   const setPerm = (s, id, ch) => { s.perms = s.perms.map(p => p.id === id ? Object.assign({}, p, ch) : p); };
   // a permanent arriving: remembered so costs can sacrifice, tap or return it, and so its triggers and abilities work
-  const arrive = (s, c, extra) => { const p = Object.assign({id: ++s.pid, name: c.name, type: c.type, cols: c.cols || "C", changeling: c.changeling, token: !!c.token, trigs: c.trigs, copyTrigs: c.copyTrigs, acts: c.acts, reduce: c.reduce, extraLand: c.extraLand, grantEvoke: c.grantEvoke, grantDork: c.grantDork, landsAny: c.landsAny, dbl: c.dbl, tokenDrain: c.tokenDrain, upkeepCard: c.upkeepCard, ds: c.ds, ownHaste: !!c.haste, noAttack: c.noAttack, used: {}}, extra || {}); s.perms.push(p); s.names = Object.assign({}, s.names, {[p.id]: [p.name, /\bland\b/i.test(p.type || "")]}); return p.id; };   // names stay known after it leaves
+  const arrive = (s, c, extra) => { const p = Object.assign({id: ++s.pid, name: c.name, type: c.type, cols: c.cols || "C", changeling: c.changeling, token: !!c.token, trigs: c.trigs, copyTrigs: c.copyTrigs, acts: c.acts, reduce: c.reduce, extraLand: c.extraLand, grantEvoke: c.grantEvoke, grantDork: c.grantDork, landsAny: c.landsAny, dbl: c.dbl, tokenDrain: c.tokenDrain, upkeepCard: c.upkeepCard, chapters: c.chapters, ds: c.ds, ownHaste: !!c.haste, noAttack: c.noAttack, used: {}}, extra || {}); s.perms.push(p); s.names = Object.assign({}, s.names, {[p.id]: [p.name, /\bland\b/i.test(p.type || "")]}); return p.id; };   // names stay known after it leaves
   const srcOf = (units, id, cre) => { const a = units.map(u => u + (cre ? "@" : "#") + id); a.id = id; return a; };
   const leave = (s, id) => { s.perms = s.perms.filter(p => p.id !== id); s.srcs = s.srcs.filter(x => x.id !== id); s.next = s.next.filter(x => x.id !== id); s.idle = s.idle.filter(x => x.id !== id); s.board = s.board.filter(b => b.id !== id); s.hasteFx = s.hasteFx.filter(g => g.id !== id); s.anth = s.anth.filter(a => a.id !== id); };
   const condOK = (s, cond) => { const m = String(cond || "").match(/you control (?:a|an|two or more) ([a-z ]+)/); return !cond || (m ? s.perms.some(p => fwFits(m[1], p)) : true); };
@@ -5696,14 +5742,14 @@ function* fwSearchGen(plan, pool, cmds, o){
           if (tc.legend) { for (const k2 of tc.cols || "") if (!n.legCols.includes(k2)) n.legCols += k2; }
           if (tc.artifact) n.arts++;
           if (tc.rock) { const s3 = srcOf(tc.rock, pid); if (tc.rockTapped) n.next.push(s3); else { n.srcs.push(s3); tapSrc(n, s3); } }
-          if (tc.dork) { const s3 = srcOf(tc.dork, pid, true); if (a.haste || tc.haste) { n.srcs.push(s3); tapSrc(n, s3); } else n.next.push(s3); }
+          if (tc.dork) { const s3 = srcOf(tc.dork, pid, true); if (tc.manaPer) s3.per = tc.manaPer; if (a.haste || tc.haste) { n.srcs.push(s3); tapSrc(n, s3); } else n.next.push(s3); }
           if (/\bcreature\b/i.test(tc.type || "")) addCreature(n, tc, pid, null, {token: true, haste: a.haste});
           fire(n, {ev: "etb", card: Object.assign({}, tc, {id: pid}), id: pid}); fire(n, {ev: "token", card: tc, id: pid});
         }
         return `token copy of ${base.name}${a.haste ? " with haste" : ""}`;
       }
       case "opp": case "drainSum": case "eachLose": { const k = a.countPh ? n.perms.filter(p => fwFits(a.countPh, p)).length : a.much && e && e.amount ? e.amount : amt; n.opp -= k; return `${k} to the opponent`; }
-      case "life": { n.life += a.n > 0 ? amt : -amt; return ""; }
+      case "life": { n.life += a.n > 0 ? amt : -amt; if (a.n > 0 && amt > 0 && !n._inGain) { n._inGain = true; fire(n, {ev: "gainlife", amount: amt}); n._inGain = false; } return ""; }
       case "counter": {
         if (a.kind !== "p1p1") return "";
         const k = amt, list = a.on === "self" ? [own(src.id)] : a.on === "it" && e ? [own(e.id)] : a.on === "all" ? n.board : a.on === "allOther" ? n.board.filter(b => b.id !== src.id) : a.on === "each" ? n.board.filter(b => fwFits(a.each, b)) : [n.board.slice().sort((x, y) => y.p - x.p)[0]];
@@ -5803,7 +5849,8 @@ function* fwSearchGen(plan, pool, cmds, o){
     if (cond.ev === "attackers") return e.ev === "attack" && e.first;
     if (cond.ev !== e.ev) return false;
     if (cond.nth && e.nth !== cond.nth) return false;
-    if (["upkeep", "landplay", "draw", "discard"].includes(cond.ev)) return true;
+    if (cond.ev === "lore") return e.id === src.id && cond.n === e.n;
+    if (["upkeep", "landplay", "draw", "discard", "combat", "endstep", "gainlife"].includes(cond.ev)) return true;
     const c = e.card; if (!c) return false;
     if (cond.ev === "token") return fwFits(cond.phrase || "", c);
     const pw = String(cond.phrase || "").match(/with power (\d+) or greater/);
@@ -5829,14 +5876,21 @@ function* fwSearchGen(plan, pool, cmds, o){
     const dbls = n.perms.filter(p => p.dbl);
     for (const src of srcs) for (const tr of src.trigs) {
       if (!tr.conds.some(k => fitsCond(k, e, src))) continue;
+      if (tr.notToken && (n.perms.find(p => p.id === src.id) || e.card || {}).token) continue;   // a token copy doesn't copy itself again
       // Yarok: things entering make triggers happen twice; Twinflame Travelers: another Elemental's triggers happen twice
       const dl = dbls.filter(d => d.dbl.etb ? e.ev === "etb" : d.id !== src.id && fwFits(d.dbl.ph, src)), times = 1 + dl.length;
       for (let k = 0; k < times; k++) {
       if (--n.budget <= 0) return;
+      // "you may pay {N}. If you do": only when the mana is there; "you may sacrifice another …": only with something to sacrifice
+      let paid = null;
+      if (tr.pay) { const after = fwPay(n.mana, tr.pay, 0); if (!after) continue; paid = spentOf(n, n.mana, after); n.mana = after; }
+      if (tr.sac && !n.perms.some(p => p.id !== src.id && fwFits(tr.sac, p))) continue;
+      if (tr.ctl && n.perms.filter(p => !(tr.ctl.other && p.id === src.id) && fwFits(tr.ctl.ph, p)).length < tr.ctl.n) continue;
       const at = n.log.length, keep = n._logAt; n.log.push({t: n.t, kind: "none"}); n._logAt = at;   // its line comes before anything it sets off
-      const notes = tr.acts.map(a => fwEff(n, a, src, e)).filter(Boolean);
+      const n0 = tr.first ? fwEff(n, tr.acts[0], src, e) : null;
+      const notes = (paid ? [`paid ${tr.payTxt}`] : []).concat(tr.first ? (n0 ? [n0].concat(tr.acts.slice(1).map(a => fwEff(n, a, src, e))) : []) : tr.acts.map(a => fwEff(n, a, src, e))).filter(Boolean);
       n._logAt = keep;
-      if (notes.length) n.log[at] = {t: n.t, kind: "trigger", name: src.name, note: notes.join(", ") + (k ? ` (again: ${dl[k - 1].name})` : ""), why: e.ev, whyTxt: e.reason};
+      if (notes.length) n.log[at] = {t: n.t, kind: "trigger", name: src.name, note: notes.join(", ") + (k ? ` (again: ${dl[k - 1].name})` : ""), why: e.ev, whyTxt: e.reason, tap: paid || undefined};
       }
     }
   }
@@ -5846,6 +5900,7 @@ function* fwSearchGen(plan, pool, cmds, o){
   const withReduce = (pay, red) => red ? {cols: pay.cols, gen: Math.max(0, pay.gen - red)} : pay;
   const play = (s, c, after, op) => {
     op = op || {};
+    if (c.xEnters && op.x) c = Object.assign({}, c, {power: op.x});   // "enters with X +1/+1 counters": an X/X
     const n = clone(s), pay = op.pay || c.pay, k = pay.gen + taxOf(s, c) + pay.cols.length;
     n.mana = after.slice(); n.budget = 60;   // its own copy: options can share the array they were priced against
     // the spell's own line goes first; anything its costs or effects set off (sacrifice triggers…) follows
@@ -5881,14 +5936,14 @@ function* fwSearchGen(plan, pool, cmds, o){
     if (c.grantDork && stays) notes.push(`your ${c.grantDork.ph} can tap for ${fmt(c.grantDork.units)} (not while summoning sick)`);
     if (c.artifact) n.arts++;
     if (c.legend) { for (const k2 of c.cols) if (!n.legCols.includes(k2)) n.legCols += k2; }
-    if (c.rock) { const src = srcOf(c.rock, pid); if (c.rockTapped) n.next.push(src); else { n.srcs.push(src); tapSrc(n, src); } notes.push(c.rock[0] === "LEG" ? (n.legCols ? `taps for a colour of your legends` : "no mana until you control a legendary creature or planeswalker") : c.rock[0] === "OPAL" ? (n.arts >= 3 ? "taps for any colour" : "no mana until you control three artifacts") : `taps for ${fmt(c.rock)}${c.rockTapped ? " from next turn" : ""}`); }
+    if (c.rock) { const src = srcOf(c.rock, pid); if (c.manaPer) src.per = c.manaPer; if (c.rockTapped) n.next.push(src); else { n.srcs.push(src); tapSrc(n, src); } notes.push(c.rock[0] === "LEG" ? (n.legCols ? `taps for a colour of your legends` : "no mana until you control a legendary creature or planeswalker") : c.rock[0] === "OPAL" ? (n.arts >= 3 ? "taps for any colour" : "no mana until you control three artifacts") : `taps for ${fmt(c.rock)}${c.rockTapped ? " from next turn" : ""}`); }
     if (c.legend || c.artifact) wake(n);
     if (c.giveHaste && stays) for (const g of c.giveHaste) n.hasteFx.push({id: pid, ph: g.ph, other: g.other});
     if (c.anthem && stays) for (const a of c.anthem) n.anth.push({id: pid, ph: a.ph, other: a.other, n: a.n});
     if (c.equipHaste != null && stays) n.equips.push({id: pid, cost: c.equipHaste, name: c.name, on: null});
     const hasty = !!(c.haste || op.haste) || (c.power && granted(n, {id: pid, type: c.type, cols: c.cols, changeling: c.changeling, name: c.name}));
     if (c.dork && !op.evoke) {
-      const src = srcOf(c.dork, pid, true);
+      const src = srcOf(c.dork, pid, true); if (c.manaPer) src.per = c.manaPer;
       if (hasty) { n.srcs.push(src); tapSrc(n, src); notes.push(`taps for ${fmt(c.dork)} right away (haste)`); }
       else { n.next.push(src); notes.push(`taps for ${fmt(c.dork)} from next turn (summoning sick)`); }
     }
@@ -5918,8 +5973,8 @@ function* fwSearchGen(plan, pool, cmds, o){
       if (!b.haste && !c.noAttack && !c.dork) notes.push("summoning sick");
       if (c.noAttack) notes.push("can't attack");
     }
-    if (c.pump) { const k2 = c.pump.x ? n.board.length : c.pump.n; n.board.forEach(b => { b.tmp = (b.tmp || 0) + k2; }); notes.push(`creatures get +${k2}/+${k2} this turn`); }
-    if (c.teamHaste) { n.board.forEach(b => { b.haste = true; }); notes.push("your creatures gain haste"); }
+    if (c.pump && !(c.pump.min && (op.x || 0) < c.pump.min)) { const k2 = c.pump.x === "X" ? (op.x || 0) : c.pump.x ? n.board.length : c.pump.n; if (k2) { n.board.forEach(b => { b.tmp = (b.tmp || 0) + k2; }); notes.push(`creatures get +${k2}/+${k2} this turn`); } }
+    if (c.teamHaste && !(c.teamHaste.min && (op.x || 0) < c.teamHaste.min)) { n.board.forEach(b => { b.haste = true; }); notes.push("your creatures gain haste"); }
     if (c.oneHaste) { const b = n.board.filter(x => x.sick && !x.haste && !x.noAttack).sort((a, b2) => powerOf(n, b2) - powerOf(n, a))[0]; if (b) { b.haste = true; notes.push(`${b.name} gains haste`); } }
     if (c.burn) { n.opp -= c.burn; notes.push(`${c.burn} damage`); }
     if (c.modeTxt) notes.unshift(`mode: ${c.modeTxt}`);
@@ -5932,10 +5987,11 @@ function* fwSearchGen(plan, pool, cmds, o){
     n.casc = newQ.concat(n.casc);
     if (c.cascade) notes.push(c.cascade > 1 ? `cascade ×${c.cascade}` : "cascade");
     const tx = taxOf(s, c), paid = op.free || c.guide ? null : {cols: pay.cols, gen: pay.gen + tx};
-    n.log[logAt] = {t: n.t, kind: op.put ? "put" : op.free ? "free" : c.cmd ? "commander" : "cast", perm: stays, from: op.from, name: c.name, img: c.img, tap, costs: pre, mana: paid && paid.gen + paid.cols.length ? fwCostTxt(paid) : paid ? "{0}" : "",
+    n.log[logAt] = {t: n.t, kind: op.put ? "put" : op.free ? "free" : c.cmd ? "commander" : "cast", x: op.x, perm: stays, from: op.from, name: c.name, img: c.img, tap, costs: pre, mana: paid && paid.gen + paid.cols.length ? fwCostTxt(paid) : paid ? "{0}" : "",
       how: op.free ? op.how : c.guide ? "exile it from your hand" : [op.how, op.red ? `{${op.red}} less` : "", tx ? `includes {${tx}} commander tax` : ""].filter(Boolean).join(" · "), cost: op.free ? `free, ${op.how}` : c.guide ? "exile it from your hand" : (op.how ? (pay.gen + pay.cols.length ? fwCostTxt(pay) + " · " : "") + op.how : (op.red ? fwCostTxt(pay) + ` (${op.red} less)` : c.cost || String(k))) + (taxOf(s, c) ? ` +${taxOf(s, c)} tax` : ""), note: notes.join(", ")};
     // enters-the-battlefield triggers (its own and other cards')
     if (stays) fire(n, {ev: "etb", card: c, id: pid});
+    if (stays && c.chapters) loreUp(n, n.perms.find(q => q.id === pid));   // a Saga: chapter I now
     if (evoked) { fire(n, {ev: "etb", card: c, id: pid}); const p = n.perms.find(q => q.id === pid); if (p) sacrifice(n, p, "evoke"); }
     grantSrcs(n);
     if (comboDone(n)) n.won = {t: n.t, how: "combo"};
@@ -6011,9 +6067,15 @@ function* fwSearchGen(plan, pool, cmds, o){
       if (!c.cmd && c.perm && !c.land) for (const p of s.perms) if (p.grantEvoke && fwFits(p.grantEvoke.ph, c)) { ops.push(Object.assign(rd(p.grantEvoke.pay), {reqs: c.reqs || [], how: `evoke ${p.grantEvoke.txt} (from ${p.name})`, evoke: true})); break; }
       // convoke: each untapped creature (summoning sick or not) can pay {1} or one mana of its colour; tapped ones can't attack
       const cvk = c.convoke ? s.board.filter(b => !b.tapped && !s.srcs.some(x => x.id === b.id)).map(b => (/^[WUBRG]+$/.test(b.cols || "") ? b.cols : "N") + "^" + b.id) : [];
-      for (const op of ops) {
+      for (let op of ops) {
         const tax = Math.max(0, taxOf(s, c) - (op.red ? Math.max(0, op.red - c.pay.gen) : 0));
-        const after = fwPay(s.mana, op.pay, tax, c);
+        let after = fwPay(s.mana, op.pay, tax, c);
+        if (after && c.xn && !op.free) {
+          const X = Math.floor(after.filter(u => !fwOnly(u) || fwFits(fwOnly(u), c)).length / c.xn);
+          const opX = Object.assign({}, op, {pay: {cols: op.pay.cols, gen: op.pay.gen + X * c.xn}, x: X});
+          const a2 = fwPay(s.mana, opX.pay, tax, c);
+          if (a2 && (X > 0 || !c.xEnters)) { after = a2; op = opX; } else if (c.xEnters) after = null;   // a 0/0 with X = 0 dies at once
+        }
         if (after && reqOK(s, c, op.reqs)) cands.push({c, after, op});
         // the same spell with creatures tapped first: saves mana for more spells, but those creatures can't attack this turn
         const a2 = cvk.length && fwPay(s.mana.concat(cvk), op.pay, tax, c, true);
@@ -6021,7 +6083,6 @@ function* fwSearchGen(plan, pool, cmds, o){
           const used = cvk.filter(u => !a2.includes(u)).map(u => +u.split("^")[1]);
           if (used.length) cands.push({c, after: a2.filter(u => !u.includes("^")), op: Object.assign({}, op, {convoke: used, how: (op.how ? op.how + ", " : "") + "convoke"})});
         }
-        if (after && reqOK(s, c, op.reqs)) cands.push({c, after, op});
       }
     }
     // short of cards: drawing comes first, or the hand runs dry
@@ -6095,6 +6156,7 @@ function* fwSearchGen(plan, pool, cmds, o){
       if (o.anyColor) s.mana = s.mana.map(u => { const i = u.search(/[!#@~]/); return "WUBRG" + (i < 0 ? "" : u.slice(i)); });
       s.castN = 0;
       fire(s, {ev: "upkeep"});
+      for (const p of s.perms.filter(q => q.lore)) loreUp(s, p);   // Sagas: the next chapter, in your first main phase
       for (const p of s.perms) if (p.upkeepCard) { s.slots++; s.acq.push({t, by: p.name, log: s.log.length}); s.log.push({t, kind: "trigger", name: p.name, note: "the top card is the type you chose: it goes to your hand", why: "upkeep"}); }
       const top = s.topCard; s.topSet = false; s.topCard = null;
       if (!(t === 1 && !o.drawFirst)) { if (top) s.back.push(top); else { s.slots++; s.acq.push({t, by: "draw"}); } fire(s, {ev: "draw", nth: 1}); }
@@ -6112,9 +6174,10 @@ function* fwSearchGen(plan, pool, cmds, o){
         // when cards are tight, also try keeping that card for something else instead of the land drop
         if (d === 0 && s.slots - s.used <= 2) starts.push(clone(s));
         s.used++; s.cnt[land.name] = (s.cnt[land.name] || 0) + 1; s.order.push({name: land.name, t});
-        const lid = arrive(s, land, {src: land.yield}), lsrc = srcOf(land.units, lid);
-        if (land.tapped) s.next.push(lsrc); else { s.srcs.push(lsrc); tapSrc(s, lsrc); }
-        s.log.push({t, kind: "land", name: land.name, img: land.img, note: (land.tapped ? "enters tapped, " : "") + (land.yield > 1 && land.units.every(u => u === "C") ? `taps for {C}{C}` : `taps for ${fmt(land.units.slice(0, 1))}`) + (land.tapped ? " from next turn" : "")});
+        const lid = arrive(s, land, {src: land.yield}), lsrc = srcOf(land.units, lid), lTap = landTapped(s, land);
+        if (land.manaIf) lsrc.cond = land.manaIf;
+        if (lTap) s.next.push(lsrc); else { s.srcs.push(lsrc); tapSrc(s, lsrc); }
+        s.log.push({t, kind: "land", name: land.name, img: land.img, note: (lTap ? "enters tapped, " : "") + (land.manaIf ? `taps for ${fmt(land.units)} once you control ${land.manaIf.n} ${land.manaIf.ph}s` : land.yield > 1 && land.units.every(u => u === "C") ? `taps for {C}{C}` : `taps for ${fmt(land.units.slice(0, 1))}`) + (lTap ? " from next turn" : "")});
         fire(s, {ev: "landplay", card: land, id: lid}); fire(s, {ev: "etb", card: land, id: lid});
       }
       grantSrcs(s);
@@ -6126,9 +6189,10 @@ function* fwSearchGen(plan, pool, cmds, o){
           if (tried.has(l.name) || tried.size >= 5 || s0land.st.used >= s0land.st.slots) continue; tried.add(l.name);
           const alt = clone(s0land.st);
           alt.used++; alt.cnt[l.name] = (alt.cnt[l.name] || 0) + 1; alt.order.push({name: l.name, t});
-          const lid = arrive(alt, l, {src: l.yield}), lsrc = srcOf(l.units, lid);
-          if (l.tapped) alt.next.push(lsrc); else { alt.srcs.push(lsrc); tapSrc(alt, lsrc); }
-          alt.log.push({t, kind: "land", name: l.name, img: l.img, note: (l.tapped ? "enters tapped, " : "") + `taps for ${fmt(l.units.slice(0, 1))}` + (l.tapped ? " from next turn" : "")});
+          const lid = arrive(alt, l, {src: l.yield}), lsrc = srcOf(l.units, lid), lTap = landTapped(alt, l);
+          if (l.manaIf) lsrc.cond = l.manaIf;
+          if (lTap) alt.next.push(lsrc); else { alt.srcs.push(lsrc); tapSrc(alt, lsrc); }
+          alt.log.push({t, kind: "land", name: l.name, img: l.img, note: (lTap ? "enters tapped, " : "") + `taps for ${fmt(l.units.slice(0, 1))}` + (lTap ? " from next turn" : "")});
           fire(alt, {ev: "landplay", card: l, id: lid}); fire(alt, {ev: "etb", card: l, id: lid}); grantSrcs(alt);
           starts.push(alt);
         }
@@ -6154,8 +6218,10 @@ function* fwSearchGen(plan, pool, cmds, o){
           const big = e.board.filter(b => canAtk(e, b)).sort((a, b) => powerOf(e, b) - powerOf(e, a))[0];
           if (big && powerOf(e, big) >= 3) { e.removed = true; const p = e.perms.find(q => q.id === big.id); if (p) { e.log.push({t, kind: "note", name: `The opponent removes ${big.name} before it can attack`}); leave(e, big.id); if (!p.token) e.grave++; fire(e, {ev: "dies", card: p, id: p.id, selfTrigs: p.trigs, reason: `${big.name} was destroyed by the opponent`}); } }
         }
+        if (e.board.some(b => canAtk(e, b))) fire(e, {ev: "combat"});   // "at the beginning of combat on your turn"
         const attackers = e.board.filter(b => canAtk(e, b));
         attackers.forEach((b, i) => { b.atk = true; fire(e, {ev: "attack", card: b, id: b.id, first: i === 0}); });
+        if (attackers.length === 1) fire(e, {ev: "attackalone", card: attackers[0], id: attackers[0].id});
         let atk = 0;
         for (const b of e.board) if (b.atk || b.attNow) { const d = powerOf(e, b) * (b.ds ? 2 : 1); atk += d; if (b.inf) e.poison += d; else e.opp -= d; if (b.cmd) e.cmdDmg += d; }
         const held = e.board.filter(b => !b.noAttack && !b.tapped && (!b.sick || b.haste || granted(e, b)) && tappedForMana(e, b)).map(b => b.name);
@@ -6167,6 +6233,7 @@ function* fwSearchGen(plan, pool, cmds, o){
           if (after) { const tap = spentOf(e, e.mana, after); e.mana = after; setPerm(e, p.id, {temp: false}); e.log.push({t, kind: "trigger", name: p.name, note: `kept: paid ${p.keepCost}`, tap, why: "end"}); continue; }
           e.log.push({t, kind: "trigger", name: p.name, note: "sacrificed at end of turn", why: "end"}); sacrifice(e, p, "its delayed end-of-turn sacrifice");
         }
+        if (e.opp > 0 && e.poison < 10) fire(e, {ev: "endstep"});
         e.log.push({t, kind: "end", opp: Math.max(0, e.opp), poison: e.poison, life: e.life});
         if (e.opp <= 0 || e.poison >= 10 || (o.isCmd && e.cmdDmg >= 21)) { e.won = {t, how: e.poison >= 10 ? "poison" : e.cmdDmg >= 21 && e.opp > 0 ? "commander damage" : "damage"}; if (!best || t < best.won.t) best = e; return; }
         // what carries over: unused Treasures, and the monarch's end-step card
@@ -6267,6 +6334,19 @@ async function fastestWin(d, onProgress, opts = {}){
     if (target >= 1 && Date.now() >= until) deep.cut = true;
     results.sort((a, b) => a.turn - b.turn || a.best.order.length - b.best.order.length);
   }
+  // play the best lines out in the Playtest's rules engine; a line that doesn't hold up goes behind ones that do
+  const rejected = [];
+  if (opts.check !== false) {
+    if (onProgress) onProgress(plans.length, plans.length + 4, "Checking the win by playing it out…");
+    for (const r of results.slice(0, 8)) {
+      if (opts.stopped && opts.stopped()) break;
+      r.check = fwReplay(d, r, o);
+      await sleep(0);
+      if (r.check.ok !== false) break;
+      rejected.push({turn: r.turn, how: r.how, why: r.check.why});
+    }
+    results.sort((a, b) => ((a.check && a.check.ok === false) - (b.check && b.check.ok === false)) || a.turn - b.turn || a.best.order.length - b.best.order.length);
+  }
   const win = results[0];
   if (win && win.plan.combo && win.plan.combo._src) { try { await stepsFor([win.plan.combo._src]); win.plan.steps = win.plan.combo._src.steps || ""; } catch (e) {} }
   // Why not faster: would one turn sooner work with a little more of something?
@@ -6282,7 +6362,165 @@ async function fastestWin(d, onProgress, opts = {}){
       await sleep(0);
     }
   }
-  return {results, o, comboNote, combosTried: plans.length - 1, why, deep};
+  return {results, o, comboNote, combosTried: plans.length - 1, why, deep, rejected};
+}
+/* ----- checking a found win by playing it out in the Playtest's rules engine -----
+   The finder has its own quick model of the game. To be sure a line can really happen, it's replayed in the Playtest:
+   same opening hand, the same cards drawn in the same order, each land played, each spell cast the same way and paid
+   for with real mana, each ability used, triggers resolved, the same attacks. If a step can't be done (not enough
+   mana, a second land drop the rules don't allow, a card that isn't there), or the opponent isn't dead at the end,
+   the line didn't hold up. Returns {ok, turn, how, steps: [{t, txt, ok, why}], why}. */
+function fwReplay(d, win, o){
+  const best = win.best, steps = [];
+  const keep = {PT, render: ptRender, st: window.setTimeout, stB: window.setTimeout.bind(window), shuffle: ptShuffle, view: PT_VIEW, pick: typeof PT_PICK !== "undefined" ? PT_PICK : null,
+    prefs: {ptTrigMode: prefs.ptTrigMode, ptAutoPick: prefs.ptAutoPick, ptAutoMana: prefs.ptAutoMana, ptDrawT1: prefs.ptDrawT1, ptOppN: prefs.ptOppN}};
+  const q = [];
+  window.setTimeout = (fn, ms, ...a) => { if ((!ms || ms < 50) && typeof fn === "function") { q.push(() => fn(...a)); return 0; } return keep.stB(fn, ms, ...a); };
+  ptRender = () => {};
+  const modal = () => document.getElementById("ptModal");
+  const settle = () => {
+    for (let i = 0; i < 80; i++) {
+      let k = 0; while (q.length && k++ < 200) q.shift()();
+      if (typeof PT_PICK !== "undefined" && PT_PICK) { ptPickFinish([], true); continue; }
+      const m = modal();
+      if (PT_VIEW && PT_VIEW.kind === "attack" && m && !m.hidden) return;   // the attack window waits for the attackers
+      if (m && !m.hidden) {
+        const b = m.querySelector("#ptXgo, [data-blkgo], [data-legkeep]");
+        if (b) { b.click(); continue; }
+        if (PT_VIEW && PT_VIEW.kind === "search") {
+          // take the next planned card that fits (the planned cards are in order at the top of the library)
+          // a search that puts a card on top takes the next planned card; others take one that isn't planned for later (so the planned draws stay put)
+          const v = PT_VIEW, fits = c => !v.what || trFits(v.what, c);
+          const planned = new Set(PT.lib.slice(0, plannedLeft()).map(c => c.uid));
+          const pick = v.to === "top" ? PT.lib.find(fits) : (PT.lib.find(c => fits(c) && !planned.has(c.uid)) || PT.lib.find(fits));
+          if (pick) {
+            if (v.to === "top") v.held = [pick.uid];
+            else { const to = v.to === "bf" ? "bf" : v.to === "grave" ? "grave" : v.to === "bottom" ? "lib" : "hand"; ptDo(() => { ptMove(pick.uid, to, to === "lib" ? {bottom: true} : {}); if (v.tapped) pick.tapped = true; }); }
+          }
+          ptSearchDone(); continue;
+        }
+        const d0 = m.querySelector("[data-d=scrydone], [data-d=digdone], [data-dig=apply]"); if (d0) { d0.click(); if (!m.hidden) ptCloseModal(); continue; }
+        ptCloseModal(); continue;
+      }
+      if (PT.trig.length) { const p0 = PT.trig[0]; if (p0.modes) { const b = ptBestMode(p0); if (b) ptPickMode(p0.id, b.i); else PT.trig.shift(); continue; } ptDoPrompt(p0.id); if (PT.trig[0] === p0) PT.trig.shift(); continue; }
+      if (PT.targeting) { PT.targeting = null; continue; }
+      return;
+    }
+  };
+  const step = (t, txt, ok, why) => { steps.push({t, txt, ok, why: why || ""}); return ok; };
+  let plannedLeft = () => 0, planHand = [], planSeq = [];   // how many cards at the top of the library are still the planned draws
+  let result = null;
+  try {
+    prefs.ptTrigMode = "auto"; prefs.ptAutoPick = true; prefs.ptAutoMana = true; prefs.ptDrawT1 = !!o.drawFirst; prefs.ptOppN = 1;
+    PT = ptNew(d); PT._noShuffle = true;   // you choose your draws here, so shuffles keep the planned order
+    PT.opps = [ptOppMake(0, 1, o.isCmd)]; PT.opps[0].life = o.life || PT.opps[0].life; PT.oppT = 0; ptOppSync();
+    // the same cards in the same order: the opening hand, then every card it got, in the order it got them
+    const ex = fwExplain(best, o), all = PT.lib.concat(PT.hand); PT.hand = []; PT.lib = [];
+    const take = nm => { const i = nm ? all.findIndex(c => c.name === nm) : -1; return i >= 0 ? all.splice(i, 1)[0] : null; };
+    const seq = []; (best.acq || []).forEach((a, i) => { if (a.by !== "open") seq.push(i < best.order.length ? best.order[i].name : null); });
+    planHand = ex.hand.slice(); planSeq = (best.acq || []).filter(a => a.by !== "open").map((a, k) => `${seq[k] || "(any card)"} (turn ${a.t}, ${a.by === "draw" ? "draw" : "from " + a.by})`);
+    // a card cast for free off the top (cascade, discover) has to be on top when that happens
+    const free = (best.log || []).filter(e => e && e.kind === "free" && e.name).map(e => e.name);
+    const needed = new Set(ex.hand.filter(Boolean).concat(seq.filter(Boolean), free));
+    const filler = () => { const i = all.findIndex(c => !needed.has(c.name) && !/\bLand\b/.test(c.type || "")); const j = i >= 0 ? i : all.findIndex(c => !needed.has(c.name)); return j >= 0 ? all.splice(j, 1)[0] : all.shift(); };
+    for (const nm of ex.hand) { const c = take(nm) || filler(); if (c) PT.hand.push(c); }
+    for (const nm of seq) { const c = take(nm) || filler(); if (c) PT.lib.push(c); }
+    const plannedUids = new Set(PT.lib.map(c => c.uid));
+    plannedLeft = () => PT.lib.filter(c => plannedUids.has(c.uid)).length && PT.lib.findIndex(c => !plannedUids.has(c.uid)) < 0 ? PT.lib.length : Math.max(0, PT.lib.findIndex(c => !plannedUids.has(c.uid)));
+    PT.lib.push(...all);
+    PT.phase = "play"; PT.turn = 1; PT.log = [];
+    if (o.drawFirst && PT.lib.length) PT.hand.push(PT.lib.shift());
+    const byT = t => (best.log || []).filter(e => e && e.t === t);
+    const wonT = best.won ? best.won.t : 1;
+    const findIn = (zones, nm) => { for (const z of zones) { const c = PT[z].find(x => x.name === nm || ptFaceName(x) === nm); if (c) return c; } return null; };
+    const wayOf = how => { const h = String(how || "").toLowerCase(); return /^evoke/.test(h) ? "evoke" : /^dash/.test(h) ? "dash" : /^blitz/.test(h) ? "blitz" : /^flashback/.test(h) ? "flashback" : /^escape/.test(h) ? "escape" : /^madness/.test(h) ? "madness" : h ? "alt" : null; };
+    let failed = false;
+    for (let t = 1; t <= wonT && !failed; t++) {
+      if (t > 1) { ptNextTurn(); settle(); }
+      for (const e of byT(t)) {
+        if (failed) break;
+        PT._fail = "";
+        if (e.kind === "land") {
+          const c = findIn(["hand"], e.name);
+          if (!c) { failed = !step(t, `Play ${e.name}`, false, "it isn't in your hand"); break; }
+          ptCastPaid(c.uid); settle();
+          if (!PT.bf.includes(c)) { if (!modal().hidden) ptCloseModal(); failed = !step(t, `Play ${e.name}`, false, PT._fail || "it couldn't be played"); break; }
+          step(t, `Play ${e.name}`, true);
+        } else if (e.kind === "cast" || e.kind === "commander") {
+          if (e.note && /countered/.test(e.note)) continue;
+          const c = findIn(e.kind === "commander" ? ["cmd", "hand"] : ["hand", "grave", "exile", "cmd"], e.name);
+          if (!c) { failed = !step(t, `Cast ${e.name}`, false, "it isn't in your hand"); break; }
+          const zone = (ptFind(c.uid) || {}).zone, way = wayOf(e.how);
+          // free cards from the top go there just before (cascade reveals until it finds one)
+          const later = byT(t).slice(byT(t).indexOf(e) + 1).filter(x => x.kind === "free" && x.name);
+          for (const fx of later.reverse()) { const i = PT.lib.findIndex(x => x.name === fx.name); if (i > 0) PT.lib.unshift(PT.lib.splice(i, 1)[0]); }
+          if (way === "alt") { ptDo(() => ptPlay(c.uid)); settle(); step(t, `Cast ${e.name} (${e.how})`, true, "its alternative cost wasn't checked"); continue; }
+          const w = way && ptCastWays(c, zone).some(x => x.k === way) ? way : null;
+          if (way && !w) { failed = !step(t, `Cast ${e.name} (${e.how})`, false, `the Playtest doesn't see a way to ${way} it`); break; }
+          // X: what the line paid for it (e.x), else nothing — the finder doesn't spend mana on X
+          const hasX = /\{x\}/i.test(String(c.cost || "").split(" // ")[0]);
+          ptCastPaid(c.uid, w || undefined, hasX ? (e.x || 0) : undefined); settle();
+          const now = (ptFind(c.uid) || {}).zone;
+          if (now === zone && !(PT_WAY_NOSPELL && w && PT_WAY_NOSPELL.has(w))) { if (!modal().hidden) ptCloseModal(); failed = !step(t, `Cast ${e.name}${e.how ? ` (${e.how})` : ""}`, false, PT._fail || "it couldn't be cast"); break; }
+          step(t, `Cast ${e.name}${e.how ? ` (${e.how})` : ""}`, true);
+        } else if (e.kind === "ability") {
+          if (e.name === "Clue") { const clue = PT.bf.find(x => x.token && /Clue/.test(x.name)); if (!clue) { failed = !step(t, "Crack a Clue", false, "there's no Clue"); break; } const i = trActivated(clue).findIndex(a => /draw/i.test(a.label)); ptActivate(clue.uid, i); settle(); step(t, "Crack a Clue", !PT._fail, PT._fail); if (PT._fail) failed = true; continue; }
+          const srcs = PT.bf.filter(x => x.name === e.name || ptFaceName(x) === e.name);
+          let done = false;
+          for (const c of srcs) {
+            const list = trActivated(c), i = list.findIndex(a => a.zone === "bf" && (a.costText === e.cost || String(a.label || "").startsWith(e.cost || "\u0000")));
+            if (i < 0) continue;
+            // sacrifice what the line sacrificed ("sacrifice Plant"), not whatever looks least useful
+            const ab = list[i], sacTxt = ((e.costs || []).find(x => /^sacrifice /.test(x)) || "").replace(/^sacrifice /, "");
+            const force = [];
+            // names can hold commas ("Ashling, the Limitless"): take the longest names that appear, in the order written
+            let rest = sacTxt;
+            while (rest) {
+              const q = PT.bf.filter(x => x.uid !== c.uid && !force.includes(x.uid) && rest.startsWith(x.name) && (!ab.cost.sac || !ab.cost.sac[1] || trFits(ab.cost.sac[1].replace(/\bother\b/, ""), x))).sort((a, b) => b.name.length - a.name.length)[0];
+              if (!q) break; force.push(q.uid); rest = rest.slice(q.name.length).replace(/^,\s*/, "");
+            }
+            if (force.length && ab.cost && ab.cost.sac && ab.cost.sac.length) ab._force = force;
+            PT._fail = ""; try { ptActivate(c.uid, i); } finally { delete ab._force; } settle();
+            if (!PT._fail) { done = true; break; }
+          }
+          if (!done) { failed = !step(t, `${e.name}: ${e.cost || "ability"}`, false, PT._fail || (srcs.length ? "that ability couldn't be used" : `${e.name} isn't on the battlefield`)); break; }
+          step(t, `${e.name}: ${e.cost || "ability"}`, true);
+        } else if (e.kind === "attack") {
+          ptAttackDialog(); settle();
+          if (PT_VIEW && PT_VIEW.kind === "attack") {
+            const want = (e.who || []).map(w => w.name), pick = new Set();
+            for (const nm of want) { const c = PT.bf.find(x => (x.name === nm || ptFaceName(x) === nm) && !pick.has(x.uid) && !x.tapped && (ptIsCreature(x) || x.faceDown)); if (c) pick.add(c.uid); }
+            PT_VIEW.pick = pick; Object.keys(PT_VIEW.to || {}).forEach(u => { PT_VIEW.to[u] = 0; });
+            const short = want.length - pick.size;
+            if (!pick.size) { ptCloseModal(); const there = PT.bf.filter(x => ptIsCreature(x)).map(x => x.name + (x.tapped ? " (tapped)" : ptSick(x) ? " (summoning sick)" : "")); failed = !step(t, `Attack with ${want.join(", ")}`, false, `none of them could attack${there.length ? `; your creatures: ${there.join(", ")}` : "; you have no creatures"}`); break; }
+            const before = PT.opps[0].life;
+            ptAttack(); settle();
+            const dealt = before - PT.opps[0].life;
+            step(t, `Attack with ${want.join(", ")}`, dealt >= (e.dmg || 0) || PT.opps[0].out, dealt < (e.dmg || 0) && !PT.opps[0].out ? `it dealt ${dealt}, not ${e.dmg}${short ? ` (${short} of them couldn't attack)` : ""}` : "");
+          } else { const want = (e.who || []).map(w => w.name), there = PT.bf.filter(x => ptIsCreature(x)).map(x => x.name + (x.tapped ? " (tapped)" : ptSick(x) ? " (summoning sick)" : "")); failed = !step(t, `Attack with ${want.join(", ")}`, false, `none of them could attack${there.length ? `; your creatures: ${there.join(", ")}` : "; you have no creatures"}`); break; }
+        }
+      }
+      if (!failed && (t < wonT || !(PT.opps[0].out || PT.opps[0].life <= 0))) { ptEndTurn(); settle(); }   // the last turn too: end-step triggers can finish it
+    }
+    const opp = PT.opps[0];
+    // something the Playtest left for you to do by hand earlier makes a failure inconclusive: the finder may be right
+    const byHand = PT.log.slice().reverse().filter(l => /\bby hand\b|keep track by hand|not tracked/.test(l)).map(l => l.replace(/^T\d+ · /, "").replace(/[.:]\s*(?:done|finish the rest|keep track) by hand.*$|\(keep track by hand\)\.?$/i, "").trim());
+    const unsure = byHand.length ? ` (the Playtest couldn't carry out: ${[...new Set(byHand)].slice(0, 3).join("; ")})` : "";
+    if (failed) { const f = steps.find(x => !x.ok); result = {ok: byHand.length ? null : false, why: `Turn ${f.t}: ${f.txt}: ${f.why}${unsure}`, manual: byHand}; }
+    else if (win.how === "combo") {
+      const pieces = (win.plan && win.plan.pieces) || [], missing = pieces.filter(nm => !PT.bf.some(x => x.name === nm) && !PT.cmd.some(x => x.name === nm && false));
+      result = missing.length ? {ok: false, why: `Turn ${wonT}: the combo isn't together (${missing.join(", ")} not on the battlefield)`} : {ok: true, why: "every combo piece is on the battlefield (the loop itself isn't played out)"};
+    } else result = opp.out || opp.life <= 0 ? {ok: true, why: byHand.length ? `parts were done by hand in the Playtest: ${[...new Set(byHand)].slice(0, 3).join("; ")}` : "", manual: byHand} : {ok: byHand.length ? null : false, why: `Turn ${wonT}: played out, the opponent was still at ${opp.life}${opp.poison ? ` (${opp.poison} poison)` : ""}${unsure}`, manual: byHand};
+    if (!steps.some(x => !x.ok)) steps.forEach(x => { if (x.ok == null) x.ok = true; });
+    result.log = PT.log.slice(0, 80).reverse();
+    result.planned = {hand: planHand, draws: planSeq};
+  } catch (err) { console.warn("replay", err); result = {ok: null, why: "couldn't replay it (" + (err && err.message || err) + ")"}; }
+  finally {
+    PT = keep.PT; ptRender = keep.render; window.setTimeout = keep.st; PT_VIEW = keep.view; if (typeof PT_PICK !== "undefined") PT_PICK = keep.pick;
+    Object.assign(prefs, keep.prefs); for (const k of Object.keys(keep.prefs)) if (keep.prefs[k] === undefined) delete prefs[k];
+    const m = modal(); if (m && !m.hidden && !PT) { m.hidden = true; m.innerHTML = ""; }
+  }
+  return Object.assign({turn: best.won ? best.won.t : null, how: win.how, steps}, result);
 }
 // Realistic: the same search, but the cards come from a shuffled library in order (no picking your draws)
 async function fwRealistic(d, games, onProgress){
@@ -6466,6 +6704,12 @@ function renderFast(){
         const last = D.checked[D.checked.length - 1];
         html += `<p class="fw-deep ${D.found.length ? "yes" : ""}">${D.found.length ? `🔎 Searching harder found a faster win: <b>turn ${top.turn}</b>. ` : ""}${last ? (last.exhaustive ? `Checked every possible line for a turn-${last.turn} win (every card, ability, land drop and order): none exists. <b>Turn ${top.turn} is the fastest possible.</b>` : last.complete ? `Searched hard for a turn-${last.turn} win (every card, ability and land drop, ${D._beamCut ? "keeping the ${D.beam || 500} most promising positions each turn" : "many lines"}${D._depthCut ? ", up to 40 plays a turn" : ""}): none found. Turn ${top.turn} is the fastest found, though not every possible line could be checked.` : (R.stopped ? `Stopped while checking for a turn-${last.turn} win: one might still exist.` : `Checked for a turn-${last.turn} win but ran out of time (${Math.round(D.budget / 1000)} s) before finishing: one might still exist.`)) : top.turn <= 1 ? "Turn 1 can't be beaten." : `Ran out of time (${Math.round(D.budget / 1000)} s) before finishing.`}</p>`;
       }
+      // checked by playing it out in the Playtest's rules engine
+      const C = top.check;
+      if (C) html += `<p class="fw-check ${C.ok === true ? "ok" : C.ok === false ? "bad" : "unsure"}">${C.ok === true ? `✓ <b>Checked:</b> played out step by step in the Playtest (real mana, real triggers), this line works.${C.why ? ` <span class="cur-sub">Note: ${esc(C.why)}.</span>` : ""}`
+        : C.ok === false ? `⚠ <b>This line didn't hold up</b> when played out in the Playtest, and no line that does was found: ${esc(C.why)}. Treat it as a guess.`
+        : `ⓘ <b>Partly checked:</b> played out in the Playtest up to a point. ${esc(C.why)}.`}${C.steps && C.steps.length ? ` <button type="button" class="linkish" data-fwsteps="1">${prefs.fwSteps ? "Hide" : "Show"} the played-out steps</button>` : ""}</p>${prefs.fwSteps && C.steps ? `<ol class="fw-steps">${C.steps.map(x => `<li class="${x.ok === false ? "bad" : ""}">Turn ${x.t}: ${esc(x.txt)}${x.ok === false ? ` ✗ <em>${esc(x.why)}</em>` : x.why ? ` <span class="cur-sub">(${esc(x.why)})</span>` : " ✓"}</li>`).join("")}</ol>` : ""}`;
+      if ((R.rejected || []).length) html += `<p class="fw-check rejected">✗ ${R.rejected.length === 1 ? "A faster line was" : `${R.rejected.length} faster lines were`} found but didn't hold up when played out, so ${R.rejected.length === 1 ? "it isn't" : "they aren't"} shown: ${R.rejected.slice(0, 3).map(r => `<span>turn ${r.turn} (${esc(r.why)})</span>`).join("; ")}.</p>`;
       html += `<div class="sim-big"><div><b>Turn ${top.turn}</b><span>fastest possible win</span></div><div class="fw-how"><b>${esc(how)}</b><span>${top.plan.kind === "combo" ? esc((top.plan.produces || []).slice(0, 3).join(" · ")) : `opponent starts at ${R.o.life} life`}</span></div></div>
         <h4 class="fw-h">Best opening hand</h4><div class="fw-row">${ex.hand.map(n => cardImg(n)).join("")}</div>
         <h4 class="fw-h">Turn by turn</h4>
@@ -6497,6 +6741,7 @@ $("deckFast").addEventListener("click", async e => {
     fwState.realBusy = false; renderFast(); return;
   }
   if (e.target.closest("#fwStop")) { if (fwState) { fwState.stop = true; const b = $("fwStop"); if (b) { b.disabled = true; b.textContent = "Stopping…"; } } return; }
+  if (e.target.closest("[data-fwsteps]")) { prefs.fwSteps = !prefs.fwSteps; savePrefs(); return renderFast(); }
   const deepRun = !!e.target.closest("#fwDeep");
   if (!e.target.closest("#fwRun") && !deepRun) return;
   const d = prefs.deckView && deckById(prefs.deckView); if (!d) return;
@@ -7277,7 +7522,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.09.1";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.10.1";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
@@ -7593,7 +7838,9 @@ function ptDraw(n = 1){
   if (k < n) { ptLog("The library is empty."); toast("Your library is empty."); }
 }
 function ptMill(n = 1){ let k = 0; for (; k < n && PT.lib.length; k++) PT.grave.push(PT.lib.shift()); ptLog(`Milled ${k} card${k === 1 ? "" : "s"}.`); }
-function ptShuffle(){ shuffle(PT.lib); ptLog("Shuffled the library."); }
+// shuffling your library (a replay of a planned line keeps the planned order: PT._noShuffle)
+const ptLibShuffle = () => { if (!PT._noShuffle) shuffle(PT.lib); };
+function ptShuffle(){ ptLibShuffle(); ptLog(PT._noShuffle ? "Shuffled the library (the planned draws stay in order)." : "Shuffled the library."); }
 function ptUntapAll(){ let n = 0; PT.bf.forEach(c => { if (c.tapped) { c.tapped = false; n++; } }); ptLog(n ? `Untapped ${n} permanent${n === 1 ? "" : "s"}.` : "Nothing to untap."); }
 function ptNextTurn(){
   if (PT.phase !== "play") return toast("Keep your opening hand first.");
@@ -7935,6 +8182,10 @@ function ptManaSource(c){
     const cs = a.cost || {};
     if (!cs.tap || cs.sac.length || cs.discard.length || cs.tapCre.length || cs.remove.length || cs.exileGrave.length || cs.returnLand.length || cs.untap) continue;
     const lbl = String(a.label || "").toLowerCase(), pain = (lbl.match(/deals (\d+) damage to you/) || [])[1];
+    // "Activate only if you control five or more lands" (Temple of the False God): only when that's true
+    const line = ptFaceText(c).split("\n").map(l => l.toLowerCase()).find(l => l.startsWith(lbl.slice(0, Math.min(14, lbl.length)))) || lbl;
+    const onlyIf = line.match(/activate only if ([^.]+)/);
+    if (onlyIf && PT && trEvalIf(onlyIf[1], {src: {card: c}}) === false) continue;
     const only = /spend this mana only to cast (?:a |an )?creature spell/.test(lbl) ? "creature" : /spend this mana only to cast (?:an? )?(artifact|instant or sorcery|noncreature)/.test(lbl) ? lbl.match(/only to cast (?:an? )?([a-z ]+?) spell/)[1] : null;
     const units = ptManaUnits(a.actions[0].what, only ? {only} : {});
     if (!units.length) continue;
@@ -7978,8 +8229,9 @@ function ptPlan(cost, spell, opts = {}){
   for (const c of PT.bf) {
     if (spell && c.uid === spell.uid) continue;
     const s = ptManaSource(c); if (!s) continue;
-    const flex = s.units.reduce((t, u) => t + u.length, 0);
-    s.score = (s.sac ? 50 : 0) + (s.mana ? 30 : 0) + (ptIsCreature(c) ? 8 : 0) + flex + (s.units.some(u => u.some(o => o.pain)) ? 3 : 0) + (s.units.some(u => u.some(o => o.only)) ? -2 : 0);
+    const flex = Math.max(...s.units.map(u => u.length));   // how many colours one of its mana can be (Sol Ring's {C}{C} is as plain as a Wastes)
+    s.score = (s.sac ? 50 : 0) + (s.mana ? 30 : 0) + (ptIsCreature(c) ? 8 : 0) + flex + (s.units.some(u => u.some(o => o.pain)) ? 3 : 0) + (s.units.some(u => u.some(o => o.only)) ? -2 : 0)
+      + (s.units.length > 1 && s.units.length > generic ? 4 : 0);   // tapping Sol Ring for one generic wastes a {C}
     srcs.push(s);
   }
   srcs.sort((a, b) => a.score - b.score);
@@ -7988,7 +8240,8 @@ function ptPlan(cost, spell, opts = {}){
   // every unit that could be spent, cheapest first
   const supply = [];
   pool.forEach(p => supply.push({kind: "pool", i: p.pool, unit: p.unit, score: -10}));
-  srcs.forEach((s, si) => s.units.forEach((u, ui) => supply.push({kind: "src", si, ui, unit: u, score: s.score + ui * 0.01})));
+  // colourless-only mana is spent before mana that could have been a colour, so the colours stay for later spells
+  srcs.forEach((s, si) => s.units.forEach((u, ui) => supply.push({kind: "src", si, ui, unit: u, score: s.score + ui * 0.01 + (u.every(o => o.c === "C") ? -0.5 : 0)})));
   convoke.forEach(c => supply.push({kind: "convoke", card: c, unit: (c.colors && c.colors.length ? c.colors : ["C"]).map(x => ({c: x})).concat([{c: "*", convoke: true}]), score: 100}));
   supply.sort((a, b) => a.score - b.score);
   // colored pips first (fewest ways to pay first), then generic
@@ -8214,6 +8467,7 @@ function ptCastPaid(uid, wayKey, x){
 }
 function ptNoteLand(){ if (PT.landTurn !== PT.turn) { PT.landTurn = PT.turn; PT.landN = 0; } PT.landN++; }
 function ptAskAnyway(msg, yes, fn){
+  PT._fail = String(msg).replace(/<[^>]+>/g, "").replace(/&#39;/g, "'").replace(/&amp;/g, "&");
   ptModal("Hold on", `<p>${msg}</p>`, `<button class="btn ghost" type="button" data-d="close">Cancel</button><button class="btn primary" type="button" id="ptAnyway">${esc(yes)}</button>`);
   $("ptAnyway").onclick = () => { ptCloseModal(); fn(); };
 }
@@ -9404,7 +9658,9 @@ function ptRunTriggers(){
         abs.forEach((ab, ai) => ab.conds.forEach((cond, ci) => {
           // abilities of cards elsewhere only count for their own "when this dies / leaves / is cast"
           const onBf = PT.bf.some(b => b.uid === src.uid);
-          if (!onBf && !((cond.who === "self" || cond.who === "selfOrOther") && src.uid === e.uid && ["dies", "ltb", "cast", "cycle", "discard"].includes(cond.ev))) return;
+          // a card that just left the battlefield "looks back in time" (rule 603.10a): its own leave/die/sacrifice abilities see it go,
+          // including "whenever you sacrifice a nontoken Elemental" on Ashling when Ashling herself is the one sacrificed
+          if (!onBf && !(src.uid === e.uid && (((cond.who === "self" || cond.who === "selfOrOther") && ["dies", "ltb", "cast", "cycle", "discard"].includes(cond.ev)) || (cond.who === "any" && ["dies", "ltb", "sac"].includes(cond.ev))))) return;
           if (!ptCondFits(cond, e, src)) return;
           const key = src.uid + ":" + ai;
           if ((cond.batch || cond.ev === "attackers" || cond.who === "attached") && once.has(key)) return;
@@ -10525,6 +10781,15 @@ function trActions2(e, selfName, have){
     add(Object.assign({t: "pump", p: sp, tt: st, px: xp ? (pp[0] === "-" ? -1 : 1) : 0, tx: xt ? (tt[0] === "-" ? -1 : 1) : 0, kws, count: mm[5] ? "the number of " + mm[5] + (/you control|in your/.test(mm[5]) ? "" : " you control") : mm[6] || null,
       label: `${pp}/${tt}${kws.length ? " and " + kws.join(", ") : ""} until end of turn${w.who === "opp" ? " (to an opponent's creature)" : ""}`}, w), mm);
   }
+  // the other order: "Creatures you control gain trample and get +X/+X until end of turn, where X is…" (Craterhoof Behemoth)
+  const pumpRe2 = new RegExp("\\b" + TR_SUBJ + " (?:each )?gains? ([a-z ,]+?) and gets? ([+-](?:\\d+|x))\\/([+-](?:\\d+|x)) until end of turn(?: for each ([a-z ,]+?)(?=[.,;]|$)|,? where x is ([^.]+))?", "g");
+  for (const mm of e.matchAll(pumpRe2)) {
+    const pp = mm[3], tt = mm[4], good = !/^-/.test(pp) && !/^-/.test(tt), w = trWho(mm[1], good);
+    if (!w) continue;
+    const xp = isX(pp.slice(1)), xt = isX(tt.slice(1)), kws = trKws(mm[2] || "");
+    add(Object.assign({t: "pump", p: xp ? 0 : +pp, tt: xt ? 0 : +tt, px: xp ? (pp[0] === "-" ? -1 : 1) : 0, tx: xt ? (tt[0] === "-" ? -1 : 1) : 0, kws, count: mm[5] ? "the number of " + mm[5] + (/you control|in your/.test(mm[5]) ? "" : " you control") : mm[6] || null,
+      label: `${pp}/${tt}${kws.length ? " and " + kws.join(", ") : ""} until end of turn${w.who === "opp" ? " (to an opponent's creature)" : ""}`}, w), mm);
+  }
   const gainRe = new RegExp("\\b" + TR_SUBJ + " (?:each )?(?:gains?|ha(?:s|ve)) ([a-z ,]+?) until end of turn", "g");
   for (const mm of e.matchAll(gainRe)) {
     const kws = trKws(mm[2]); if (!kws.length) continue;
@@ -10669,6 +10934,9 @@ function trActions2(e, selfName, have){
   }
   if ((m = e.match(/\bput cardname onto the battlefield attached to (?:target|a) creature[^.]*/))) add({t: "attachTo", label: "Attach it to a creature"}, m);
   if ((m = e.match(/\battach (cardname|it) to (?:target|up to one target|another target) creature(?: you control)?/))) add({t: "attachTo", label: "Attach it to a creature"}, m);
+  // "you may cast target instant or sorcery card from a graveyard without paying its mana cost" (Impulsivity)
+  if ((m = e.match(/\b(?:you may )?cast (?:target|up to one target) ([a-z ,]+?) card from (?:a|your) graveyard without paying its mana cost(?:\. if that (?:spell|card) would be put into (?:a|your) graveyard,? exile it instead)?/)))
+    add({t: "castGy", phrase: m[1].replace(/\band\b/g, "or"), exile: /exile it instead/.test(m[0]), label: `Cast ${trA(m[1])} card from your graveyard for free`}, m);
   // impulse draw: "exile the top card of your library. You may play that card this turn / until the end of your next turn"
   if ((m = e.match(/\bexile the top (card|a card|two cards|three cards|four cards|five cards|x cards) of your library(?: face down)?\.? (?:(?:until (?:the )?end of (your next turn|turn|this turn)|until your next end step|this turn),? you may (?:play|cast) (?:that card|those cards|them|it|cards exiled this way|one of those cards)|you may (?:play|cast) (?:that card|those cards|it|them|one of those cards|cards exiled this way)(?: this turn| until (?:the )?end of (your next turn|turn)| until your next end step)?)/))) {
     const n0 = m[1] === "card" || m[1] === "a card" ? 1 : m[1] === "x cards" ? 1 : trNum(m[1].split(" ")[0]), next = /your next turn|next end step/.test(m[2] || m[3] || "") || /your next end step/.test(m[0]);
@@ -11012,6 +11280,16 @@ function ptResolve2(a, p, ctx){
       ptLog(`${nm}: ${a.label}${t && t.how ? " (no opponent has one to hit)" : ""}.`); break;
     }
     case "note": ptLog(`${nm}: ${a.label}.`); break;
+    case "castGy": {
+      // the best one there: a mana ritual or card draw first, then the most expensive
+      const list = PT.grave.filter(c => trFits(a.phrase, c) && !(sc && c.uid === sc.uid));
+      const score = c => (/\badd \{/i.test(c.text || "") ? 100 : 0) + (/\bdraw/i.test(c.text || "") ? 50 : 0) + (c.cmc || 0);
+      const pick = list.sort((x, y) => score(y) - score(x))[0];
+      if (!pick) { ptLog(`${nm}: no ${a.phrase} card in your graveyard to cast.`); break; }
+      ptLog(`${nm}: cast ${pick.name} from your graveyard for free.`);
+      ptMove(pick.uid, ptIsPermanentType(pick) ? "bf" : "exile", {cast: true, how: "from the graveyard"});
+      break;
+    }
     case "role": {
       if (/opponent/.test(a.on)) { const x = ptOppTargets({phrase: "creature"})[0]; ptLog(`${nm}: a ${trCap(a.role)} Role goes on ${x ? x.o.name + "'s " + x.b.name : "an opponent's creature"} (tracked by hand).`); break; }
       const host = /^(it|cardname|that creature)$/.test(a.on) ? (ctx.it && ctx.it.zone === "bf" ? ctx.it.card : sc && PT.bf.includes(sc) ? sc : null)
@@ -11097,7 +11375,7 @@ function ptResolve2(a, p, ctx){
         if (to === "bf") { PT.lib.unshift(c); ptMove(c.uid, "bf", {cast: false}); if (a.tapped) c.tapped = true; }
         else if (to === "hand") PT.hand.push(c); else if (to === "grave") PT.grave.push(c); else PT.lib.unshift(c);
       });
-      if (a.to !== "top") shuffle(PT.lib); else { const t = got; PT.lib = PT.lib.filter(c => !t.includes(c)); shuffle(PT.lib); PT.lib.unshift(...t); }
+      if (a.to !== "top") ptLibShuffle(); else { const t = got; PT.lib = PT.lib.filter(c => !t.includes(c)); ptLibShuffle(); PT.lib.unshift(...t); }
       ptLog(got.length ? `${nm}: searched for ${got.map(c => c.name).join(", ")}.` : `${nm}: searched, found nothing that fits.`);
       p.result = got.length ? got.map(c => c.name).join(", ") : "found nothing";
       break;
@@ -11111,7 +11389,7 @@ function ptResolve2(a, p, ctx){
     case "lookBack": {
       const top = PT.lib.splice(0, Math.min(a.n, PT.lib.length)), lands = PT.bf.filter(ptIsLand).length + PT.hand.filter(ptIsLand).length;
       const good = ptBestCard(top);
-      if (good.length && !good.some(c => ptIsLand(c) ? lands < 5 : (c.cmc || 0) <= lands + 1)) { PT.lib.push(...good); shuffle(PT.lib); ptLog(`${nm}: nothing useful on top, so shuffled.`); }
+      if (good.length && !good.some(c => ptIsLand(c) ? lands < 5 : (c.cmc || 0) <= lands + 1)) { PT.lib.push(...good); ptLibShuffle(); ptLog(`${nm}: nothing useful on top, so shuffled.`); }
       else { PT.lib.unshift(...good); ptLog(`${nm}: looked at ${top.length} and put the best on top.`); }
       break;
     }
@@ -11396,7 +11674,14 @@ function ptActivate(uid, i){
   const f = ptFind(uid); if (!f) return;
   const c = f.card, ab = trActivated(c)[i]; if (!ab) return;
   const nm = ptFaceName(c), why = ptCanPay(c, ab);
-  if (why) return toast(why);
+  if (why) { PT._fail = why; return toast(why); }
+  // the mana part of the cost is paid like a spell's (lands, rocks, the pool), when paying is automatic
+  const manaCost = String((ab.cost || {}).mana || "");
+  let manaPlan = null;
+  if (ptAutoMana() && PT.phase === "play" && /\{(?!x\})[^}]+\}/i.test(manaCost)) {
+    manaPlan = ptPlan(manaCost.replace(/\{x\}/gi, ""), {uid: c.uid, name: nm, type: "", text: ""});
+    if (manaPlan.missing) { const msg = `Not enough mana for ${nm}'s ability (${ptManaTxt(manaCost)}): missing ${ptManaTxt(manaPlan.missing)}.`; PT._fail = msg; return toast(msg); }
+  }
   // a cost where you choose (sacrifice another creature, discard a card): choose first, then it's activated
   const cs = ab.cost || {};
   if (!ptAuto() && !ab._force && ab.kind !== "loyalty") {
@@ -11406,6 +11691,7 @@ function ptActivate(uid, i){
   }
   let dialog = null, pickAfter = null;
   ptDo(() => {
+    if (manaPlan) ptApplyPlan(manaPlan, `${nm}'s ability`);
     c.used = c.used || {};
     if (ab.once || ab.oncePerTurn) c.used[ab.label] = PT.turn;
     if (ab.kind === "loyalty") {
@@ -11515,6 +11801,12 @@ function ptAddSpellPrompt(snap, opts = {}){
   }
   for (let k = 0; k < copies; k++)
     ptAddPrompt(Object.assign({}, base, {kind: k ? "copy" : base.kind, extra: k > 0, eff, actions: acts, xExpr, conditional: condl}));
+}
+// When it chooses for you: the most useful modes first (tokens, damage, cards, counters; removal only when there's a target)
+function ptBestMode(p){
+  const val = m => m.actions.reduce((t, a) => t + (a.t === "token" ? 6 + (+((a.def || {}).power) || 0) * (a.n || 1) : a.t === "opp" ? 4 + (a.n || 0) : a.t === "draw" ? 4 * (a.n || 1) : a.t === "counter" ? 3 : a.t === "life" ? 1
+    : a.t === "oppNone" ? (a.tgt && ptOppTargets(a.tgt).length ? 5 : 0) : a.t === "pump" ? 2 : 1), 0) + (m.actions.length && trCovered(m.eff, m.actions) ? 1 : -2);
+  return p.modes.map((m, i) => ({i, v: val(m)})).filter(x => !p.chosen.includes(x.i)).sort((a, b) => b.v - a.v)[0];
 }
 // clicking a mode of a modal spell on the stack
 function ptPickMode(id, i){
@@ -11780,7 +12072,7 @@ function ptApplyPick(a, p, cards){
         PT.lib.splice(PT.lib.indexOf(c), 1);
         if (to === "bf") { PT.lib.unshift(c); ptMove(c.uid, "bf", {cast: false}); if (a.tapped) c.tapped = true; } else if (to === "hand") PT.hand.push(c); else if (to === "grave") PT.grave.push(c); else PT.lib.unshift(c);
       });
-      if (a.to === "top") { PT.lib = PT.lib.filter(c => !cards.includes(c)); shuffle(PT.lib); PT.lib.unshift(...cards); } else shuffle(PT.lib);
+      if (a.to === "top") { PT.lib = PT.lib.filter(c => !cards.includes(c)); ptLibShuffle(); PT.lib.unshift(...cards); } else ptLibShuffle();
       ptLog(cards.length ? `${nm}: searched for ${names}, then shuffled.` : `${nm}: searched and found nothing, then shuffled.`); break;
     case "landHand": cards.forEach(c => { ptMove(c.uid, "bf", {cast: false}); if (a.tapped) c.tapped = true; }); break;
     case "counter": cards.forEach(c => a.noMods ? ptCounter(c.uid, a.kind, ptAmt(a, p)) : ptAddCounters(c.uid, a.kind, ptAmt(a, p))); if (cards.length) ptLog(`${nm}: ${a.label.replace(/ on a creature you pick$/, "")} on ${names}.`); break;

@@ -43,6 +43,20 @@ module.exports = async function () {
     // a convoke creature tapped for the spell doesn't also attack that turn
     const line = w1 && w1.log.find(l => /convoke/.test(l.how || ''));
     out.convokeLine = line && {how: line.how, costs: line.costs, t: line.t};
+
+    // triggers the finder now follows: the end step, "you may pay {N}. If you do", "if you control …", Saga chapters
+    FW_TYPE = 'creature';
+    const mtn = Object.assign(fwCard(card('Mountain', 'Basic Land — Mountain', '', 0, '')), {qty: 30});
+    const engine = Object.assign(fwCard(card('Burn Engine', 'Enchantment', '{R}', 1, 'At the beginning of your end step, Burn Engine deals 5 damage to each opponent.', ['R'])), {qty: 30});
+    out.endTrig = (engine.trigs || []).map(t => t.conds.map(k => k.ev).join()).join();
+    const we = fwSearch(plan, [mtn, engine], [], {life: 10, maxT: 6, beam: 30, wide: 6, ms: 3000});
+    out.endTurn = we && we.won.t; out.endLogged = !!we && we.log.some(l => l.kind === 'trigger' && l.why === 'endstep');
+    const dawn = fwCard(card('Dawn of Hope', 'Enchantment', '{1}{W}', 2, 'Whenever you gain life, you may pay {2}. If you do, draw a card.\n{3}{W}: Create a 1/1 white Soldier creature token with lifelink.', ['W']));
+    out.dawn = (dawn.trigs || []).map(t => ({ev: t.conds[0].ev, pay: t.payTxt, acts: t.acts.map(a => a.t)}));
+    const geist = fwCard(card('Apothecary Geist', 'Creature — Spirit', '{3}{W}', 4, 'Flying\nWhen Apothecary Geist enters, if you control another Spirit, you gain 3 life.', ['W'], {power: '2', toughness: '3'}));
+    out.geist = (geist.trigs || []).map(t => t.ctl);
+    const saga = fwCard(card('History of Benalia', 'Enchantment — Saga', '{1}{W}{W}', 3, '(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)\nI, II — Create a 2/2 white Knight creature token with vigilance.\nIII — Knights you control get +2/+1 until end of turn.', ['W']));
+    out.saga = {chapters: saga.chapters, trigs: (saga.trigs || []).map(t => t.conds[0].ev + t.conds[0].n)};
     return out;
   });
   check('Arcane Signet makes only the commander\'s colours', JSON.stringify(r.signetRG) === '["RG"]', r.signetRG);
@@ -58,6 +72,11 @@ module.exports = async function () {
   check('convoke is read', r.convokeRead);
   check(`convoke makes the win faster (turn ${r.turnWith} instead of ${r.turnWithout})`, r.turnWith && r.turnWithout && r.turnWith < r.turnWithout, [r.turnWith, r.turnWithout]);
   check('the turn table says which creatures convoked', r.convokeLogged, r.convokeLine);
+  check('end-step triggers are read', r.endTrig === 'endstep', r.endTrig);
+  check(`…and count: 5 damage each end step wins on turn ${r.endTurn}`, r.endTurn === 2 && r.endLogged, [r.endTurn, r.endLogged]);
+  check('"you may pay {2}. If you do, draw" is kept, with its cost', JSON.stringify(r.dawn) === '[{"ev":"gainlife","pay":"{2}","acts":["draw"]}]', r.dawn);
+  check('"if you control another Spirit" is kept and checked', JSON.stringify(r.geist) === '[{"ph":"spirit","n":1,"other":true}]', r.geist);
+  check('Saga chapters are read (I, II, III)', r.saga.chapters === 3 && r.saga.trigs.join() === 'lore1,lore2,lore3', r.saga);
   check('no page errors', page.errors.length === 0, page.errors);
   await browser.close();
 };

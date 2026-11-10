@@ -354,3 +354,37 @@ Checked with every card whose enter ability creates tokens (848). Cast in Auto m
 - **Mana per thing you control**: `ptManaUnits` reads "{C} for each Halfling you control", so it's one unit per matching permanent, changelings included.
 - `fwDeckType` skips changelings, so a deck with many changelings gets its real type (Halfling, not Shapeshifter). This affects Roaming Throne, Herald's Horn and other "chosen type" cards.
 - **Still misread by the finder and the 3,000-game test** (not the Playtest): the Hobbits' copies and per-Halfling mana, the untap abilities of Umbral Mantle and Sword of the Paruns, Helix Pinnacle's win, and Roaming Throne's doubling. Their numbers undersell decks built on these.
+
+## Fastest win: checked in the Playtest (2026.11.10.1)
+**Replay checker (`fwReplay`)**
+- Each win the finder reports is played out in the Playtest engine before it's shown. The replay uses the same opening hand and draws (`best.acq` / `best.order`), with shuffles off (`PT._noShuffle`, through `ptLibShuffle`). Searches take the planned card, modes use `ptBestMode`, sacrifices follow the finder's choices, and X uses the planned value.
+- `fastestWin` checks up to 8 results. Lines that fail go into `rejected`; verified lines are sorted first.
+- Result: `ok: true` means it worked. `false` means the Playtest couldn't do it, which catches finder mistakes. `null` means it failed after something had to be done by hand, so it doesn't count against the finder.
+- The panel shows "Checked in the Playtest" / "Couldn't be played out" (`.fw-check`), with a step-by-step list (`prefs.fwSteps`).
+- The last turn also gets its end step, so end-step triggers can finish the game.
+
+**Finder mistakes it caught, now fixed**
+- Castle Garenbrig-style lands entering untapped (`tapUnless`).
+- Temple of the False God tapping with too few lands (`manaIf`).
+- X spells: paid as X = 0 but still getting the effect. Fixed with `xn`/`xEnters` and the X ≥ 10 condition on Finale of Devastation.
+- Craterhoof's pump counted twice.
+- Burn from activated abilities counted as cast damage.
+
+**Playtest gaps it caught, now fixed**
+- Impulsivity (`castGy`).
+- A card's own death or sacrifice setting off its "whenever a creature dies" (Ashling).
+- Temple's "activate only if": `ptManaSource` checks it (`onlyIf`).
+- `ptActivate` pays mana costs through `ptPlan`.
+- Payment order: colorless-only sources are spent first.
+- Craterhoof's "gain X and get +a/+b" wording (`pumpRe2`).
+
+**Finder reads more (checked across all 34,057 cards with `tools/finder-coverage.js`)**
+The count of abilities the Playtest understands but the finder dropped went from 3,292 to about 2,200. The finder now covers:
+- **New events**: beginning of combat, attacks alone, your end step, and gaining life.
+- **Sagas**: chapter I on entering, the next chapter each turn, and sacrifice after the last one (`loreUp`).
+- **"You may pay {N}. If you do, …"**: paid when the mana is there.
+- **"You may sacrifice another … If you do"**: only with something to sacrifice.
+- **"You may discard / draw … If you do"**: the rest happens only if the first part did.
+- **"If you control (another / N or more) X, …"**: checked against your permanents (`tr.ctl`).
+- **Biggest groups still dropped**: other "if" conditions (kicked, attacked this turn, a creature died this turn…), costs that remove counters or tap creatures, and choices.
+- Payment: a source that makes more mana than the generic part needs (Sol Ring for {1}{R}) is tapped last.
