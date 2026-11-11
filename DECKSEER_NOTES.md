@@ -4,6 +4,13 @@
 
 Read this first. It explains what Deckseer is, how the code is laid out, what was decided along the way, and what comes next. Keep it next to `deckseer.html` and update it when something important changes.
 
+## House rules (from the owner)
+
+- **Every option you can switch on or off, and every lasting preference, goes in ⚙ Settings** (`#setDlg`), never loose on a page. Add it to the right tab (Scanning, Sounds, Look, or a recognition tab), or add a new tab: a `<section class="set-pane">`, its button in `.set-tabs`, and its id in `SET_TABS`. Use a `.set-list` row with a bold name and a short `<small>` explanation.
+  - **Exceptions**: controls for what you're doing right now stay where you use them. These are Foil batch, Sleeved cards, Auto-scan, Hands-free, list filters such as "Ignore cards under $1", export choices, and the Playtest's own in-game settings.
+  - **On a page**: if a page needs to show what a setting does, show it as text with a link that opens Settings on that tab (e.g. `#deckAlsoCollInfo` → `openSettings("scanSet")`).
+- Don't release the stashed "AI files from the website" change until the owner asks.
+
 ## Files
 
 | File | What it is |
@@ -442,3 +449,8 @@ The count of abilities the Playtest understands but the finder dropped went from
 - `#bgfx` sits behind the content (fixed, z-index -1, pointer-events none). It has three aurora patches drawn with radial gradients (blue, violet, cyan) that drift on 95–140 s cycles, plus two star layers that twinkle on 9 and 13 s cycles.
 - Only transform and opacity animate. A blur filter dropped headless rendering from 60 to 10 fps, so there is none.
 - Light and dark mode have their own colours. Nothing moves when the device asks for reduced motion. The "🌌 Lively background" option (`prefs.bgfx`) is on by default.
+
+## Options moved into Settings (2026.11.11.6)
+- New tabs: 📷 Scanning (add automatically, also add to my collection, low light, prices), 🔊 Sounds (sounds, ka-ching price, Hear it, own sound) and 🎨 Look (glow, background). They come before the recognition tabs.
+- The Scanner page keeps the controls for the current batch: list, set lock, condition, foil batch and sleeved. It has a "⚙ Settings" button. The deck builder shows where scanned cards go, with a link to the setting (`#deckAlsoCollInfo`).
+- A guide step for ⚙ Settings was added. See "House rules" at the top.

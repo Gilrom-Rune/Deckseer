@@ -201,6 +201,12 @@ tr.flash td{animation:fl 1.6s ease-out}
 .set-pane{border:1px solid var(--line);border-radius:10px;padding:12px 14px}
 .set-pane h3{margin:0 0 4px;font-size:1rem}
 .set-row{align-items:center}
+.set-list{display:flex;flex-direction:column;gap:12px;margin-top:8px}
+.set-list .chk{align-items:flex-start;flex-wrap:wrap;gap:8px}
+.set-list .chk>span{display:flex;flex-direction:column;flex:1 1 0;min-width:0}
+.set-list .chk>input[type=checkbox]{flex:none;margin-top:2px}
+.set-list small{color:var(--muted);font-size:.82rem;font-weight:400}
+.set-list .chk>small{flex-basis:100%}
 .set-cog .cog{display:inline-block;transition:transform .6s}
 .set-cog:hover .cog{transform:rotate(120deg)}
 @media (prefers-reduced-motion:reduce){.set-cog .cog{transition:none}}
@@ -1306,20 +1312,12 @@ html.bgfx #bgfx{display:block;position:fixed;inset:0;z-index:-1;pointer-events:n
       <div class="row2">
         <label class="field">Set lock <input type="text" id="optSet" maxlength="40" placeholder="e.g. HOC, MH3" aria-label="Set codes to prefer, separated by commas"></label>
         <label class="field">Condition <select id="optCond"></select></label>
-        <label class="field">Prices <select id="optCur"><option value="usd">USD (TCGplayer)</option><option value="eur">EUR (Cardmarket)</option></select></label>
       </div>
       <div class="row2">
-        <label class="chk"><input type="checkbox" id="optAdd" checked> Add automatically when sure</label>
         <label class="chk"><input type="checkbox" id="optFoil"> Foil batch</label>
         <label class="chk" title="Finds the card inside the sleeve and removes glare from the plastic"><input type="checkbox" id="optSleeve"> Sleeved cards</label>
-        <label class="chk" title="In a dark room: brightens the webcam, averages several frames to remove grain, and boosts contrast">Low light <select id="optLow" class="tiny-sel"><option value="auto">Auto</option><option value="on">On</option><option value="off">Off</option></select></label>
-        <label class="chk"><input type="checkbox" id="optSound" checked> Sounds</label>
-        <label class="chk" title="Every edge glows magical blue and white"><input type="checkbox" id="optGlow" checked> ✨ Magical glow</label>
-        <label class="chk" title="A slow aurora and faint twinkling stars behind the panels"><input type="checkbox" id="optBgfx" checked> 🌌 Lively background</label>
-        <label class="chk">Alert for cards worth <span class="cur-sym" id="alertSym">$</span><input type="number" id="optAlert" min="0" step="0.5" class="tiny" aria-label="Alert price"> or more <button class="btn ghost sm" type="button" id="optHear" title="Play the sound for a valuable card">🔊 Hear it</button></label>
-        <span class="chk" id="optOwnWrap"><button class="btn ghost sm" type="button" id="optOwnSnd" title="Pick a sound file (MP3, WAV, OGG, up to 500 KB) to play for valuable cards">🎵 Use my own sound…</button><span id="optOwnInfo" class="cur-sub"></span><input type="file" id="optOwnFile" accept="audio/*" hidden></span>
       </div>
-      <div class="row2 set-row"><button class="btn" type="button" id="settingsOpen2" title="Learning from scans, Picture library, AI picture recognition">⚙ Recognition settings</button><span class="cur-sub" id="setSummary"></span></div>
+      <div class="row2 set-row"><button class="btn" type="button" id="settingsOpen2" title="Scanning, sounds, look, and how cards are recognised">⚙ Settings</button><span class="cur-sub" id="setSummary"></span></div>
       <div class="keys"><span><kbd>Space</kbd> scan</span><span class="aikey hide"><kbd>C</kbd> ask Claude</span><span><kbd>Enter</kbd> add</span><span><kbd>F</kbd> foil</span><span><kbd>R</kbd> add another copy</span><span><kbd>M</kbd> say a card</span><span><kbd>1</kbd>–<kbd>5</kbd> condition</span><span><kbd>←</kbd><kbd>→</kbd> printing</span><span><kbd>Ctrl</kbd>+<kbd>Z</kbd> undo</span></div>
     </section>
   </div>
@@ -1417,7 +1415,7 @@ html.bgfx #bgfx{display:block;position:fixed;inset:0;z-index:-1;pointer-events:n
         <button class="btn" type="button" id="deckNewBtn">New deck</button>
         <button class="btn" type="button" id="deckImpBtn">Import a deck list</button>
         <span class="sp"></span>
-        <label class="chk" title="Off: decks are separate lists, like on Moxfield"><input type="checkbox" id="deckAlsoColl"> Also add scanned cards to my collection</label>
+        <button class="linkbtn cur-sub" type="button" id="deckAlsoCollInfo" title="Change it in ⚙ Settings → Scanning"></button>
       </div>
       <form id="deckNewForm" class="deck-new" hidden>
         <label class="field grow">Deck name <input type="text" id="deckNewName" maxlength="60" placeholder="Atraxa superfriends" required></label>
@@ -1483,10 +1481,35 @@ html.bgfx #bgfx{display:block;position:fixed;inset:0;z-index:-1;pointer-events:n
 <dialog id="viewDlg" class="view-dlg" aria-label="Card"></dialog>
 <dialog id="setDlg" class="setup-dlg set-dlg" aria-labelledby="setTitle">
   <div class="set-head"><h2 id="setTitle">⚙ Settings</h2><button type="button" class="vw-x" id="setClose" aria-label="Close">✕</button></div>
-  <p class="cur-sub">How the scanner recognises cards. It tries these in order: what it learned from your scans, the AI, then the Picture library.</p>
-  <div class="set-tabs" role="tablist"><button type="button" role="tab" class="set-tab" data-settab="memBox" aria-controls="memBox"><span class="set-tl">🧠 Learning from scans</span> <span class="muted-s" id="memSummaryState">(learning)</span></button><button type="button" role="tab" class="set-tab" data-settab="libBox" aria-controls="libBox"><span class="set-tl">🖼️ Picture library</span> <span class="muted-s" id="libSummaryState">(off)</span></button><button type="button" role="tab" class="set-tab" data-settab="aiPicBox" aria-controls="aiPicBox"><span class="set-tl">🤖 AI picture recognition</span> <span class="muted-s" id="aiPicState">(off)</span></button><button type="button" role="tab" class="set-tab" data-settab="aiBox" aria-controls="aiBox"><span class="set-tl">✨ Ask Claude</span> <span class="muted-s" id="aiState">(off)</span></button></div>
+  <p class="cur-sub">Everything you can switch on or off. Changes are saved straight away.</p>
+  <div class="set-tabs" role="tablist"><button type="button" role="tab" class="set-tab" data-settab="scanSet" aria-controls="scanSet"><span class="set-tl">📷 Scanning</span></button><button type="button" role="tab" class="set-tab" data-settab="soundSet" aria-controls="soundSet"><span class="set-tl">🔊 Sounds</span></button><button type="button" role="tab" class="set-tab" data-settab="lookSet" aria-controls="lookSet"><span class="set-tl">🎨 Look</span></button><button type="button" role="tab" class="set-tab" data-settab="memBox" aria-controls="memBox"><span class="set-tl">🧠 Learning from scans</span> <span class="muted-s" id="memSummaryState">(learning)</span></button><button type="button" role="tab" class="set-tab" data-settab="libBox" aria-controls="libBox"><span class="set-tl">🖼️ Picture library</span> <span class="muted-s" id="libSummaryState">(off)</span></button><button type="button" role="tab" class="set-tab" data-settab="aiPicBox" aria-controls="aiPicBox"><span class="set-tl">🤖 AI picture recognition</span> <span class="muted-s" id="aiPicState">(off)</span></button><button type="button" role="tab" class="set-tab" data-settab="aiBox" aria-controls="aiBox"><span class="set-tl">✨ Ask Claude</span> <span class="muted-s" id="aiState">(off)</span></button></div>
+  <section class="set-pane" id="scanSet" role="tabpanel" hidden>
+    <h3>Scanning</h3>
+    <div class="set-list">
+      <label class="chk"><input type="checkbox" id="optAdd" checked> <span><b>Add automatically when sure</b><small>Cards it's certain about are added without pressing Enter.</small></span></label>
+      <label class="chk" title="Off: decks are separate lists, like on Moxfield"><input type="checkbox" id="deckAlsoColl"> <span><b>Also add scanned cards to my collection</b><small>When scanning into a deck. Off: decks are separate lists, like on Moxfield.</small></span></label>
+      <label class="chk">Low light <select id="optLow" class="tiny-sel"><option value="auto">Auto</option><option value="on">On</option><option value="off">Off</option></select> <small>In a dark room: brightens the webcam, averages frames to remove grain, and boosts contrast.</small></label>
+      <label class="chk">Prices <select id="optCur"><option value="usd">USD (TCGplayer)</option><option value="eur">EUR (Cardmarket)</option></select></label>
+    </div>
+  </section>
+  <section class="set-pane" id="soundSet" role="tabpanel" hidden>
+    <h3>Sounds</h3>
+    <div class="set-list">
+      <label class="chk"><input type="checkbox" id="optSound" checked> <span><b>Sounds</b><small>A beep when a card is added, and the ka-ching for valuable ones.</small></span></label>
+      <label class="chk">Ka-ching for cards worth <span class="cur-sym" id="alertSym">$</span><input type="number" id="optAlert" min="0" step="0.5" class="tiny" aria-label="Alert price"> or more <button class="btn ghost sm" type="button" id="optHear" title="Play the sound for a valuable card">🔊 Hear it</button></label>
+      <span class="chk" id="optOwnWrap"><button class="btn ghost sm" type="button" id="optOwnSnd" title="Pick a sound file (MP3, WAV, OGG, up to 500 KB) to play for valuable cards">🎵 Use my own sound…</button><span id="optOwnInfo" class="cur-sub"></span><input type="file" id="optOwnFile" accept="audio/*" hidden></span>
+    </div>
+  </section>
+  <section class="set-pane" id="lookSet" role="tabpanel" hidden>
+    <h3>Look</h3>
+    <div class="set-list">
+      <label class="chk"><input type="checkbox" id="optGlow" checked> <span><b>✨ Magical glow</b><small>Every edge glows blue and white.</small></span></label>
+      <label class="chk"><input type="checkbox" id="optBgfx" checked> <span><b>🌌 Lively background</b><small>A slow aurora and faint twinkling stars behind the panels.</small></span></label>
+    </div>
+  </section>
   <section class="ai set-pane" id="memBox" role="tabpanel" hidden>
     <h3>Learning from your scans</h3>
+    <p class="cur-sub">How cards are recognised: the scanner tries what it learned from your scans first, then the AI, then the Picture library.</p>
 
         <div class="ai-body"><p class="cur-sub" id="memInfo"></p>
           <p class="cur-sub">Each card you confirm is remembered as it looks through your webcam, in your lighting (up to 3 looks per printing, kept only in this browser). Next time it's recognised straight away, even when the name can't be read, and the same printing is picked. Fixing a wrong scan teaches it the right card.</p></div>
@@ -4590,7 +4613,10 @@ $("deckImpBtn").onclick = () => { const f = $("deckImpForm"); f.hidden = !f.hidd
 $("deckImpCancel").onclick = () => { $("deckImpForm").hidden = true; };
 $("deckImpForm").addEventListener("submit", e => { e.preventDefault(); importDeck(); });
 $("deckAlsoColl").checked = !!prefs.deckAlsoColl;
-$("deckAlsoColl").onchange = e => { prefs.deckAlsoColl = e.target.checked; savePrefs(); };
+const deckAlsoInfo = () => { $("deckAlsoCollInfo").textContent = prefs.deckAlsoColl ? "Scanned cards also go into your collection ⚙" : "Scanned cards go into the deck only ⚙"; };
+deckAlsoInfo();
+$("deckAlsoColl").onchange = e => { prefs.deckAlsoColl = e.target.checked; savePrefs(); deckAlsoInfo(); };
+$("deckAlsoCollInfo").onclick = () => openSettings("scanSet");
 
 /* ---------------- card editor: fix a misscan by picking the right printing, set or finish ---------------- */
 let edit = null;
@@ -7716,7 +7742,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.11.5";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.11.6";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
@@ -12425,7 +12451,8 @@ const GUIDE = [
     {h: "Turn on the webcam", b: "On the <b>Scanner</b> page click <b>Turn on webcam</b> and allow camera access. Any webcam works; a sharper one reads small text better.", go: {page: "scanner", el: "startCam"}},
     {h: "Hold a card up", b: "Hold the card flat against a plain background, filling most of the frame. When Deckseer finds it, a <b>green outline</b> appears. With <b>Auto-scan</b> on, it reads the card by itself and beeps when it's added. Otherwise press <b>Scan now</b> (or Space).", go: {page: "scanner", el: "optAuto"}},
     {h: "Scanning with a phone", b: "A phone uses its <b>back camera</b> (switch it in the Camera list). If it has a flashlight, a <b>🔦 Flashlight</b> button appears: tilt the card slightly if the light glares on it. The phone gives a short buzz when a card is added. Scanning is slower than on a PC, so good light helps a lot.", go: {page: "scanner", el: "startCam"}},
-    {h: "Light", b: "Even light with no glare works best. In a dim room <b>Low light</b> (Auto) brightens the camera and averages a few frames. <b>Screen light</b> turns your screen into a soft white lamp.", go: {page: "scanner", el: "screenLight"}},
+    {h: "Light", b: "Even light with no glare works best. In a dim room <b>Low light</b> (Auto, in <b>⚙ Settings → Scanning</b>) brightens the camera and averages a few frames. <b>Screen light</b> turns your screen into a soft white lamp.", go: {page: "scanner", el: "screenLight"}},
+    {h: "⚙ Settings", b: "Everything you can switch on or off is in <b>⚙ Settings</b> (the cog at the top): <b>Scanning</b> (add automatically, also add to my collection, low light, prices), <b>Sounds</b> (the ka-ching and its price, or your own sound), <b>Look</b> (magical glow, lively background), and how cards are recognised (learning, Picture library, AI, Ask Claude).", go: {page: "scanner", el: "optAdd"}},
     {h: "Cards in sleeves", b: "Tick <b>Sleeved cards</b>. Deckseer then finds the card inside the sleeve and removes the plastic's glare by combining several frames.", go: {page: "scanner", el: "optSleeve"}},
     {h: "Going through one set? Use Set lock", b: "Type the set's code (like <b>MH3</b> or <b>HOC</b>) in <b>Set lock</b>. Scans get faster, it picks the right printing, and it can recognise cards by picture alone within that set.", go: {page: "scanner", el: "optSet"}},
     {h: "Check, fix and add", b: "When Deckseer is sure, it adds the card straight away. When it isn't, it shows <b>your photo next to its best match</b>. Pick the right printing, or the right card under <b>Not it?</b>, then press <b>Enter</b> to add. Foil? Tick foil before adding.", go: {page: "scanner", el: "sessView"}},
@@ -12504,7 +12531,7 @@ function guideMove(d){
   document.querySelectorAll(".guide-hl").forEach(x => x.classList.remove("guide-hl"));
 }
 /* ⚙ Settings: learning from scans, Picture library, AI picture recognition, Ask Claude, as tabs */
-const SET_TABS = ["memBox", "libBox", "aiPicBox", "aiBox"];
+const SET_TABS = ["scanSet", "soundSet", "lookSet", "memBox", "libBox", "aiPicBox", "aiBox"];
 function setTab(id){
   if (!SET_TABS.includes(id)) id = SET_TABS[0];
   prefs.setTab = id; savePrefs();

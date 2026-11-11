@@ -6,6 +6,10 @@ module.exports = async function () {
   const { browser, page } = await openApp();
   const r = await page.evaluate(async () => {
     const out = {}, dlg = document.getElementById('setDlg');
+    // every on/off option lives in Settings, not on the pages
+    out.moved = ['optAdd', 'optLow', 'optCur', 'optSound', 'optAlert', 'optHear', 'optOwnSnd', 'optGlow', 'optBgfx', 'deckAlsoColl'].filter(id => !dlg.contains(document.getElementById(id)));
+    const inp = document.getElementById('deckAlsoColl'); inp.checked = true; inp.dispatchEvent(new Event('change'));
+    out.deckInfo = document.getElementById('deckAlsoCollInfo').textContent; inp.checked = false; inp.dispatchEvent(new Event('change'));
     const s = document.getElementById('setupDlg'); if (s && s.open) s.close();
     out.inDlg = ['memBox', 'libBox', 'aiPicBox', 'aiBox'].every(id => dlg.contains(document.getElementById(id)));
     out.notOnScanner = !document.querySelector('.panel.opts #libBox');
@@ -27,8 +31,10 @@ module.exports = async function () {
     return out;
   });
   check('the three scanner sections (and Ask Claude) moved into the Settings window', r.inDlg && r.notOnScanner, r);
+  check('every on/off option is in Settings', r.moved.length === 0, r.moved);
+  check('the deck builder says where scanned cards go, with a link to the setting', /also go into your collection/.test(r.deckInfo), r.deckInfo);
   check('the ⚙ button opens it', r.open);
-  check('one tab each', r.tabs.join('|') === 'Learning from scans|Picture library|AI picture recognition|Ask Claude', r.tabs);
+  check('one tab each', r.tabs.join('|') === 'Scanning|Sounds|Look|Learning from scans|Picture library|AI picture recognition|Ask Claude', r.tabs);
   check('a tab shows only its own settings, with its buttons working there', r.shown.join() === 'aiPicBox' && r.load, r);
   check('each tab shows its state (on, off, learning…)', r.state);
   check('it closes, and reopens on the same tab from the scanner\'s button', r.closed && r.remembered, r);
