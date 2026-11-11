@@ -1167,9 +1167,29 @@ html.glow body::after{content:"";position:fixed;inset:0;pointer-events:none;z-in
   box-shadow:inset 0 0 0 1px var(--gl-white),inset 0 0 14px var(--gl-edge),inset 0 0 48px var(--gl-soft);animation:glowEdge 6s ease-in-out infinite}
 @keyframes glowEdge{0%,100%{opacity:.75}50%{opacity:1}}
 @media (prefers-reduced-motion:reduce){html.glow body::after{animation:none}html.glow :is(.btn,input,select,textarea){transition:none}}
+/* 🌌 Lively background (prefs.bgfx, on by default): a slow aurora and faint twinkling stars behind the panels.
+   Only transform and opacity move (cheap for the GPU), very slowly, and nothing moves when the device asks for less motion. */
+#bgfx{display:none}
+html.bgfx #bgfx{display:block;position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;contain:strict}
+#bgfx .aur{position:absolute;width:75vmax;height:75vmax;border-radius:50%;opacity:var(--aur-o);will-change:transform}
+#bgfx .a1{left:-20vmax;top:-25vmax;background:radial-gradient(circle,var(--aur-1) 0%,transparent 65%);animation:aurA 95s ease-in-out infinite alternate}
+#bgfx .a2{right:-25vmax;bottom:-30vmax;background:radial-gradient(circle,var(--aur-2) 0%,transparent 65%);animation:aurB 120s ease-in-out infinite alternate}
+#bgfx .a3{left:30vw;top:35vh;width:55vmax;height:55vmax;background:radial-gradient(circle,var(--aur-3) 0%,transparent 65%);animation:aurC 140s ease-in-out infinite alternate}
+#bgfx .stars{position:absolute;inset:-10%;background-image:var(--stars);background-size:420px 420px;opacity:var(--star-o);animation:twinkle 9s ease-in-out infinite alternate}
+#bgfx .stars.s2{background-size:610px 610px;background-position:170px 90px;animation-duration:13s;animation-delay:-5s}
+:root{--aur-1:rgba(80,150,255,.55);--aur-2:rgba(150,120,255,.4);--aur-3:rgba(110,210,255,.35);--aur-o:.55;--star-o:.5;
+  --stars:radial-gradient(1.2px 1.2px at 40px 60px,rgba(70,130,220,.7),transparent),radial-gradient(1px 1px at 210px 140px,rgba(70,130,220,.6),transparent),radial-gradient(1.5px 1.5px at 330px 300px,rgba(110,160,240,.6),transparent),radial-gradient(1px 1px at 120px 360px,rgba(70,130,220,.5),transparent),radial-gradient(1.2px 1.2px at 280px 30px,rgba(140,170,255,.6),transparent)}
+@media (prefers-color-scheme: dark){:root{--aur-1:rgba(60,130,255,.5);--aur-2:rgba(140,90,255,.38);--aur-3:rgba(70,200,255,.3);--aur-o:.6;--star-o:.75;
+  --stars:radial-gradient(1.2px 1.2px at 40px 60px,rgba(255,255,255,.85),transparent),radial-gradient(1px 1px at 210px 140px,rgba(200,225,255,.7),transparent),radial-gradient(1.5px 1.5px at 330px 300px,rgba(255,255,255,.75),transparent),radial-gradient(1px 1px at 120px 360px,rgba(190,215,255,.6),transparent),radial-gradient(1.2px 1.2px at 280px 30px,rgba(255,255,255,.8),transparent)}}
+@keyframes aurA{to{transform:translate(18vw,14vh) scale(1.15)}}
+@keyframes aurB{to{transform:translate(-20vw,-12vh) scale(.9)}}
+@keyframes aurC{to{transform:translate(-14vw,10vh) scale(1.2)}}
+@keyframes twinkle{from{opacity:calc(var(--star-o) * .35)}to{opacity:var(--star-o)}}
+@media (prefers-reduced-motion:reduce){#bgfx .aur,#bgfx .stars{animation:none}}
 </style>
 </head>
 <body>
+<div id="bgfx" aria-hidden="true"><div class="aur a1"></div><div class="aur a2"></div><div class="aur a3"></div><div class="stars"></div><div class="stars s2"></div></div>
 <aside id="tour" class="guide" hidden role="dialog" aria-modal="false" aria-labelledby="guideTitle">
   <div class="gd-top"><h2 id="guideTitle">📖 Guide</h2><button class="btn ghost" type="button" id="guideClose" aria-label="Close the guide">✕</button></div>
   <div id="guideBody"></div>
@@ -1295,6 +1315,7 @@ html.glow body::after{content:"";position:fixed;inset:0;pointer-events:none;z-in
         <label class="chk" title="In a dark room: brightens the webcam, averages several frames to remove grain, and boosts contrast">Low light <select id="optLow" class="tiny-sel"><option value="auto">Auto</option><option value="on">On</option><option value="off">Off</option></select></label>
         <label class="chk"><input type="checkbox" id="optSound" checked> Sounds</label>
         <label class="chk" title="Every edge glows magical blue and white"><input type="checkbox" id="optGlow" checked> ✨ Magical glow</label>
+        <label class="chk" title="A slow aurora and faint twinkling stars behind the panels"><input type="checkbox" id="optBgfx" checked> 🌌 Lively background</label>
         <label class="chk">Alert for cards worth <span class="cur-sym" id="alertSym">$</span><input type="number" id="optAlert" min="0" step="0.5" class="tiny" aria-label="Alert price"> or more <button class="btn ghost sm" type="button" id="optHear" title="Play the sound for a valuable card">🔊 Hear it</button></label>
         <span class="chk" id="optOwnWrap"><button class="btn ghost sm" type="button" id="optOwnSnd" title="Pick a sound file (MP3, WAV, OGG, up to 500 KB) to play for valuable cards">🎵 Use my own sound…</button><span id="optOwnInfo" class="cur-sub"></span><input type="file" id="optOwnFile" accept="audio/*" hidden></span>
       </div>
@@ -7695,7 +7716,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.11.4";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.11.5";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
@@ -7853,6 +7874,9 @@ async function sleeveExposure(on){
 }
 document.documentElement.classList.toggle("glow", prefs.glow !== false);
 $("optGlow").checked = prefs.glow !== false;
+document.documentElement.classList.toggle("bgfx", prefs.bgfx !== false);
+$("optBgfx").checked = prefs.bgfx !== false;
+$("optBgfx").onchange = e => { prefs.bgfx = e.target.checked; savePrefs(); document.documentElement.classList.toggle("bgfx", prefs.bgfx); };
 $("optGlow").onchange = e => { prefs.glow = e.target.checked; savePrefs(); document.documentElement.classList.toggle("glow", prefs.glow); };
 $("optSound").onchange = e => { prefs.sound = e.target.checked; savePrefs(); if (prefs.sound) sound("ok"); };
 function renderOwnSnd(){ const own = store.get("bsw-kaching", null); $("optOwnInfo").innerHTML = own ? ` Playing <b>${esc(own.name)}</b> <button class="linkbtn" type="button" id="optOwnReset">use the built-in ka-ching</button>` : ""; $("optOwnSnd").textContent = own ? "🎵 Change sound…" : "🎵 Use my own sound…"; }

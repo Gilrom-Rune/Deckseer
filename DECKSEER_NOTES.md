@@ -437,3 +437,8 @@ The count of abilities the Playtest understands but the finder dropped went from
 - The tabs are Learning from scans, Picture library, AI picture recognition and Ask Claude. These were `<details>` in the scan options and are now `<section class="set-pane">` with the same ids. Their state spans moved into the tabs, and the last tab is remembered (`prefs.setTab`). Arrow keys move between tabs.
 - `guideShow` opens Settings non-modally on the right tab when the target is inside it.
 - On phones the header buttons sit on their own row (`.stats-br`), so the counts no longer push the page sideways. Tests: `tests/settings.test.js`.
+
+## Lively background (2026.11.11.5)
+- `#bgfx` sits behind the content (fixed, z-index -1, pointer-events none). It has three aurora patches drawn with radial gradients (blue, violet, cyan) that drift on 95–140 s cycles, plus two star layers that twinkle on 9 and 13 s cycles.
+- Only transform and opacity animate. A blur filter dropped headless rendering from 60 to 10 fps, so there is none.
+- Light and dark mode have their own colours. Nothing moves when the device asks for reduced motion. The "🌌 Lively background" option (`prefs.bgfx`) is on by default.
