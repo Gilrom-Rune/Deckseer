@@ -416,3 +416,11 @@ The count of abilities the Playtest understands but the finder dropped went from
 - The "valuable" sound (a card worth at least the alert price, default $5) is now a cash-register ka-ching made with Web Audio (`kaching(ac, t0)`). The "ka" is a burst of filtered noise plus a falling thump. The "ching" is a bell with uneven overtones (1, 2.76, 5.4, 8.9 × 1975 Hz), each struck twice 0.7% apart, ringing out over about 1 s. No sound file.
 - A "🔊 Hear it" button next to the alert price plays it, even with sounds off.
 - The AudioContext is resumed if the browser suspended it. Tests: `tests/sound.test.js`.
+
+## A more real ka-ching, or your own sound (2026.11.11.2)
+- `kaching` was rebuilt to sound like a real register:
+  - Two metal clacks (noise through resonances at 1.25, 3.3 and 5.2 kHz) and the drawer thump.
+  - A struck bell with pairs of close modes that beat as it rings (about 1.7 s).
+  - Coins: 14 pings at 4–9 kHz, with the same jingle every time.
+  - A small reverb, made by a ConvolverNode.
+- **"Use my own sound…"**: pick an MP3, WAV or OGG up to 500 KB. It is stored as a data URL in `bsw-kaching`, not in backups, and plays instead of the built-in sound, which you can switch back to. Licensed register recordings were only in paid packs, so none is bundled.
