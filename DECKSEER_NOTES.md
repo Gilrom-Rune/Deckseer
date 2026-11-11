@@ -15,14 +15,52 @@ Read this first. It explains what Deckseer is, how the code is laid out, what wa
 
 | File | What it is |
 |---|---|
-| `deckseer.html` | the whole app |
+| `src/` | **the app's source**: edit these. `node tools/build.js` (or `npm run build`) joins them into `deckseer.html` |
+| `deckseer.html` | the whole app as one file, **built from `src/`**: don't edit it by hand (the build refuses to overwrite hand edits) |
+| `tools/` | `build.js`, `bump-version.js`, and the all-cards testers (`forge-cards.js`, `allcards-check.js`, `allcards-coverage.js`, `finder-coverage.js`) |
 | `index.html`, `manifest.webmanifest`, `sw.js`, `icons/` | the installable app (PWA) for GitHub Pages; harmless when opening the HTML from disk |
 | `tests/` | the Playwright test suite (`npm test`), see `tests/README.md` |
 | `stage2/` | the Stage 2 index builder: `build_index.py` and the Colab notebook |
 
 ## What Deckseer is
 
-A Magic: The Gathering app for the owner's PC, built as **one self-contained HTML file** (`deckseer.html`, about 960 KB, about 10,000 lines of inline JS and CSS). It is opened straight from disk (`file://`) in Chrome or Edge. There is no build step and no server. Everything the user owns is saved in their browser.
+A Magic: The Gathering app for the owner's PC, delivered as **one self-contained HTML file** (`deckseer.html`, about 1.2 MB, about 12,900 lines of inline JS and CSS). It is opened straight from disk (`file://`) in Chrome or Edge, or from GitHub Pages. There is no server. Everything the user owns is saved in their browser.
+
+## The source (`src/`) and the build
+
+Since Nov 2026 the file is built from about 40 pieces in `src/`, so each part can be read and edited on its own. `tools/build.js` just joins them in order. There is no bundler and no transpiling, and the result is the same single file as before. Everything is still one `<script>`, so code in a later file can use anything defined in an earlier one, as it always could. Don't add `import`/`export`.
+
+- `src/page/1-head.html`: `<head>`, ending with `<style>`.
+- `src/css/`: `1-main.css`, `2-playtest.css`, `3-phones.css` and `4-glow-background.css`, in that order.
+- `src/page/2-body.html`: all the page's markup, including dialogs (Settings, downloads, card view, add/replace, editor), ending with `<script>`.
+- `src/js/`: the app, in file-name order.
+
+| File | What's in it |
+|---|---|
+| `01-basics` | `$`, `esc`, `money`, card geometry |
+| `02-storage-names-scryfall` | `store`, `prefs`, name matching, collector-line parsing, Scryfall (`sf`, `slimCard`) |
+| `03-ocr`, `04-camera-card-finding` | Tesseract / PaddleOCR, the webcam, OpenCV card finding, live checks, low light |
+| `05-picture-matching-library`, `06-scanning-ai-recognition` | Picture library, the scan loop, Stage 2 AI recognition |
+| `07-ask-claude`, `08-type-in-voice` | Ask Claude about a card, typing a name, voice |
+| `09-collection` | collection table, session, big card view, lists, filters, prices |
+| `10-decks`, `11-deck-import-editor-export` | decks, add/replace dialog, rules checks, deck view, import, card editor, export |
+| `12-deck-test-simulator` | the 3,000-game test (`simulateDeck`) |
+| `13-fastest-win`, `14-fastest-win-replay` | the finder (`fwCard`, `fwRules`, `fwSearchGen`, `fastestWin`) and its Playtest replay (`fwReplay`) |
+| `15-deck-check-upgrades`, `16-combos` | Deck check (mana base, bracket, cuts, adds, swaps), Commander Spellbook |
+| `17-backup-version-install-misc` | backup and export, version check, PWA install, the logo's eye, toast, sounds and Settings wiring |
+| `18`–`22` (`pt-…`) | Playtest table: state, rules-changers, mana (`ptPlan`), drawing, menus, input |
+| `23-tr-reading-cards`, `24-tr-watching-table` | reading card text into triggers and actions (`trAbilities`, `trActions`), and firing them (`ptRunTriggers`, `ptResolve`) |
+| `25-pt-opponents-combat` | opponents, attacking, blocking, combat damage |
+| `26`–`31` (`rules-…`) | rules engine: keyword data (702/701 text), stats, counting, "if"s, X, effects, keyword triggers, activated abilities, choosing, state-based actions, stack, ways to cast, turn steps |
+| `32-pt-choices-panel` | the side panel where you pick targets and choices |
+| `33-boot-guide` | start-up, the step-by-step guide, Settings dialog code |
+| `34-card-search`, `35-wishlist`, `36-game-tracker` | the other pages |
+
+**Working on it**:
+- Find code with `grep -n name src/js/*.js`.
+- After editing, run `node tools/build.js`. `npm test` builds first anyway.
+- `tests/build.test.js` fails if `deckseer.html` doesn't match `src/`, so commit both.
+- A new file is picked up automatically; its number decides its place.
 
 The goal is to be a **one-stop app**: scanning, collection, deck building, deck analysis, playtesting, card search, wishlist and game tracking.
 
@@ -217,7 +255,7 @@ Tests: `tests/interactions.test.js` with real Oracle text in `tests/fixtures/ash
 
 ## Testing
 
-- `tests/` has a Playwright suite (`npm test`, 61 checks). It covers backup and restore, the PWA (offline, served by a local server), the finder's mana rules and convoke, and every page opening without errors. The network is blocked, so Scryfall and the CDNs are mocked or fail. See `tests/README.md`. Add a test with each new feature.
+- `tests/` has a Playwright suite (`npm test`, about 325 checks, about 20 minutes; `node tests/run.js <name>` runs one file). It covers backup and restore, the PWA (offline, served by a local server), the finder's mana rules and convoke, and every page opening without errors. The network is blocked, so Scryfall and the CDNs are mocked or fail. See `tests/README.md`. Add a test with each new feature.
 - The scanner has still never been tested end to end with real OCR and OpenCV. **On a PC with internet, do a real scan test first**: real cards, the webcam, good and dim light, sleeved and unsleeved.
 
 ## Working style the user prefers
@@ -232,7 +270,7 @@ Tests: `tests/interactions.test.js` with real Oracle text in `tests/fixtures/ash
 
 The app is live at **https://gilrom-rune.github.io/Deckseer/** (GitHub Pages from `main`, repository `Gilrom-Rune/Deckseer`, public, PolyForm Noncommercial license). Everyone using it from there gets updates automatically. To release:
 
-1. `node tools/bump-version.js`: sets `APP_VERSION` in `deckseer.html` and `version.json` (date plus counter). `tests/version.test.js` fails if they differ.
+1. `node tools/bump-version.js`: sets `APP_VERSION` (in `src/js/17-…`) and `version.json` (date plus counter), then rebuilds `deckseer.html`. `tests/version.test.js` fails if they differ.
 2. `npm test`: every check must pass. An update reaches every user at once.
 3. Commit and push to `main`. Pages redeploys in about a minute.
 
@@ -454,3 +492,8 @@ The count of abilities the Playtest understands but the finder dropped went from
 - New tabs: 📷 Scanning (add automatically, also add to my collection, low light, prices), 🔊 Sounds (sounds, ka-ching price, Hear it, own sound) and 🎨 Look (glow, background). They come before the recognition tabs.
 - The Scanner page keeps the controls for the current batch: list, set lock, condition, foil batch and sleeved. It has a "⚙ Settings" button. The deck builder shows where scanned cards go, with a link to the setting (`#deckAlsoCollInfo`).
 - A guide step for ⚙ Settings was added. See "House rules" at the top.
+
+## Cleanup: source split into src/ (2026.11.11.7)
+- `deckseer.html` is now built from `src/` (see "The source (`src/`) and the build" near the top). The first build matched the old file byte for byte.
+- Removed dead code: `dcCuts` (old version; `dcCuts2` is now `dcCuts`), `trSpellActions` and `ptKwRule`. Also about 30 CSS rules for classes nothing uses any more (`.pt-right`, `.pt-log`, `.pt-modal`, `.pt-preview`, `.pt-traybox`, `.fw-plays`, `.fw-drew`, `.ccard`, `.dx-hint`…).
+- `npm run build`, `npm test` (builds first) and `npm run release` (bump plus build). `tests/build.test.js` checks that `deckseer.html` matches `src/`.

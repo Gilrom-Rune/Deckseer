@@ -1,9 +1,11 @@
 {
   "name": "deckseer",
   "private": true,
-  "description": "Tests for deckseer.html (the app itself needs no build step).",
+  "description": "Deckseer: src/ is built into the single file deckseer.html (node tools/build.js); tests run on the built file.",
   "scripts": {
-    "test": "node tests/run.js"
+    "build": "node tools/build.js",
+    "test": "node tests/run.js",
+    "release": "node tools/bump-version.js"
   },
   "devDependencies": {
     "playwright": "^1.48.0",

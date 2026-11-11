@@ -1,9 +1,10 @@
 # Deckseer tests
 
-Headless Chrome opens `deckseer.html` with the internet blocked (Scryfall and the CDNs are mocked or fail), and checks:
+`node tests/run.js` first builds `deckseer.html` from `src/` (`tools/build.js`), then headless Chrome opens it with the internet blocked (Scryfall and the CDNs are mocked or fail), and checks:
 
 | File | What it checks |
 |---|---|
+| `build.test.js` | `deckseer.html` matches what `src/` builds, and is still one self-contained page |
 | `backup.test.js` | Backup saves everything (collection, decks, wishlist, games, game setup, session, preferences, scan memory); Restore brings it back; Undo; old backups still work; wrong files are refused |
 | `pwa.test.js` | Served from a web address: manifest, icons, service worker, works offline; opened from a file: nothing breaks |
 | `finder.test.js` | Fastest-win finder: Arcane Signet / Command Tower, Cavern of Souls, "can't be countered", convoke |

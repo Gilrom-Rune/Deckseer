@@ -1,0 +1,428 @@
+</style>
+</head>
+<body>
+<div id="bgfx" aria-hidden="true"><div class="aur a1"></div><div class="aur a2"></div><div class="aur a3"></div><div class="stars"></div><div class="stars s2"></div></div>
+<aside id="tour" class="guide" hidden role="dialog" aria-modal="false" aria-labelledby="guideTitle">
+  <div class="gd-top"><h2 id="guideTitle">📖 Guide</h2><button class="btn ghost" type="button" id="guideClose" aria-label="Close the guide">✕</button></div>
+  <div id="guideBody"></div>
+</aside>
+
+<header>
+  <div>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+                <g id="gem"><path d="M4 1h8l4 5-8 11L0 6z"/></g>
+        <g id="gem-facets">
+          <path fill="#fff" fill-opacity=".55" d="M4 1h8L10 6H6z"/>
+          <path fill="#fff" fill-opacity=".22" d="M0 6l4-5 2 5z M16 6l-4-5-2 5z"/>
+          <path fill="#000" fill-opacity=".22" d="M10 6h6L8 17z"/>
+          <path fill="none" stroke="#000" stroke-opacity=".35" stroke-width=".7" stroke-linejoin="round" d="M4 1h8l4 5-8 11L0 6z M0 6h16 M6 6l2 11 2-11"/>
+        </g>
+      </defs>
+    </svg>
+    <div class="pips" aria-hidden="true"><svg viewBox="0 0 16 18"><use href="#gem" fill="var(--pip-w)"/><use href="#gem-facets"/></svg><svg viewBox="0 0 16 18"><use href="#gem" fill="var(--pip-u)"/><use href="#gem-facets"/></svg><svg viewBox="0 0 16 18"><use href="#gem" fill="var(--pip-b)"/><use href="#gem-facets"/></svg><svg viewBox="0 0 16 18"><use href="#gem" fill="var(--pip-r)"/><use href="#gem-facets"/></svg><svg viewBox="0 0 16 18"><use href="#gem" fill="var(--pip-g)"/><use href="#gem-facets"/></svg></div>
+    <h1 aria-label="Deckseer">Deck<svg class="eye" viewBox="0 0 60 34" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="eyeGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6dc8a"/><stop offset=".5" stop-color="#c9952e"/><stop offset="1" stop-color="#8a5a12"/></linearGradient>
+        <radialGradient id="eyeIris" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#f3c6ff"/><stop offset=".35" stop-color="#b16cf2"/><stop offset=".8" stop-color="#6a2bc9"/><stop offset="1" stop-color="#2e0f6e"/></radialGradient>
+        <clipPath id="eyeShape"><path d="M4 17 Q30 -3 56 17 Q30 37 4 17 Z"/></clipPath>
+      </defs>
+      <path d="M4 17 Q30 -3 56 17 Q30 37 4 17 Z" fill="#170d3a"/>
+      <g clip-path="url(#eyeShape)"><g class="iris" id="logoIris">
+        <circle cx="30" cy="17" r="11.5" fill="url(#eyeIris)" stroke="#2a0f5c" stroke-width="1"/>
+        <ellipse cx="30" cy="17" rx="2.3" ry="9.5" fill="#0b0620"/>
+        <circle cx="34.5" cy="12" r="1.8" fill="#fff" opacity=".85"/>
+      </g></g>
+      <path d="M4 17 Q30 -3 56 17 Q30 37 4 17 Z" fill="none" stroke="url(#eyeGold)" stroke-width="2.6" stroke-linejoin="round"/>
+    </svg>seer</h1>
+  </div>
+  <div class="stats">
+    <button class="btn ghost guide-open set-cog" type="button" id="settingsOpen" title="Settings: learning from scans, Picture library, AI picture recognition" aria-label="Settings"><span class="cog">⚙</span><span class="set-word"> Settings</span></button>
+    <button class="btn ghost guide-open" type="button" id="setupOpen" title="Download the card pictures and the AI files">⬇ Downloads</button>
+    <button class="btn ghost guide-open" type="button" id="guideOpen" title="Step-by-step guide to everything in Deckseer">📖 Guide</button>
+    <span class="stats-br" aria-hidden="true"></span>
+    <div class="stat"><b id="stTotal">0</b><span>Cards</span></div>
+    <div class="stat"><b id="stUnique">0</b><span>Unique</span></div>
+    <div class="stat"><b id="stValue">$0.00</b><span id="stValueLbl">Value (USD)</span></div>
+  </div>
+</header>
+<nav class="pagetabs" role="tablist" aria-label="Pages">
+  <button type="button" role="tab" id="pgScan" aria-selected="true" data-ic="📷" data-short="Scan"><span class="tl">Scanner</span></button>
+  <button type="button" role="tab" id="pgColl" aria-selected="false" data-ic="🗂️" data-short="Cards"><span class="tl">Collection</span> <span class="count" id="collCountTop">0</span></button>
+  <button type="button" role="tab" id="pgBuild" aria-selected="false" data-ic="🃏" data-short="Decks"><span class="tl">Deck builder</span> <span class="count" id="deckCount">0</span></button>
+  <button type="button" role="tab" id="pgSearch" aria-selected="false" data-ic="🔎" data-short="Search"><span class="tl">Card search</span></button>
+  <button type="button" role="tab" id="pgGame" aria-selected="false" data-ic="❤️" data-short="Game"><span class="tl">Game</span></button>
+</nav>
+
+<main id="scanPage">
+  <div class="left">
+    <section class="panel">
+      <div class="cam" id="cam">
+        <video id="video" playsinline muted></video>
+        <canvas class="overlay" id="overlay"></canvas>
+        <div class="guide hide" id="guide"></div>
+        <div class="zone hide" id="zName"><span>Card name here</span></div>
+        <div class="zone hide" id="zInfo"></div>
+        <div class="idle" id="idle">
+          <div>Hold a card up to your webcam and it's read automatically.</div>
+          <button class="btn primary" id="startCam" type="button">Turn on webcam</button>
+        </div>
+      </div>
+      <div class="low-badge" id="lowBadge" hidden>☾ Low light mode</div>
+      <div class="checks" id="checks" hidden aria-live="polite">
+        <div class="chips" id="chips"></div>
+        <div class="check-tip" id="checkTip"></div>
+      </div>
+      <div class="cam-bar">
+        <select id="camSel" aria-label="Camera"><option>Camera</option></select>
+        <label class="chk"><input type="checkbox" id="optAuto" checked> Auto-scan</label>
+        <button class="btn" id="scanNow" type="button" disabled>Scan now <kbd>Space</kbd></button>
+        <button class="btn" id="screenLight" type="button" title="Turns the rest of the screen white so it lights the card, like a lamp">💡 Screen light</button>
+          <button class="btn" type="button" id="torchBtn" aria-pressed="false" hidden title="Turn the phone's flashlight on or off">🔦 Flashlight</button>
+        <button class="btn hide" id="askAi" type="button" disabled>Ask Claude <kbd>C</kbd></button>
+      </div>
+      <div class="deck-strip" id="deckStrip" hidden></div>
+      <div class="scan-help" id="scanHelp" hidden></div>
+      <div class="status" id="status"><span class="spin" id="spin"></span><span id="statusTxt">Loading the card list…</span></div>
+      <div class="peek hide" id="peekRow"><span>Reading:</span><canvas id="peek" width="10" height="10"></canvas></div>
+      <div class="find">
+        <label for="find">Can't scan it? Type or say the name, or a set and number like <span class="mono">HOC 96</span></label>
+        <div class="find-row">
+          <div class="find-box">
+            <input type="search" id="find" autocomplete="off" placeholder="Mox Amber" aria-autocomplete="list" aria-controls="sugg">
+            <ul id="sugg" class="sugg hide" role="listbox"></ul>
+          </div>
+          <button type="button" class="mic-btn" id="micBtn" aria-pressed="false" title="Say a card name (M)" aria-label="Say a card name">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="voice-row">
+          <label class="chk" id="voiceKeepWrap" title="Keep listening: say cards one after another and each one is added"><input type="checkbox" id="voiceKeep"> Hands-free: keep listening and add each card I say</label>
+        </div>
+        <div class="voice-heard" id="voiceHeard" hidden aria-live="polite"></div>
+        <div class="voice-sugg" id="voiceSugg" hidden></div>
+      </div>
+    </section>
+
+    <section class="panel current" id="current">
+      <div class="cur-empty">The last card you scan shows up here so you can check its printing.</div>
+    </section>
+
+    <section class="panel opts">
+      <div class="row2">
+        <label class="field grow">Scanning into
+          <span class="inline"><select id="listSel"></select><button class="btn" type="button" id="newListBtn">New list</button></span>
+        </label>
+        <label class="field" id="newListWrap" hidden>List name <input type="text" id="newList" maxlength="40" placeholder="Trade binder"></label>
+      </div>
+      <div class="row2">
+        <label class="field">Set lock <input type="text" id="optSet" maxlength="40" placeholder="e.g. HOC, MH3" aria-label="Set codes to prefer, separated by commas"></label>
+        <label class="field">Condition <select id="optCond"></select></label>
+      </div>
+      <div class="row2">
+        <label class="chk"><input type="checkbox" id="optFoil"> Foil batch</label>
+        <label class="chk" title="Finds the card inside the sleeve and removes glare from the plastic"><input type="checkbox" id="optSleeve"> Sleeved cards</label>
+      </div>
+      <div class="row2 set-row"><button class="btn" type="button" id="settingsOpen2" title="Scanning, sounds, look, and how cards are recognised">⚙ Settings</button><span class="cur-sub" id="setSummary"></span></div>
+      <div class="keys"><span><kbd>Space</kbd> scan</span><span class="aikey hide"><kbd>C</kbd> ask Claude</span><span><kbd>Enter</kbd> add</span><span><kbd>F</kbd> foil</span><span><kbd>R</kbd> add another copy</span><span><kbd>M</kbd> say a card</span><span><kbd>1</kbd>–<kbd>5</kbd> condition</span><span><kbd>←</kbd><kbd>→</kbd> printing</span><span><kbd>Ctrl</kbd>+<kbd>Z</kbd> undo</span></div>
+    </section>
+  </div>
+
+  <div class="right">
+    <section class="panel intro" id="intro" hidden>
+      <div class="intro-head"><h2>Welcome to Deckseer</h2><div class="row2"><button class="btn primary" type="button" id="introGuide">📖 Step-by-step guide</button><button class="btn ghost" type="button" id="introClose">Got it</button></div></div>
+      <ol>
+        <li><b>Turn on webcam</b> and allow camera access. Use Chrome or Edge on a PC.</li>
+        <li><b>Hold a card up</b> against a plain background. A green outline means it found the card. It beeps when the card is added.</li>
+        <li>Going through one set? Type its code in <b>Set lock</b> (like <span class="mono">MH3</span>). Scans get faster and pick the right printing.</li>
+        <li>Cards in sleeves? Tick <b>Sleeved cards</b>.</li>
+        <li>Can't scan a card? Type its name, or set and number like <span class="mono">HOC 96</span>, in the box under the camera.</li>
+        <li>Building a deck? Open the <b>Deck builder</b> tab at the top and click <b>New deck</b>. For Commander, scan (or type) your commander first, then the rest. The deck builder shows every card as a big picture. When you're done, copy the list into Moxfield or anywhere else.</li>
+        <li>Wrong set, printing or foil? Click the card in the Deck builder, or the ✎ next to it in your scan list or collection, and pick the right one.</li>
+        <li>Looking for combos? Click <b>Find combos</b> in a deck, or in the Collection tab for all your cards. The first time, Deckseer downloads Commander Spellbook's combo database (about 30 MB) and keeps it on your PC.</li>
+        <li>Your collection saves in this browser only. Click <b>Backup</b> now and then, and use <b>Export</b> to send it to Moxfield, Archidekt and others.</li>
+      </ol>
+    </section>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tabSess" class="tab" aria-selected="true">This session <span class="count" id="sessCount">0</span></button>
+      <button type="button" role="tab" id="tabColl" class="tab" aria-selected="false">Collection <span class="count" id="collCount">0</span></button>
+    </div>
+
+    <section class="panel" id="sessView">
+      <div class="sess-head">
+        <div class="sess-total"><b id="sessValue">$0.00</b><span id="sessMeta">0 cards scanned</span></div>
+        <label class="chk"><input type="checkbox" id="optIgn1"> <span id="ign1Lbl">Ignore cards under $1.00</span></label>
+        <span class="sp"></span>
+        <button class="btn" type="button" id="newSess">Start new session</button>
+      </div>
+      <div id="sessList"></div>
+    </section>
+
+    <section class="panel hide" id="collView">
+      <div class="tools">
+        <input type="search" id="q" placeholder="Search name, type or set" aria-label="Search collection">
+        <select id="fList" aria-label="List"></select>
+        <select id="fRarity" aria-label="Rarity"><option value="">All rarities</option><option value="mythic">Mythic</option><option value="rare">Rare</option><option value="uncommon">Uncommon</option><option value="common">Common</option></select>
+        <select id="fColor" aria-label="Color"><option value="">All colors</option><option value="W">White</option><option value="U">Blue</option><option value="B">Black</option><option value="R">Red</option><option value="G">Green</option><option value="M">Multicolor</option><option value="C">Colorless</option></select>
+        <select id="fType" aria-label="Card type"><option value="">All card types</option><option value="land">Lands</option><option value="basic">Basic lands</option><option value="nonbasic">Nonbasic lands</option><option value="nonland">Everything but lands</option><option value="creature">Creatures</option><option value="instant">Instants</option><option value="sorcery">Sorceries</option><option value="artifact">Artifacts</option><option value="enchantment">Enchantments</option><option value="planeswalker">Planeswalkers</option><option value="battle">Battles</option></select>
+        <select id="sort" aria-label="Sort">
+          <option value="recent">Recently added</option>
+          <option value="name">Name</option>
+          <option value="set">Set &amp; number</option>
+          <option value="value">Value</option>
+          <option value="change">Price change</option>
+        </select>
+        <button class="btn" type="button" id="collComboBtn" title="Combos you can make from the cards shown">Find combos</button>
+      </div>
+      <div class="stats-strip" id="statsStrip"></div>
+      <div class="bulk hide" id="bulkBar">
+        <b id="bulkCount">0 selected</b>
+        <select id="bulkCond" aria-label="Set condition"><option value="">Set condition…</option></select>
+        <select id="bulkFoil" aria-label="Set finish"><option value="">Set finish…</option><option value="n">Normal</option><option value="f">Foil</option></select>
+        <select id="bulkList" aria-label="Move to list"><option value="">Move to list…</option></select>
+        <button class="btn" type="button" id="bulkDel">Delete</button>
+        <button class="btn ghost" type="button" id="bulkNone">Clear selection</button>
+      </div>
+      <div class="tablewrap" id="tableWrap"></div>
+      <div id="movers"></div>
+      <div class="combo-box" id="collCombos"></div>
+    </section>
+
+    <section class="panel export-bar" id="expBar">
+      <label class="field">Export <select id="expFmt">
+        <option value="moxfield">Moxfield CSV</option>
+        <option value="deckbox">Deckbox CSV</option>
+        <option value="full">Full CSV (Archidekt, ManaBox, spreadsheets)</option>
+        <option value="tcg">TCGplayer mass entry</option>
+        <option value="text">Plain text list</option>
+      </select></label>
+      <button class="btn primary" id="dlExport" type="button">Export</button>
+      <span class="exp-scope" id="expScope"></span>
+      <span class="sp"></span>
+      <button class="btn" id="refresh" type="button">Refresh prices</button>
+      <button class="btn primary hide" id="installApp" type="button" title="Install Deckseer as an app on this PC: its own window, works offline">Install app</button>
+      <button class="btn" id="backup" type="button">Backup</button>
+      <label class="btn" id="restoreLbl">Restore<input type="file" id="restore" accept=".json,application/json" hidden></label>
+      <button class="btn ghost" id="clearAll" type="button">Clear collection</button>
+    </section>
+    <small style="color:var(--muted)">Card data and prices from Scryfall. Everything is saved in this browser on this PC, after every card. Use Backup now and then to keep a copy.</small>
+    <small class="legal-note">Deckseer is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC. Magic: The Gathering is a trademark of Wizards of the Coast. Deckseer is free and not affiliated with Scryfall. <span id="appVersion"></span></small>
+    <button class="btn ghost help-btn" type="button" id="introOpen">How to use Deckseer</button>
+  </div>
+</main>
+
+<main id="collPage" class="coll-page" hidden><section class="panel pad" id="wishView" hidden></section></main>
+<main id="searchPage" class="coll-page" hidden><section class="panel pad" id="searchView"></section></main>
+<main id="gamePage" class="coll-page" hidden><section class="panel pad" id="gameView"></section></main>
+<main id="builderPage" class="builder" hidden>
+    <section class="panel" id="deckView">
+      <div class="deck-top">
+        <select id="deckSel" aria-label="Deck"></select>
+        <button class="btn" type="button" id="deckNewBtn">New deck</button>
+        <button class="btn" type="button" id="deckImpBtn">Import a deck list</button>
+        <span class="sp"></span>
+        <button class="linkbtn cur-sub" type="button" id="deckAlsoCollInfo" title="Change it in ⚙ Settings → Scanning"></button>
+      </div>
+      <form id="deckNewForm" class="deck-new" hidden>
+        <label class="field grow">Deck name <input type="text" id="deckNewName" maxlength="60" placeholder="Atraxa superfriends" required></label>
+        <label class="field">Format <select id="deckNewFmt"><option value="commander">Commander</option><option value="standard">Standard</option><option value="pioneer">Pioneer</option><option value="modern">Modern</option><option value="legacy">Legacy</option><option value="vintage">Vintage</option><option value="pauper">Pauper</option><option value="casual">Casual / other</option></select></label>
+        <button class="btn primary" type="submit">Create and start scanning</button>
+      </form>
+      <form id="deckImpForm" class="deck-imp" hidden>
+        <div class="imp-help">
+          <b>Bring in a deck from Moxfield (or Archidekt, TappedOut, MTGGoldfish, Arena…)</b>
+          <ol>
+            <li>Open your deck on Moxfield and choose <b>Export</b> (in the deck's <b>More</b> / <b>⋯</b> menu).</li>
+            <li>Copy the deck list text. Any format with one card per line works, like <span class="mono">1 Sol Ring (CMR) 263</span>.</li>
+            <li>Paste it below and press <b>Import</b>. Set codes and numbers keep your exact printings, and <span class="mono">*F*</span> marks foils.</li>
+          </ol>
+        </div>
+        <textarea id="deckImpText" rows="9" spellcheck="false" placeholder="Commander&#10;1 Atraxa, Praetors' Voice (2X2) 190&#10;&#10;Deck&#10;1 Sol Ring (CMR) 263&#10;1 Arcane Signet (ELD) 331 *F*&#10;10 Forest" aria-label="Deck list"></textarea>
+        <div class="imp-row">
+          <label class="field grow">Deck name <input type="text" id="deckImpName" maxlength="60" placeholder="Name it, or leave blank"></label>
+          <label class="field">Format <select id="deckImpFmt"><option value="auto">Work it out</option><option value="commander">Commander</option><option value="standard">Standard</option><option value="pioneer">Pioneer</option><option value="modern">Modern</option><option value="legacy">Legacy</option><option value="vintage">Vintage</option><option value="pauper">Pauper</option><option value="casual">Casual / other</option></select></label>
+          <button class="btn primary" type="submit" id="deckImpGo">Import</button>
+          <button class="btn ghost" type="button" id="deckImpCancel">Cancel</button>
+        </div>
+        <div id="deckImpMsg" class="cur-sub" role="status"></div>
+      </form>
+      <div id="deckBody"></div>
+      <div class="view-bar" id="deckViewBar" hidden>
+        <div class="seg" role="group" aria-label="Show cards as">
+          <button type="button" data-lay="pics" aria-pressed="true">Pictures</button><button type="button" data-lay="stacks" aria-pressed="false">Stacks</button><button type="button" data-lay="text" aria-pressed="false">Text</button><button type="button" data-lay="list" aria-pressed="false">Table</button>
+        </div>
+        <label class="inline-field" id="tileSizeWrap">Card size <input type="range" id="tileSize" min="140" max="340" step="10" aria-label="Card picture size"></label>
+        <label class="inline-field">Group by <select id="deckGroup"><option value="type">Card type</option><option value="mv">Mana value</option><option value="color">Color</option><option value="none">Nothing (A to Z)</option></select></label>
+        <button class="btn" type="button" id="deckAddCard">+ Add cards</button>
+        <input type="search" id="deckFind" placeholder="Find a card in this deck" aria-label="Find a card in this deck">
+        <span class="cur-sub">Click a card to change its printing or foil.</span>
+      </div>
+      <div id="deckCards"></div>
+      <div class="sim-box" id="deckCheck"></div>
+      <div class="sim-box" id="deckSim"></div>
+      <div class="sim-box" id="deckFast"></div>
+      <div class="combo-box" id="deckCombos"></div>
+      <div class="deck-export" id="deckExport" hidden>
+        <h3>Send this deck to another site or app</h3>
+        <div class="send-grid" id="sendGrid" role="group" aria-label="Where to send the deck"></div>
+        <ol class="send-steps" id="dxHint"></ol>
+        <div class="dx-row">
+          <a class="btn primary" id="dxGo" href="https://moxfield.com/" target="_blank" rel="noopener">Copy &amp; open Moxfield</a>
+          <button class="btn" type="button" id="dxCopy">Copy list only</button>
+          <button class="btn" type="button" id="dxDl">Download file</button>
+          <label class="chk" id="dxSetWrap"><input type="checkbox" id="dxSet" checked> Include set and number</label>
+        </div>
+        <details class="dx-preview"><summary>Show the list that will be sent</summary>
+          <textarea id="dxText" readonly rows="10" aria-label="Deck list" spellcheck="false"></textarea>
+        </details>
+        <div class="dx-row">
+          <a class="linkbtn" id="dxEdh" href="https://edhrec.com/" target="_blank" rel="noopener" hidden>Commander on EDHREC ↗</a>
+          <a class="linkbtn" id="dxScry" href="https://scryfall.com/" target="_blank" rel="noopener">See every card on Scryfall ↗</a>
+        </div>
+      </div>
+    </section>
+
+</main>
+
+<dialog id="viewDlg" class="view-dlg" aria-label="Card"></dialog>
+<dialog id="setDlg" class="setup-dlg set-dlg" aria-labelledby="setTitle">
+  <div class="set-head"><h2 id="setTitle">⚙ Settings</h2><button type="button" class="vw-x" id="setClose" aria-label="Close">✕</button></div>
+  <p class="cur-sub">Everything you can switch on or off. Changes are saved straight away.</p>
+  <div class="set-tabs" role="tablist"><button type="button" role="tab" class="set-tab" data-settab="scanSet" aria-controls="scanSet"><span class="set-tl">📷 Scanning</span></button><button type="button" role="tab" class="set-tab" data-settab="soundSet" aria-controls="soundSet"><span class="set-tl">🔊 Sounds</span></button><button type="button" role="tab" class="set-tab" data-settab="lookSet" aria-controls="lookSet"><span class="set-tl">🎨 Look</span></button><button type="button" role="tab" class="set-tab" data-settab="memBox" aria-controls="memBox"><span class="set-tl">🧠 Learning from scans</span> <span class="muted-s" id="memSummaryState">(learning)</span></button><button type="button" role="tab" class="set-tab" data-settab="libBox" aria-controls="libBox"><span class="set-tl">🖼️ Picture library</span> <span class="muted-s" id="libSummaryState">(off)</span></button><button type="button" role="tab" class="set-tab" data-settab="aiPicBox" aria-controls="aiPicBox"><span class="set-tl">🤖 AI picture recognition</span> <span class="muted-s" id="aiPicState">(off)</span></button><button type="button" role="tab" class="set-tab" data-settab="aiBox" aria-controls="aiBox"><span class="set-tl">✨ Ask Claude</span> <span class="muted-s" id="aiState">(off)</span></button></div>
+  <section class="set-pane" id="scanSet" role="tabpanel" hidden>
+    <h3>Scanning</h3>
+    <div class="set-list">
+      <label class="chk"><input type="checkbox" id="optAdd" checked> <span><b>Add automatically when sure</b><small>Cards it's certain about are added without pressing Enter.</small></span></label>
+      <label class="chk" title="Off: decks are separate lists, like on Moxfield"><input type="checkbox" id="deckAlsoColl"> <span><b>Also add scanned cards to my collection</b><small>When scanning into a deck. Off: decks are separate lists, like on Moxfield.</small></span></label>
+      <label class="chk">Low light <select id="optLow" class="tiny-sel"><option value="auto">Auto</option><option value="on">On</option><option value="off">Off</option></select> <small>In a dark room: brightens the webcam, averages frames to remove grain, and boosts contrast.</small></label>
+      <label class="chk">Prices <select id="optCur"><option value="usd">USD (TCGplayer)</option><option value="eur">EUR (Cardmarket)</option></select></label>
+    </div>
+  </section>
+  <section class="set-pane" id="soundSet" role="tabpanel" hidden>
+    <h3>Sounds</h3>
+    <div class="set-list">
+      <label class="chk"><input type="checkbox" id="optSound" checked> <span><b>Sounds</b><small>A beep when a card is added, and the ka-ching for valuable ones.</small></span></label>
+      <label class="chk">Ka-ching for cards worth <span class="cur-sym" id="alertSym">$</span><input type="number" id="optAlert" min="0" step="0.5" class="tiny" aria-label="Alert price"> or more <button class="btn ghost sm" type="button" id="optHear" title="Play the sound for a valuable card">🔊 Hear it</button></label>
+      <span class="chk" id="optOwnWrap"><button class="btn ghost sm" type="button" id="optOwnSnd" title="Pick a sound file (MP3, WAV, OGG, up to 500 KB) to play for valuable cards">🎵 Use my own sound…</button><span id="optOwnInfo" class="cur-sub"></span><input type="file" id="optOwnFile" accept="audio/*" hidden></span>
+    </div>
+  </section>
+  <section class="set-pane" id="lookSet" role="tabpanel" hidden>
+    <h3>Look</h3>
+    <div class="set-list">
+      <label class="chk"><input type="checkbox" id="optGlow" checked> <span><b>✨ Magical glow</b><small>Every edge glows blue and white.</small></span></label>
+      <label class="chk"><input type="checkbox" id="optBgfx" checked> <span><b>🌌 Lively background</b><small>A slow aurora and faint twinkling stars behind the panels.</small></span></label>
+    </div>
+  </section>
+  <section class="ai set-pane" id="memBox" role="tabpanel" hidden>
+    <h3>Learning from your scans</h3>
+    <p class="cur-sub">How cards are recognised: the scanner tries what it learned from your scans first, then the AI, then the Picture library.</p>
+
+        <div class="ai-body"><p class="cur-sub" id="memInfo"></p>
+          <p class="cur-sub">Each card you confirm is remembered as it looks through your webcam, in your lighting (up to 3 looks per printing, kept only in this browser). Next time it's recognised straight away, even when the name can't be read, and the same printing is picked. Fixing a wrong scan teaches it the right card.</p></div>
+  </section>
+  <section class="ai set-pane" id="libBox" role="tabpanel" hidden>
+    <h3>Picture library</h3>
+
+        <div class="ai-body">
+          <p id="libState"></p>
+          <progress id="libBar" max="1" value="0" hidden></progress>
+          <div class="row2">
+            <label class="field">Which cards <select id="libScope"><option value="recent">Cards from 2015 on (quicker)</option><option value="all">Every card</option></select></label>
+            <button class="btn" type="button" id="libBuild">Build picture library</button>
+            <button class="btn ghost" type="button" id="libDelete" hidden>Delete</button>
+          </div>
+          <small>Downloads a small picture of every card artwork from Scryfall once and keeps a compact fingerprint of each on this PC (about 40 MB). Expect roughly 15–60 minutes depending on your connection. You can pause, close the page and resume later. Each person builds their own copy.</small>
+          <small id="readerState"></small>
+        </div>
+  </section>
+  <section class="ai set-pane" id="aiPicBox" role="tabpanel" hidden>
+    <h3>AI picture recognition</h3>
+
+        <div class="ai-body">
+          <p class="cur-sub" id="aiPicInfo"></p>
+          <div class="row2">
+            <label class="btn">Load files<input type="file" id="aiPicFiles" accept=".onnx,.bin,.json" multiple hidden></label>
+            <button class="btn ghost" type="button" id="aiPicRemove" hidden>Remove</button>
+          </div>
+          <small>An image model that has seen a picture of every card. It works on this PC only, with no internet needed once it's loaded. The files (about 50 MB) are made by the Stage 2 notebook and kept in this browser.</small>
+        </div>
+  </section>
+  <section class="ai set-pane" id="aiBox" role="tabpanel" hidden>
+    <h3>Ask Claude about hard cards</h3>
+
+        <div class="ai-body">
+          <p>For cards nothing else can read, press <kbd>C</kbd> to send a photo of the card to Claude, which looks at everything on it: art, set symbol, frame, language. This uses an Anthropic API key, billed per use by Anthropic (roughly a cent per card). Get one at <span class="mono">console.anthropic.com</span>.</p>
+          <label class="field">API key <input type="password" id="aiKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"></label>
+          <label class="field">Model <select id="aiModel"><option value="claude-sonnet-5-5">Sonnet 5.5 (more accurate)</option><option value="claude-haiku-5-5">Haiku 5.5 (cheaper, faster)</option></select></label>
+          <small>The key is saved only in this browser on this PC and is sent only to Anthropic.</small>
+        </div>
+  </section>
+</dialog>
+<dialog id="setupDlg" class="setup-dlg" aria-labelledby="setupTitle">
+  <h2 id="setupTitle" tabindex="-1" autofocus>Get the scanner ready</h2>
+  <p class="cur-sub">Two optional downloads help Deckseer recognise cards from their picture when the name can't be read: foreign cards, foils, glare and odd fonts. You can skip them and do them later.</p>
+  <div class="su-item" id="suLib">
+    <h3>1. Card pictures <span class="muted-s">(Picture library, about 40 MB)</span> <span class="su-done" id="suLibDone" hidden>✓ Done</span></h3>
+    <p class="cur-sub" id="suLibInfo">Deckseer downloads a small picture of every card from Scryfall once and keeps them in this browser. It takes 15–60 minutes and runs in the background: you can use Deckseer, pause, or close it and carry on later.</p>
+    <div class="row2">
+      <label class="field">Which cards <select id="suLibScope"><option value="recent">Cards from 2015 on (quicker)</option><option value="all">Every card</option></select></label>
+      <button class="btn primary" type="button" id="suLibGo">Download card pictures</button>
+    </div>
+  </div>
+  <div class="su-item" id="suAi">
+    <h3>2. AI picture recognition <span class="muted-s">(about 50 MB)</span> <span class="su-done" id="suAiDone" hidden>✓ On</span></h3>
+    <p class="cur-sub" id="suAiInfo">More accurate than the card pictures. It needs three files you make once, for free, with a Google Colab notebook (about an hour, mostly waiting):</p>
+    <ol class="cur-sub" id="suAiSteps">
+      <li>Open the notebook below (sign in with a Google account).</li>
+      <li>Choose <b>Runtime → Change runtime type → T4 GPU</b>, then <b>Runtime → Run all</b>.</li>
+      <li>When it finishes, download <b>deckseer-embed.onnx</b>, <b>deckseer-index.bin</b> and <b>deckseer-index.json</b>.</li>
+      <li>Click <b>Load the files</b> here and pick all three (hold Ctrl).</li>
+    </ol>
+    <div class="row2">
+      <a class="btn primary" id="suAiNb" href="https://colab.research.google.com/github/Gilrom-Rune/Deckseer/blob/main/stage2/Deckseer_Stage2_Index.ipynb" target="_blank" rel="noopener">Open the notebook ↗</a>
+      <label class="btn">Load the files<input type="file" id="suAiFiles" accept=".onnx,.bin,.json" multiple hidden></label>
+      <button class="btn ghost" type="button" id="suAiHow">Show me how</button>
+    </div>
+  </div>
+  <div class="su-foot">
+    <small class="muted-s">Open this again any time with the <b>⬇ Downloads</b> button at the top.</small>
+    <button class="btn" type="button" id="setupClose">Done for now</button>
+  </div>
+</dialog>
+<dialog id="replDlg" class="repl-dlg" aria-labelledby="replTitle"></dialog>
+<dialog id="editDlg" class="edit-dlg" aria-labelledby="edTitle">
+  <form method="dialog" id="edForm">
+    <div class="ed-head"><h2 id="edTitle">Edit card</h2><button class="x" value="cancel" aria-label="Close">×</button></div>
+    <div class="ed-main">
+      <div class="ed-pic"><img id="edImg" alt=""><span class="foilfx" id="edFoilFx" hidden></span></div>
+      <div class="ed-side">
+        <div class="ed-sub" id="edSub"></div>
+        <div class="ed-row"><span class="lbl">Finish</span><span class="seg" id="edFinish" role="group" aria-label="Finish"></span></div>
+        <div class="ed-row"><label class="inline-field" id="edQtyRow">Quantity <input type="number" id="edQty" min="1" max="99"></label><label class="inline-field" id="edCondRow">Condition <select id="edCond"></select></label></div>
+        <div class="prints-head"><span id="edCount">Printings</span><button type="button" class="more-langs" id="edLangs">Show other languages</button></div>
+        <div class="prints ed-prints" id="edPrints"></div>
+      </div>
+    </div>
+    <div class="ed-foot"><button class="btn ghost danger-text" value="remove" id="edRemove">Remove from deck</button><span class="cur-sub" id="edNote"></span><span class="sp"></span><button class="btn" value="cancel">Cancel</button><button class="btn primary" value="save" id="edSave">Save changes</button></div>
+  </form>
+</dialog>
+
+<img id="hoverCard" class="hover-card" alt="" hidden>
+<div id="pt" class="pt" hidden aria-label="Playtest">
+  <div class="pt-top" id="ptTop" role="toolbar" aria-label="Game controls"></div>
+  <div class="pt-opps" id="ptOpps" aria-label="Opponents"></div>
+  <div class="pt-main">
+    <aside class="pt-left" id="ptLeft" aria-label="Command zone, library, graveyard and exile"></aside>
+    <div class="pt-bf" id="ptBf" aria-label="Battlefield"></div>
+    <aside class="pt-side" id="ptSide" aria-label="The stack">
+      <div class="pt-stackbox" id="ptStackBox"></div>
+      <div class="pt-drawer" id="ptModal" hidden></div>
+    </aside>
+  </div>
+  <div class="pt-hand" id="ptHand" aria-label="Hand"></div>
+  <div class="pt-menu" id="ptMenu" hidden></div>
+</div>
+<div class="toast hide" id="toast" role="status"><span id="toastMsg"></span><button id="toastBtn" type="button"></button></div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script>
