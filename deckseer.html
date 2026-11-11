@@ -1264,7 +1264,7 @@ label.btn{display:inline-flex;align-items:center;justify-content:center}
         <label class="chk" title="Finds the card inside the sleeve and removes glare from the plastic"><input type="checkbox" id="optSleeve"> Sleeved cards</label>
         <label class="chk" title="In a dark room: brightens the webcam, averages several frames to remove grain, and boosts contrast">Low light <select id="optLow" class="tiny-sel"><option value="auto">Auto</option><option value="on">On</option><option value="off">Off</option></select></label>
         <label class="chk"><input type="checkbox" id="optSound" checked> Sounds</label>
-        <label class="chk">Alert for cards worth <span class="cur-sym" id="alertSym">$</span><input type="number" id="optAlert" min="0" step="0.5" class="tiny" aria-label="Alert price"> or more</label>
+        <label class="chk">Alert for cards worth <span class="cur-sym" id="alertSym">$</span><input type="number" id="optAlert" min="0" step="0.5" class="tiny" aria-label="Alert price"> or more <button class="btn ghost sm" type="button" id="optHear" title="Play the sound for a valuable card">🔊 Hear it</button></label>
       </div>
       <details class="ai" id="memBox">
         <summary>Learning from your scans <span class="muted-s" id="memSummaryState">(learning)</span></summary>
@@ -7653,7 +7653,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.10.5";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.11.1";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
@@ -7733,16 +7733,40 @@ function toast(msg, btnText, fn){
   $("toast").classList.remove("hide"); clearTimeout(toastT); toastT = setTimeout(() => $("toast").classList.add("hide"), 5000);
 }
 let actx = null;
+// a cash register: the drawer's clunk ("ka"), then its bell ringing out ("ching"), made with Web Audio so there's no sound file
+function kaching(ac, t0){
+  const out = ac.createGain(); out.gain.value = 1.4; out.connect(ac.destination);
+  // ka: a short burst of filtered noise with a low thump under it
+  const len = Math.floor(ac.sampleRate * 0.06), buf = ac.createBuffer(1, len, ac.sampleRate), ch = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+  const nz = ac.createBufferSource(), bp = ac.createBiquadFilter(), ng = ac.createGain();
+  nz.buffer = buf; bp.type = "bandpass"; bp.frequency.value = 2400; bp.Q.value = 0.9; ng.gain.value = 0.35;
+  nz.connect(bp).connect(ng).connect(out); nz.start(t0);
+  const th = ac.createOscillator(), tg = ac.createGain();
+  th.type = "triangle"; th.frequency.setValueAtTime(190, t0); th.frequency.exponentialRampToValueAtTime(70, t0 + 0.07);
+  tg.gain.setValueAtTime(0.25, t0); tg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08);
+  th.connect(tg).connect(out); th.start(t0); th.stop(t0 + 0.1);
+  // ching: a bell's uneven overtones, struck twice a hair apart so it shimmers
+  const at = t0 + 0.085, base = 1975;
+  for (const [ratio, amp, dec] of [[1, 0.16, 1.1], [2.76, 0.07, 0.6], [5.4, 0.04, 0.35], [8.9, 0.02, 0.2]]) for (const det of [1, 1.007]) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = "sine"; o.frequency.value = base * ratio * det;
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(amp / (det === 1 ? 1 : 1.6), at + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dec);
+    o.connect(g).connect(out); o.start(at); o.stop(at + dec + 0.05);
+  }
+}
 function sound(kind){
   if (!prefs.sound) return;
   try { if (navigator.vibrate && isPhone()) navigator.vibrate(kind === "valuable" ? [40, 60, 40] : kind === "check" ? [15, 40, 15] : 30); } catch (e) {}
   try {
-    actx = actx || new AudioContext(); const t0 = actx.currentTime;
-    const notes = kind === "valuable" ? [[988, 0], [1319, 0.11], [1760, 0.22]] : kind === "check" ? [[392, 0], [311, 0.13]] : [[880, 0]];
+    actx = actx || new AudioContext(); if (actx.state === "suspended") actx.resume(); const t0 = actx.currentTime;
+    if (kind === "valuable") return kaching(actx, t0);
+    const notes = kind === "check" ? [[392, 0], [311, 0.13]] : [[880, 0]];
     for (const [f, at] of notes) {
       const o = actx.createOscillator(), g = actx.createGain();
       o.type = kind === "check" ? "triangle" : "sine"; o.frequency.value = f;
-      g.gain.setValueAtTime(0.0001, t0 + at); g.gain.exponentialRampToValueAtTime(kind === "valuable" ? 0.09 : 0.06, t0 + at + 0.01);
+      g.gain.setValueAtTime(0.0001, t0 + at); g.gain.exponentialRampToValueAtTime(0.06, t0 + at + 0.01);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + 0.14);
       o.connect(g).connect(actx.destination); o.start(t0 + at); o.stop(t0 + at + 0.16);
     }
@@ -7777,6 +7801,7 @@ async function sleeveExposure(on){
   } catch (e) { /* this webcam doesn't allow it; glare merging still works */ }
 }
 $("optSound").onchange = e => { prefs.sound = e.target.checked; savePrefs(); if (prefs.sound) sound("ok"); };
+$("optHear").onclick = e => { e.preventDefault(); const was = prefs.sound; prefs.sound = true; sound("valuable"); prefs.sound = was; };
 $("optAlert").oninput = e => { prefs.alertAt = Math.max(0, Number(e.target.value) || 0); savePrefs(); renderSession(); };
 $("optCur").onchange = e => { prefs.cur = e.target.value; savePrefs(); syncCurUI(); renderAll(); renderCurrent(); };
 $("optCond").onchange = e => { prefs.cond = e.target.value; savePrefs(); };

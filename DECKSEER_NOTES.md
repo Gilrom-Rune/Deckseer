@@ -411,3 +411,8 @@ The count of abilities the Playtest understands but the finder dropped went from
 - **Search by name**: a "How many" box (`repl.qty`) and "Into" main / sideboard / commander (`repl.board`). It starts on Commander when the deck needs one. The window stays open after each card, with a green message.
 - **Paste a list** (`replAddPasted`) uses `parseDeckList` + `lookupCards` and adds to this deck. Cards it could not find are left in the box. Undo is available.
 - Tests: `tests/deckadd.test.js`.
+
+## Ka-ching for valuable cards (2026.11.11.1)
+- The "valuable" sound (a card worth at least the alert price, default $5) is now a cash-register ka-ching made with Web Audio (`kaching(ac, t0)`). The "ka" is a burst of filtered noise plus a falling thump. The "ching" is a bell with uneven overtones (1, 2.76, 5.4, 8.9 × 1975 Hz), each struck twice 0.7% apart, ringing out over about 1 s. No sound file.
+- A "🔊 Hear it" button next to the alert price plays it, even with sounds off.
+- The AudioContext is resumed if the browser suspended it. Tests: `tests/sound.test.js`.
