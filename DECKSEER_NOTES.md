@@ -424,3 +424,10 @@ The count of abilities the Playtest understands but the finder dropped went from
   - Coins: 14 pings at 4–9 kHz, with the same jingle every time.
   - A small reverb, made by a ConvolverNode.
 - **"Use my own sound…"**: pick an MP3, WAV or OGG up to 500 KB. It is stored as a data URL in `bsw-kaching`, not in backups, and plays instead of the built-in sound, which you can switch back to. Licensed register recordings were only in paid packs, so none is bundled.
+
+## Magical glow (2026.11.11.3)
+- `html.glow`, on by default, toggled by "✨ Magical glow" (`prefs.glow`). It turns `--line` blue and gives these a white inner edge plus a blue haze:
+  - panels, dialogs, card tiles, Playtest boxes and lists
+  - buttons, inputs and selects, with a soft glow that brightens on hover or focus
+- The screen edges glow and slowly pulse (`body::after`, fixed, pointer-events none). The pulse stops when the device asks for reduced motion.
+- Light and dark mode each have their own strength. Tests: `tests/glow.test.js`.
