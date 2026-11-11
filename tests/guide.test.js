@@ -26,8 +26,8 @@ module.exports = async function () {
   check(`all ${total} steps can be stepped through`, seen.length === total && new Set(seen).size === total, seen.length);
   check('every "Show me" finds and highlights its target', misses.length === 0, misses);
   // the AI and Picture library steps open their settings
-  const opened = await page.evaluate(() => { const g = GUIDE.findIndex(c => /AI and Picture library/.test(c.t)); openGuide(g, 2); guideShow(GUIDE[g].steps[2].go); return new Promise(r => setTimeout(() => r({ai: document.getElementById('aiPicBox').open}), 300)); });
-  check('the AI step opens the AI picture recognition settings', opened.ai, opened);
+  const opened = await page.evaluate(() => { const g = GUIDE.findIndex(c => /AI and Picture library/.test(c.t)); openGuide(g, 2); guideShow(GUIDE[g].steps[2].go); return new Promise(r => setTimeout(() => r({ai: document.getElementById('setDlg').open && !document.getElementById('aiPicBox').hidden}), 300)); });
+  check('the AI step opens Settings on AI picture recognition', opened.ai, opened);
   // where you stopped is remembered; Finish closes it
   await page.click('#guideNext'); const before = await page.evaluate(() => guideState());
   await page.reload(); await page.waitForTimeout(400); await page.click('#guideOpen');

@@ -431,3 +431,9 @@ The count of abilities the Playtest understands but the finder dropped went from
   - buttons, inputs and selects, with a soft glow that brightens on hover or focus
 - The screen edges glow and slowly pulse (`body::after`, fixed, pointer-events none). The pulse stops when the device asks for reduced motion.
 - Light and dark mode each have their own strength. Tests: `tests/glow.test.js`.
+
+## ⚙ Settings window (2026.11.11.4)
+- A cog button in the header (`#settingsOpen`; just the cog on phones) and "⚙ Recognition settings" in the scanner options (`#settingsOpen2`, with a one-line summary in `#setSummary`) open `#setDlg`.
+- The tabs are Learning from scans, Picture library, AI picture recognition and Ask Claude. These were `<details>` in the scan options and are now `<section class="set-pane">` with the same ids. Their state spans moved into the tabs, and the last tab is remembered (`prefs.setTab`). Arrow keys move between tabs.
+- `guideShow` opens Settings non-modally on the right tab when the target is inside it.
+- On phones the header buttons sit on their own row (`.stats-br`), so the counts no longer push the page sideways. Tests: `tests/settings.test.js`.

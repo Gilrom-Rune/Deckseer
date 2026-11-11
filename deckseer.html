@@ -70,6 +70,7 @@ h1 .eye .iris{transition:transform .12s ease-out}
 .pips svg{width:16px;height:18px;display:block;overflow:visible;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.25))}
 
 .stats{display:flex;gap:22px;font-variant-numeric:tabular-nums}
+.stats-br{display:none}
 .stat b{display:block;font-size:1.3rem;line-height:1.1}
 .stat span{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 h2{font-family:var(--f-display);font-weight:500;font-size:1.15rem;margin:0}
@@ -191,6 +192,19 @@ tr.flash td{animation:fl 1.6s ease-out}
 .repl-dlg::backdrop{background:rgba(5,8,12,.6)}
 .setup-dlg{border:1px solid var(--rune-b,var(--line));border-radius:14px;padding:18px 20px;background:var(--surface);color:var(--ink);width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto}
 .setup-dlg::backdrop{background:rgba(5,8,12,.6)}
+.set-dlg{width:min(720px,calc(100vw - 24px))}
+.set-head{display:flex;align-items:center;justify-content:space-between;gap:8px;position:relative;padding-right:36px}
+.set-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.set-tab{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:7px 11px;font-weight:600;font-size:.9rem;cursor:pointer;text-align:left}
+.set-tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.set-tab[aria-selected="true"] .muted-s{color:inherit;opacity:.85}
+.set-pane{border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.set-pane h3{margin:0 0 4px;font-size:1rem}
+.set-row{align-items:center}
+.set-cog .cog{display:inline-block;transition:transform .6s}
+.set-cog:hover .cog{transform:rotate(120deg)}
+@media (prefers-reduced-motion:reduce){.set-cog .cog{transition:none}}
+@media (max-width:560px){.set-cog .set-word{display:none}.set-cog{padding:6px 9px}.set-cog .cog{font-size:1.35rem}}
 .setup-dlg h2{margin:0 0 4px;font-size:1.2rem}
 .setup-dlg .su-item{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:12px}
 .setup-dlg .su-item h3{margin:0 0 4px;font-size:1rem;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
@@ -1125,7 +1139,7 @@ img.noimg{visibility:hidden}
   /* a smaller header */
   header{padding:10px 0 8px;gap:8px;align-items:center}
   h1{font-size:1.6rem}
-  .stats{gap:12px}.stat b{font-size:1.15rem}.stat span{font-size:.62rem}
+  .stats{gap:12px;flex-wrap:wrap;row-gap:8px}.stats-br{display:block;flex-basis:100%;height:0}.stat b{font-size:1.15rem}.stat span{font-size:.62rem}
   /* wide tables scroll inside themselves instead of pushing the page sideways */
   .dc-table,.sim-table{display:block;overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
   .deck-tabs{scroll-snap-type:x proximity}.deck-tabs button{scroll-snap-align:start}
@@ -1191,8 +1205,10 @@ html.glow body::after{content:"";position:fixed;inset:0;pointer-events:none;z-in
     </svg>seer</h1>
   </div>
   <div class="stats">
+    <button class="btn ghost guide-open set-cog" type="button" id="settingsOpen" title="Settings: learning from scans, Picture library, AI picture recognition" aria-label="Settings"><span class="cog">⚙</span><span class="set-word"> Settings</span></button>
     <button class="btn ghost guide-open" type="button" id="setupOpen" title="Download the card pictures and the AI files">⬇ Downloads</button>
     <button class="btn ghost guide-open" type="button" id="guideOpen" title="Step-by-step guide to everything in Deckseer">📖 Guide</button>
+    <span class="stats-br" aria-hidden="true"></span>
     <div class="stat"><b id="stTotal">0</b><span>Cards</span></div>
     <div class="stat"><b id="stUnique">0</b><span>Unique</span></div>
     <div class="stat"><b id="stValue">$0.00</b><span id="stValueLbl">Value (USD)</span></div>
@@ -1282,45 +1298,7 @@ html.glow body::after{content:"";position:fixed;inset:0;pointer-events:none;z-in
         <label class="chk">Alert for cards worth <span class="cur-sym" id="alertSym">$</span><input type="number" id="optAlert" min="0" step="0.5" class="tiny" aria-label="Alert price"> or more <button class="btn ghost sm" type="button" id="optHear" title="Play the sound for a valuable card">🔊 Hear it</button></label>
         <span class="chk" id="optOwnWrap"><button class="btn ghost sm" type="button" id="optOwnSnd" title="Pick a sound file (MP3, WAV, OGG, up to 500 KB) to play for valuable cards">🎵 Use my own sound…</button><span id="optOwnInfo" class="cur-sub"></span><input type="file" id="optOwnFile" accept="audio/*" hidden></span>
       </div>
-      <details class="ai" id="memBox">
-        <summary>Learning from your scans <span class="muted-s" id="memSummaryState">(learning)</span></summary>
-        <div class="ai-body"><p class="cur-sub" id="memInfo"></p>
-          <p class="cur-sub">Each card you confirm is remembered as it looks through your webcam, in your lighting (up to 3 looks per printing, kept only in this browser). Next time it's recognised straight away, even when the name can't be read, and the same printing is picked. Fixing a wrong scan teaches it the right card.</p></div>
-      </details>
-      <details class="ai" id="libBox">
-        <summary>Picture library <span class="muted-s" id="libSummaryState">(off)</span></summary>
-        <div class="ai-body">
-          <p id="libState"></p>
-          <progress id="libBar" max="1" value="0" hidden></progress>
-          <div class="row2">
-            <label class="field">Which cards <select id="libScope"><option value="recent">Cards from 2015 on (quicker)</option><option value="all">Every card</option></select></label>
-            <button class="btn" type="button" id="libBuild">Build picture library</button>
-            <button class="btn ghost" type="button" id="libDelete" hidden>Delete</button>
-          </div>
-          <small>Downloads a small picture of every card artwork from Scryfall once and keeps a compact fingerprint of each on this PC (about 40 MB). Expect roughly 15–60 minutes depending on your connection. You can pause, close the page and resume later. Each person builds their own copy.</small>
-          <small id="readerState"></small>
-        </div>
-      </details>
-      <details class="ai" id="aiPicBox">
-        <summary>AI picture recognition <span class="muted-s" id="aiPicState">(off)</span></summary>
-        <div class="ai-body">
-          <p class="cur-sub" id="aiPicInfo"></p>
-          <div class="row2">
-            <label class="btn">Load files<input type="file" id="aiPicFiles" accept=".onnx,.bin,.json" multiple hidden></label>
-            <button class="btn ghost" type="button" id="aiPicRemove" hidden>Remove</button>
-          </div>
-          <small>An image model that has seen a picture of every card. It works on this PC only, with no internet needed once it's loaded. The files (about 50 MB) are made by the Stage 2 notebook and kept in this browser.</small>
-        </div>
-      </details>
-      <details class="ai" id="aiBox">
-        <summary>Ask Claude about hard cards <span class="muted-s" id="aiState">(off)</span></summary>
-        <div class="ai-body">
-          <p>For cards nothing else can read, press <kbd>C</kbd> to send a photo of the card to Claude, which looks at everything on it: art, set symbol, frame, language. This uses an Anthropic API key, billed per use by Anthropic (roughly a cent per card). Get one at <span class="mono">console.anthropic.com</span>.</p>
-          <label class="field">API key <input type="password" id="aiKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"></label>
-          <label class="field">Model <select id="aiModel"><option value="claude-sonnet-5-5">Sonnet 5.5 (more accurate)</option><option value="claude-haiku-5-5">Haiku 5.5 (cheaper, faster)</option></select></label>
-          <small>The key is saved only in this browser on this PC and is sent only to Anthropic.</small>
-        </div>
-      </details>
+      <div class="row2 set-row"><button class="btn" type="button" id="settingsOpen2" title="Learning from scans, Picture library, AI picture recognition">⚙ Recognition settings</button><span class="cur-sub" id="setSummary"></span></div>
       <div class="keys"><span><kbd>Space</kbd> scan</span><span class="aikey hide"><kbd>C</kbd> ask Claude</span><span><kbd>Enter</kbd> add</span><span><kbd>F</kbd> foil</span><span><kbd>R</kbd> add another copy</span><span><kbd>M</kbd> say a card</span><span><kbd>1</kbd>–<kbd>5</kbd> condition</span><span><kbd>←</kbd><kbd>→</kbd> printing</span><span><kbd>Ctrl</kbd>+<kbd>Z</kbd> undo</span></div>
     </section>
   </div>
@@ -1482,6 +1460,54 @@ html.glow body::after{content:"";position:fixed;inset:0;pointer-events:none;z-in
 </main>
 
 <dialog id="viewDlg" class="view-dlg" aria-label="Card"></dialog>
+<dialog id="setDlg" class="setup-dlg set-dlg" aria-labelledby="setTitle">
+  <div class="set-head"><h2 id="setTitle">⚙ Settings</h2><button type="button" class="vw-x" id="setClose" aria-label="Close">✕</button></div>
+  <p class="cur-sub">How the scanner recognises cards. It tries these in order: what it learned from your scans, the AI, then the Picture library.</p>
+  <div class="set-tabs" role="tablist"><button type="button" role="tab" class="set-tab" data-settab="memBox" aria-controls="memBox"><span class="set-tl">🧠 Learning from scans</span> <span class="muted-s" id="memSummaryState">(learning)</span></button><button type="button" role="tab" class="set-tab" data-settab="libBox" aria-controls="libBox"><span class="set-tl">🖼️ Picture library</span> <span class="muted-s" id="libSummaryState">(off)</span></button><button type="button" role="tab" class="set-tab" data-settab="aiPicBox" aria-controls="aiPicBox"><span class="set-tl">🤖 AI picture recognition</span> <span class="muted-s" id="aiPicState">(off)</span></button><button type="button" role="tab" class="set-tab" data-settab="aiBox" aria-controls="aiBox"><span class="set-tl">✨ Ask Claude</span> <span class="muted-s" id="aiState">(off)</span></button></div>
+  <section class="ai set-pane" id="memBox" role="tabpanel" hidden>
+    <h3>Learning from your scans</h3>
+
+        <div class="ai-body"><p class="cur-sub" id="memInfo"></p>
+          <p class="cur-sub">Each card you confirm is remembered as it looks through your webcam, in your lighting (up to 3 looks per printing, kept only in this browser). Next time it's recognised straight away, even when the name can't be read, and the same printing is picked. Fixing a wrong scan teaches it the right card.</p></div>
+  </section>
+  <section class="ai set-pane" id="libBox" role="tabpanel" hidden>
+    <h3>Picture library</h3>
+
+        <div class="ai-body">
+          <p id="libState"></p>
+          <progress id="libBar" max="1" value="0" hidden></progress>
+          <div class="row2">
+            <label class="field">Which cards <select id="libScope"><option value="recent">Cards from 2015 on (quicker)</option><option value="all">Every card</option></select></label>
+            <button class="btn" type="button" id="libBuild">Build picture library</button>
+            <button class="btn ghost" type="button" id="libDelete" hidden>Delete</button>
+          </div>
+          <small>Downloads a small picture of every card artwork from Scryfall once and keeps a compact fingerprint of each on this PC (about 40 MB). Expect roughly 15–60 minutes depending on your connection. You can pause, close the page and resume later. Each person builds their own copy.</small>
+          <small id="readerState"></small>
+        </div>
+  </section>
+  <section class="ai set-pane" id="aiPicBox" role="tabpanel" hidden>
+    <h3>AI picture recognition</h3>
+
+        <div class="ai-body">
+          <p class="cur-sub" id="aiPicInfo"></p>
+          <div class="row2">
+            <label class="btn">Load files<input type="file" id="aiPicFiles" accept=".onnx,.bin,.json" multiple hidden></label>
+            <button class="btn ghost" type="button" id="aiPicRemove" hidden>Remove</button>
+          </div>
+          <small>An image model that has seen a picture of every card. It works on this PC only, with no internet needed once it's loaded. The files (about 50 MB) are made by the Stage 2 notebook and kept in this browser.</small>
+        </div>
+  </section>
+  <section class="ai set-pane" id="aiBox" role="tabpanel" hidden>
+    <h3>Ask Claude about hard cards</h3>
+
+        <div class="ai-body">
+          <p>For cards nothing else can read, press <kbd>C</kbd> to send a photo of the card to Claude, which looks at everything on it: art, set symbol, frame, language. This uses an Anthropic API key, billed per use by Anthropic (roughly a cent per card). Get one at <span class="mono">console.anthropic.com</span>.</p>
+          <label class="field">API key <input type="password" id="aiKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"></label>
+          <label class="field">Model <select id="aiModel"><option value="claude-sonnet-5-5">Sonnet 5.5 (more accurate)</option><option value="claude-haiku-5-5">Haiku 5.5 (cheaper, faster)</option></select></label>
+          <small>The key is saved only in this browser on this PC and is sent only to Anthropic.</small>
+        </div>
+  </section>
+</dialog>
 <dialog id="setupDlg" class="setup-dlg" aria-labelledby="setupTitle">
   <h2 id="setupTitle" tabindex="-1" autofocus>Get the scanner ready</h2>
   <p class="cur-sub">Two optional downloads help Deckseer recognise cards from their picture when the name can't be read: foreign cards, foils, glare and odd fonts. You can skip them and do them later.</p>
@@ -7669,7 +7695,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.11.3";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.11.4";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
@@ -12385,7 +12411,7 @@ const GUIDE = [
   {t: "Make the scanner smarter (AI and Picture library)", steps: [
     {h: "How Deckseer recognises a card", b: "First it <b>reads the name</b> (two text readers, both ends of the card in case it's upside down). Then it <b>compares the picture</b> to confirm the name and choose the printing. When the name can't be read (foreign cards, foil glare, odd fonts), the picture tools below take over. You don't need them, but each one makes scanning more reliable."},
     {h: "AI picture recognition: what it is", b: "A small AI image model that has seen a picture of <b>every card face</b> (about 100,000). It recognises a card from its picture alone, even blurry or with glare, and picks the printing without downloading anything. It runs on your computer, with no internet needed once loaded. The model and its index (about 50 MB) are made once with the free <b>Stage 2 notebook</b> on Google Colab: the <b>⬇ Downloads</b> button at the top has a link that opens it, with the steps."},
-    {h: "AI picture recognition: turn it on", b: "Open <b>AI picture recognition</b> in the scan options and click <b>Load files</b>. Pick all three files together (hold Ctrl): <b>…-embed.onnx</b>, <b>…-index.bin</b> and <b>…-index.json</b>. After a few seconds it says <b>Ready: 102,926 card pictures</b>. Deckseer keeps its own copy, so you only do this once per computer. If the files are put next to Deckseer on the website, it finds them by itself.", go: {page: "scanner", el: "aiPicBox", open: true}},
+    {h: "AI picture recognition: turn it on", b: "Click <b>⚙ Settings</b> at the top, open <b>AI picture recognition</b> and click <b>Load files</b>. Pick all three files together (hold Ctrl): <b>…-embed.onnx</b>, <b>…-index.bin</b> and <b>…-index.json</b>. After a few seconds it says <b>Ready: 102,926 card pictures</b>. Deckseer keeps its own copy, so you only do this once per computer. If the files are put next to Deckseer on the website, it finds them by itself.", go: {page: "scanner", el: "aiPicBox", open: true}},
     {h: "AI picture recognition: what you'll see", b: "When the name couldn't be read, the AI's best guess appears with its other close guesses under <b>Not it?</b>. A card found only by picture <b>always waits for your OK</b>. When it agrees with the text reader, the name counts as confirmed. And it chooses the printing by comparing every printing at once.", go: {page: "scanner", el: "aiPicBox", open: true}},
     {h: "Picture library", b: "The older, simpler picture matcher: Deckseer downloads a small picture of every card's artwork from Scryfall once and keeps a fingerprint of each (about 40 MB). Choose <b>Cards from 2015 on</b> (quicker) or <b>Every card</b>, then <b>Build picture library</b>. It takes 15–60 minutes; you can keep scanning, pause, or close the page and carry on later.", go: {page: "scanner", el: "libBox", open: true}},
     {h: "AI or Picture library?", b: "Use the <b>AI</b> if you have its files: it covers every card and is more accurate. The Picture library is a good fallback if you don't, and having both does no harm, because the scanner tries the AI first. Neither is in your backup, because both can be loaded or built again."},
@@ -12453,6 +12479,33 @@ function guideMove(d){
   prefs.guide = Object.assign(g, {ch, st}); savePrefs(); renderGuide();
   document.querySelectorAll(".guide-hl").forEach(x => x.classList.remove("guide-hl"));
 }
+/* ⚙ Settings: learning from scans, Picture library, AI picture recognition, Ask Claude, as tabs */
+const SET_TABS = ["memBox", "libBox", "aiPicBox", "aiBox"];
+function setTab(id){
+  if (!SET_TABS.includes(id)) id = SET_TABS[0];
+  prefs.setTab = id; savePrefs();
+  for (const t of SET_TABS) { $(t).hidden = t !== id; const b = document.querySelector(`[data-settab="${t}"]`); b.setAttribute("aria-selected", t === id); b.tabIndex = t === id ? 0 : -1; }
+}
+function openSettings(tab, nonModal){
+  const dlg = $("setDlg"); setTab(tab || prefs.setTab);
+  if (!dlg.open) { if (nonModal) dlg.show(); else dlg.showModal(); }
+}
+function setSummary(){
+  const st = id => ($(id).textContent || "").replace(/[()]/g, "").trim();
+  $("setSummary").textContent = `Learning: ${st("memSummaryState") || "on"} · Picture library: ${st("libSummaryState") || "off"} · AI: ${st("aiPicState") || "off"}`;
+}
+document.addEventListener("click", e => {
+  if (e.target.closest("#settingsOpen, #settingsOpen2")) return openSettings();
+  if (e.target.closest("#setClose") || e.target === $("setDlg")) return $("setDlg").close();
+  const t = e.target.closest("[data-settab]"); if (t) setTab(t.dataset.settab);
+});
+$("setDlg").addEventListener("keydown", e => {
+  if (!e.target.closest(".set-tabs") || !["ArrowLeft", "ArrowRight"].includes(e.key)) return;
+  const i = SET_TABS.indexOf(prefs.setTab), n = SET_TABS[(i + (e.key === "ArrowRight" ? 1 : SET_TABS.length - 1)) % SET_TABS.length];
+  setTab(n); document.querySelector(`[data-settab="${n}"]`).focus(); e.preventDefault();
+});
+setTab(prefs.setTab); setSummary();
+new MutationObserver(setSummary).observe($("setDlg").querySelector(".set-tabs"), {subtree: true, childList: true, characterData: true});
 // go to the page and tab, open the settings it's in, scroll to it and make it glow
 function guideShow(go){
   const msg = t => { const m = $("guideMsg"); if (m) m.textContent = t; };
@@ -12465,6 +12518,7 @@ function guideShow(go){
   if (go.page === "builder") { if (typeof renderDeck === "function") renderDeck(); if (go.dtab) { prefs.deckTab = go.dtab; savePrefs(); applyDeckTab(); } }
   setTimeout(() => {
     const el = $(go.el); if (!el) return msg("That part isn't on the screen right now.");
+    const pane = el.closest(".set-pane"); if (pane) openSettings(pane.id, true);   // non-modal, so the guide stays usable
     for (let p = el; p; p = p.parentElement) { if (p.tagName === "DETAILS") p.open = true; }
     if (el.tagName === "DETAILS") el.open = true;
     if (!el.offsetParent && el.id !== "installApp") msg(el.id === "installApp" ? "" : "It's hidden right now.");
