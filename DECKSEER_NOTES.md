@@ -497,3 +497,9 @@ The count of abilities the Playtest understands but the finder dropped went from
 - `deckseer.html` is now built from `src/` (see "The source (`src/`) and the build" near the top). The first build matched the old file byte for byte.
 - Removed dead code: `dcCuts` (old version; `dcCuts2` is now `dcCuts`), `trSpellActions` and `ptKwRule`. Also about 30 CSS rules for classes nothing uses any more (`.pt-right`, `.pt-log`, `.pt-modal`, `.pt-preview`, `.pt-traybox`, `.fw-plays`, `.fw-drew`, `.ccard`, `.dx-hint`…).
 - `npm run build`, `npm test` (builds first) and `npm run release` (bump plus build). `tests/build.test.js` checks that `deckseer.html` matches `src/`.
+
+## Phone Playtest: hand at the bottom, easy sideways scrolling (2026.11.11.8)
+- On screens up to 900px wide, `.pt` is exactly the screen height (`100dvh`) with rows top, opponents, table and hand. Only `.pt-main` scrolls, so the hand never moves. The old `position:sticky` hand could scroll away. There is bottom padding for the phone safe area.
+- Hand cards are `touch-action:pan-x`. A sideways swipe is a native scroll: the browser cancels the pointer, and a new `pointercancel` handler clears the half-started drag. Dragging up still plays the card. Before, `.ptc{touch-action:none}` made every swipe pick up a card.
+- ‹ › buttons (`data-hscroll`) appear only when the hand overflows, and grey out at each end (`ptHandArrows`). The hand keeps its scroll position across `ptRender`. It snaps to cards, and a mouse wheel scrolls it sideways.
+- Tests: `tests/pthand.test.js` uses real touch events through CDP. `Input.synthesizeScrollGesture` does nothing in headless Chrome here; `Input.dispatchTouchEvent` works.

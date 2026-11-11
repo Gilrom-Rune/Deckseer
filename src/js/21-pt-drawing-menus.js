@@ -84,9 +84,18 @@ function ptRender(){
   const banner = PT.phase === "mull" ? `<div class="pt-banner"><span>${PT.mull ? `Mulligan ${PT.mull}. ` : ""}Keep this hand?</span><button class="btn primary" type="button" data-pt="keep">Keep</button><button class="btn" type="button" data-pt="mulligan">Mulligan</button>${PT.isCmd ? `<label class="chk"><input type="checkbox" id="ptFreeMull" ${prefs.ptFreeMull !== false ? "checked" : ""}> First mulligan is free</label>` : ""}</div>`
     : PT.phase === "bottom" ? `<div class="pt-banner warn"><span>Click ${PT.toBottom} card${PT.toBottom === 1 ? "" : "s"} in your hand to put on the bottom of your library.</span></div>` : "";
   const glow = ptAutoMana() && PT.phase === "play", can = c => glow && ptAffordable(c, "hand") ? " can-cast" : "";
-  $("ptHand").innerHTML = `${banner}<div class="pt-hand-head"><span>Hand</span><b>${PT.hand.length}</b>${glow ? `<small class="pt-hand-note">Cards you can cast now glow. Clicking one pays for it.</small>` : ""}</div><div class="pt-hand-cards" data-drop="hand" style="--n:${PT.hand.length}">${PT.hand.map(c => ptCardHtml(c, "hand", can(c))).join("") || `<div class="pt-empty">No cards in hand</div>`}</div>`;
+  const keepX = ($("ptHand").querySelector(".pt-hand-cards") || {}).scrollLeft || 0;   // the hand stays scrolled where you left it
+  $("ptHand").innerHTML = `${banner}<div class="pt-hand-head"><span>Hand</span><b>${PT.hand.length}</b>${glow ? `<small class="pt-hand-note">Cards you can cast now glow. Clicking one pays for it.</small>` : ""}<span class="pt-hscroll"><button type="button" data-hscroll="-1" aria-label="Scroll your hand left">‹</button><button type="button" data-hscroll="1" aria-label="Scroll your hand right">›</button></span></div><div class="pt-hand-cards" data-drop="hand" style="--n:${PT.hand.length}">${PT.hand.map(c => ptCardHtml(c, "hand", can(c))).join("") || `<div class="pt-empty">No cards in hand</div>`}</div>`;
+  const hc = $("ptHand").querySelector(".pt-hand-cards"); if (hc) { hc.scrollLeft = keepX; ptHandArrows(hc); hc.onscroll = () => ptHandArrows(hc); }
   if (ptHover != null && !ptFind(ptHover)) ptHover = null;
   ptPreview(ptHover, ptLastX);
+}
+// the ‹ › buttons: shown only when the hand is wider than the screen, each greyed out at its end
+function ptHandArrows(hc){
+  const max = hc.scrollWidth - hc.clientWidth, box = $("ptHand");
+  box.classList.toggle("scrolls", max > 4);
+  const [l, r] = box.querySelectorAll("[data-hscroll]");
+  if (l) l.disabled = hc.scrollLeft <= 2; if (r) r.disabled = hc.scrollLeft >= max - 2;
 }
 let ptLastX = null;
 function ptPreview(uid, px){

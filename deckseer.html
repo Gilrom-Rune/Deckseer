@@ -995,7 +995,13 @@ img.noimg{visibility:hidden}
 .pt-pool-n{font-size:.75rem;font-weight:700;color:var(--muted)}
 .pt-hand-head b{font:700 .85rem var(--f-mono);color:var(--ink)}
 .pt-hand-cards{display:flex;gap:8px;overflow-x:auto;overflow-y:visible;padding:8px 4px 2px;min-height:calc(var(--g) * 7.28 + 10px);border:1px dashed transparent;border-radius:10px;align-items:flex-end}
-.pt-hand-cards .ptc{flex:0 0 auto;width:calc(var(--g) * 5.2);height:calc(var(--g) * 7.28);transition:transform .12s}
+.pt-hand-cards .ptc{flex:0 0 auto;width:calc(var(--g) * 5.2);height:calc(var(--g) * 7.28);transition:transform .12s;touch-action:pan-x;scroll-snap-align:start}
+.pt-hand-cards{scroll-snap-type:x proximity;overscroll-behavior-x:contain;scroll-padding-inline:4px;scrollbar-width:thin}
+.pt-hscroll{display:none;margin-left:auto;gap:6px}
+.pt-hand.scrolls .pt-hscroll{display:flex}
+.pt-hscroll button{width:38px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:1.3rem;line-height:1;cursor:pointer}
+.pt-hscroll button:disabled{opacity:.35;cursor:default}
+.pt-hand-head{align-items:center}
 .pt-hand-cards .ptc:hover{transform:translateY(-8px)}
 .pt-hand-cards .pt-empty{min-height:calc(var(--g) * 7)}
 .pt-banner{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 12px;margin-bottom:6px;border-radius:10px;background:color-mix(in srgb,var(--accent) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);font-weight:600}
@@ -1084,14 +1090,16 @@ img.noimg{visibility:hidden}
   .pt-stackbox{overflow:visible}
   .pt-left .pt-piles2{flex-direction:row}.pt-piles2{display:flex;gap:8px}.pt-libbtns{flex-direction:column;align-items:flex-start;gap:2px}
   .pt-title b{max-width:140px}
-  .pt{grid-template-rows:auto auto auto;overflow-y:auto}
-  .pt-main{grid-template-rows:auto auto auto}
+  /* the hand stays at the bottom of the screen; only the table between scrolls */
+  .pt{grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;height:100vh;height:100dvh}
+  .pt-main{grid-template-rows:auto auto auto;overflow-y:auto;overscroll-behavior:contain}
   .pt-bf{min-height:58vh;max-height:72vh}
   .pt-top{padding:6px 10px;gap:6px}
   .pt-stat{padding:1px 6px}.pt-stat small{display:none}.pt-stat b{font-size:1rem}
   .pt-actions .btn{padding:4px 8px;font-size:.84rem}
-  .pt-hand{position:sticky;bottom:0;z-index:5}
-  .pt-main{display:flex;flex-direction:column;min-height:max-content}
+  .pt-hand{position:relative;z-index:5;padding-bottom:max(6px,env(safe-area-inset-bottom))}
+  .pt-hscroll button{width:44px;height:34px}
+  .pt-main{display:flex;flex-direction:column;min-height:0}
   .pt-left,.pt-bf,.pt-side{flex:none}
   .pt-left{min-height:max-content}
 }
@@ -7675,7 +7683,7 @@ async function undoRestore(){
 
 
 /* ---------------- version and updates ---------------- */
-const APP_VERSION = "2026.11.11.7";   // set by tools/bump-version.js, together with version.json
+const APP_VERSION = "2026.11.11.8";   // set by tools/bump-version.js, together with version.json
 /* ---------------- installable app (when opened from a web address, not from a file) ---------------- */
 (() => {
   if (!/^https?:$/.test(location.protocol)) return;   // file:// can't install or work offline: nothing to do
@@ -8776,9 +8784,18 @@ function ptRender(){
   const banner = PT.phase === "mull" ? `<div class="pt-banner"><span>${PT.mull ? `Mulligan ${PT.mull}. ` : ""}Keep this hand?</span><button class="btn primary" type="button" data-pt="keep">Keep</button><button class="btn" type="button" data-pt="mulligan">Mulligan</button>${PT.isCmd ? `<label class="chk"><input type="checkbox" id="ptFreeMull" ${prefs.ptFreeMull !== false ? "checked" : ""}> First mulligan is free</label>` : ""}</div>`
     : PT.phase === "bottom" ? `<div class="pt-banner warn"><span>Click ${PT.toBottom} card${PT.toBottom === 1 ? "" : "s"} in your hand to put on the bottom of your library.</span></div>` : "";
   const glow = ptAutoMana() && PT.phase === "play", can = c => glow && ptAffordable(c, "hand") ? " can-cast" : "";
-  $("ptHand").innerHTML = `${banner}<div class="pt-hand-head"><span>Hand</span><b>${PT.hand.length}</b>${glow ? `<small class="pt-hand-note">Cards you can cast now glow. Clicking one pays for it.</small>` : ""}</div><div class="pt-hand-cards" data-drop="hand" style="--n:${PT.hand.length}">${PT.hand.map(c => ptCardHtml(c, "hand", can(c))).join("") || `<div class="pt-empty">No cards in hand</div>`}</div>`;
+  const keepX = ($("ptHand").querySelector(".pt-hand-cards") || {}).scrollLeft || 0;   // the hand stays scrolled where you left it
+  $("ptHand").innerHTML = `${banner}<div class="pt-hand-head"><span>Hand</span><b>${PT.hand.length}</b>${glow ? `<small class="pt-hand-note">Cards you can cast now glow. Clicking one pays for it.</small>` : ""}<span class="pt-hscroll"><button type="button" data-hscroll="-1" aria-label="Scroll your hand left">‹</button><button type="button" data-hscroll="1" aria-label="Scroll your hand right">›</button></span></div><div class="pt-hand-cards" data-drop="hand" style="--n:${PT.hand.length}">${PT.hand.map(c => ptCardHtml(c, "hand", can(c))).join("") || `<div class="pt-empty">No cards in hand</div>`}</div>`;
+  const hc = $("ptHand").querySelector(".pt-hand-cards"); if (hc) { hc.scrollLeft = keepX; ptHandArrows(hc); hc.onscroll = () => ptHandArrows(hc); }
   if (ptHover != null && !ptFind(ptHover)) ptHover = null;
   ptPreview(ptHover, ptLastX);
+}
+// the ‹ › buttons: shown only when the hand is wider than the screen, each greyed out at its end
+function ptHandArrows(hc){
+  const max = hc.scrollWidth - hc.clientWidth, box = $("ptHand");
+  box.classList.toggle("scrolls", max > 4);
+  const [l, r] = box.querySelectorAll("[data-hscroll]");
+  if (l) l.disabled = hc.scrollLeft <= 2; if (r) r.disabled = hc.scrollLeft >= max - 2;
 }
 let ptLastX = null;
 function ptPreview(uid, px){
@@ -9158,6 +9175,18 @@ function ptInit(){
     const uid = h ? +(h.dataset.uid || h.dataset.uidView) : null;
     if (!ptDrag) { ptLastX = e.clientX; if (uid !== ptHover) { ptHover = uid; ptPreview(uid, e.clientX); } }
   });
+  // a sideways swipe on your hand scrolls it (touch-action: pan-x); the browser takes the touch over and cancels the drag
+  addEventListener("pointercancel", () => {
+    if (!ptDrag) return;
+    if (ptDrag.ghost) ptDrag.ghost.remove(); if (ptDrag.over) ptDrag.over.classList.remove("over");
+    ptDrag.el.classList.remove("pt-dragging"); root.classList.remove("dragging"); const sn = $("ptSnap"); if (sn) sn.hidden = true;
+    ptDrag = null;
+  });
+  // the mouse wheel scrolls the hand sideways
+  root.addEventListener("wheel", e => {
+    const hc = e.target.closest && e.target.closest(".pt-hand-cards"); if (!hc || Math.abs(e.deltaX) > Math.abs(e.deltaY) || hc.scrollWidth <= hc.clientWidth) return;
+    e.preventDefault(); hc.scrollLeft += e.deltaY;
+  }, {passive: false});
   addEventListener("pointerup", e => {
     if (!ptDrag || !PT) return;
     const d = ptDrag;
@@ -9177,6 +9206,8 @@ function ptInit(){
   root.addEventListener("click", async e => {
     if (!PT) return;
     if (ptTrayClick(e)) return;
+    const hs = e.target.closest("[data-hscroll]");
+    if (hs) { const hc = $("ptHand").querySelector(".pt-hand-cards"); if (hc) hc.scrollBy({left: +hs.dataset.hscroll * Math.max(120, hc.clientWidth * 0.8), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"}); return; }
     if (ptOppClick(e)) return;
     const badge = e.target.closest(".ptc-badge"); if (badge) return ptDo(() => ptCounter(+badge.dataset.uid, badge.dataset.cnt, 1));
     const atk = e.target.closest("[data-atk]"); if (atk && PT_VIEW && PT_VIEW.kind === "attack") { const us = atk.dataset.atk.split(",").map(Number), on = us.every(u => PT_VIEW.pick.has(u)); us.forEach(u => on ? PT_VIEW.pick.delete(u) : PT_VIEW.pick.add(u)); return ptRenderAttack(); }

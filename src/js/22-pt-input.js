@@ -82,6 +82,18 @@ function ptInit(){
     const uid = h ? +(h.dataset.uid || h.dataset.uidView) : null;
     if (!ptDrag) { ptLastX = e.clientX; if (uid !== ptHover) { ptHover = uid; ptPreview(uid, e.clientX); } }
   });
+  // a sideways swipe on your hand scrolls it (touch-action: pan-x); the browser takes the touch over and cancels the drag
+  addEventListener("pointercancel", () => {
+    if (!ptDrag) return;
+    if (ptDrag.ghost) ptDrag.ghost.remove(); if (ptDrag.over) ptDrag.over.classList.remove("over");
+    ptDrag.el.classList.remove("pt-dragging"); root.classList.remove("dragging"); const sn = $("ptSnap"); if (sn) sn.hidden = true;
+    ptDrag = null;
+  });
+  // the mouse wheel scrolls the hand sideways
+  root.addEventListener("wheel", e => {
+    const hc = e.target.closest && e.target.closest(".pt-hand-cards"); if (!hc || Math.abs(e.deltaX) > Math.abs(e.deltaY) || hc.scrollWidth <= hc.clientWidth) return;
+    e.preventDefault(); hc.scrollLeft += e.deltaY;
+  }, {passive: false});
   addEventListener("pointerup", e => {
     if (!ptDrag || !PT) return;
     const d = ptDrag;
@@ -101,6 +113,8 @@ function ptInit(){
   root.addEventListener("click", async e => {
     if (!PT) return;
     if (ptTrayClick(e)) return;
+    const hs = e.target.closest("[data-hscroll]");
+    if (hs) { const hc = $("ptHand").querySelector(".pt-hand-cards"); if (hc) hc.scrollBy({left: +hs.dataset.hscroll * Math.max(120, hc.clientWidth * 0.8), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"}); return; }
     if (ptOppClick(e)) return;
     const badge = e.target.closest(".ptc-badge"); if (badge) return ptDo(() => ptCounter(+badge.dataset.uid, badge.dataset.cnt, 1));
     const atk = e.target.closest("[data-atk]"); if (atk && PT_VIEW && PT_VIEW.kind === "attack") { const us = atk.dataset.atk.split(",").map(Number), on = us.every(u => PT_VIEW.pick.has(u)); us.forEach(u => on ? PT_VIEW.pick.delete(u) : PT_VIEW.pick.add(u)); return ptRenderAttack(); }
